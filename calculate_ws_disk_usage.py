@@ -1,10 +1,12 @@
+#!/usr/bin/env python
+
 '''
 Created on Apr 27, 2014
 
-@author: crusherofheads
+@author: gaprice@lbl.gov
 
-Calculate disk usage and object counts  by user, separated into public vs.
-private and deleted vs. undeleted data.
+Calculate workspace disk usage and object counts  by user, separated into
+public vs. private and deleted vs. undeleted data.
 
 These figures are not actually related to the physical disk space for three
 reasons:
@@ -30,6 +32,7 @@ import sys
 import os
 from collections import defaultdict
 import datetime
+from argparse import ArgumentParser
 
 # where to get credentials (don't check these into git, idiot)
 CFG_FILE_DEFAULT = 'usage.cfg'
@@ -64,6 +67,19 @@ OR_QUERY_SIZE = 100  # 75 was slower, 150 was slower
 MAX_WS = -1  # for testing, set to < 1 for all ws
 
 
+def _parseArgs():
+    parser = ArgumentParser(description='Calculate workspace disk usage by ' +
+                                        'user')
+    parser.add_argument('-c', '--config',
+                        help='path to the config file. By default the ' +
+                        'script looks for a file called ' + CFG_FILE_DEFAULT +
+                        ' in the working directory.',
+                        default=CFG_FILE_DEFAULT)
+    parser.add_argument('-j', '--json-output',
+                        help='write json output to this file.')
+    return parser.parse_args()
+
+
 def chunkiter(iterable, size):
     """Iterates over an iterable in chunks of size size. Returns an iterator
   that in turn returns iterators over the iterable that each iterate through
@@ -92,11 +108,7 @@ def process_optional_key(configObj, section, key):
     return v
 
 
-def get_config():
-    if len(sys.argv) > 1:
-        cfgfile = sys.argv[1]
-    else:
-        cfgfile = CFG_FILE_DEFAULT
+def get_config(cfgfile):
     if not os.path.isfile(cfgfile) and not os.access(cfgfile, os.R_OK):
         print ('Cannot read file ' + cfgfile)
         sys.exit(1)
@@ -241,7 +253,8 @@ def print_table(rows):
 
 
 def main():
-    sourcecfg, targetcfg = get_config()
+    args = _parseArgs()
+    sourcecfg, targetcfg = get_config(args.config)
     starttime = time.time()
     srcmongo = MongoClient(sourcecfg[CFG_HOST], sourcecfg[CFG_PORT],
                            slaveOk=True)
