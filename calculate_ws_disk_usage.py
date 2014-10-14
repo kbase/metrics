@@ -33,6 +33,7 @@ import os
 from collections import defaultdict
 import datetime
 from argparse import ArgumentParser
+import json
 
 # where to get credentials (don't check these into git, idiot)
 CFG_FILE_DEFAULT = 'usage.cfg'
@@ -180,12 +181,11 @@ def process_workspaces(db):
     pub_read = db[COL_ACLS].find({user: all_users}, [acl_id])
     workspaces = defaultdict(dict)
     for ws in ws_cursor:
-        workspaces[ws[WS_ID]][PUBLIC] = False
+        workspaces[ws[WS_ID]][PUBLIC] = PRIVATE
         workspaces[ws[WS_ID]][WS_OBJ_CNT] = ws[WS_OBJ_CNT]
         workspaces[ws[WS_ID]][OWNER] = ws[WS_OWNER]
-        workspaces[ws[WS_ID]][DELETED] = ws[WS_DELETED]
     for pr in pub_read:
-        workspaces[pr[acl_id]][PUBLIC] = True
+        workspaces[pr[acl_id]][PUBLIC] = PUBLIC
     return workspaces
 
 
@@ -211,7 +211,7 @@ def process_object_versions(db, userdata, objects, workspaces,
     vers = 0
     for v in res:
         vers += 1
-        deleted = odel[v[obj_id]]
+        deleted = DELETED if odel[v[obj_id]] else NOT_DEL
         userdata[wsowner][wspub][deleted][OBJ_CNT] += 1
         userdata[wsowner][wspub][deleted][BYTES] += v[size]
     return vers
@@ -295,6 +295,7 @@ def main():
     ws = process_workspaces(srcdb)
 
     objdata = process_objects(srcdb, ws, sourcecfg[CFG_EXCLUDE_WS])
+    print(json.dumps(objdata))
 
     rows = [['user',
              'pub-bytes', 'pub-#', 'pub-del-bytes', 'pub-del-#',
@@ -304,14 +305,14 @@ def main():
     for name_ in sorted(objdata):
         row = [name_]
         rows.append(row)
-        row.append(str(objdata[name_][True][False][BYTES]))
-        row.append(str(objdata[name_][True][False][OBJ_CNT]))
-        row.append(str(objdata[name_][True][True][BYTES]))
-        row.append(str(objdata[name_][True][True][OBJ_CNT]))
-        row.append(str(objdata[name_][False][False][BYTES]))
-        row.append(str(objdata[name_][False][False][OBJ_CNT]))
-        row.append(str(objdata[name_][False][True][BYTES]))
-        row.append(str(objdata[name_][False][True][OBJ_CNT]))
+        row.append(str(objdata[name_][PUBLIC][NOT_DEL][BYTES]))
+        row.append(str(objdata[name_][PUBLIC][NOT_DEL][OBJ_CNT]))
+        row.append(str(objdata[name_][PUBLIC][DELETED][BYTES]))
+        row.append(str(objdata[name_][PUBLIC][DELETED][OBJ_CNT]))
+        row.append(str(objdata[name_][PRIVATE][NOT_DEL][BYTES]))
+        row.append(str(objdata[name_][PRIVATE][NOT_DEL][OBJ_CNT]))
+        row.append(str(objdata[name_][PRIVATE][DELETED][BYTES]))
+        row.append(str(objdata[name_][PRIVATE][DELETED][OBJ_CNT]))
 
     print_table(rows)
     # print time, object data
