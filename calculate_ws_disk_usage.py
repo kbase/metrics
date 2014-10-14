@@ -148,15 +148,17 @@ def get_config(cfgfile):
     types = co[s][CFG_TYPES]
     if types:
         if type(types) is not list:
-            co[s][CFG_TYPES] = [types]
+            co[s][CFG_TYPES] = set([types])
+        else:
+            co[s][CFG_TYPES] = set(types)
     exclude = co[s][CFG_EXCLUDE_WS]
     if exclude:
         if type(exclude) is not list:
             exclude = [exclude]
-        ints = []
+        ints = set()
         for ws in exclude:
             try:
-                ints.append(int(ws))
+                ints.add(int(ws))
             except ValueError:
                 print ('Workspace id {} must be an integer'.format(ws))
                 sys.exit(1)
@@ -211,7 +213,7 @@ def process_object_versions(db, userdata, objects, workspaces,
     return vers
 
 
-def process_objects(db, workspaces):
+def process_objects(db, workspaces, exclude_ws):
     ws_id = 'ws'
     obj_id = 'id'
     # user -> pub -> del -> du or objs -> #
@@ -222,9 +224,13 @@ def process_objects(db, workspaces):
     for ws in workspaces:
         if MAX_WS > 0 and wscount > MAX_WS:
             break
+        wscount += 1
         wsobjcount = workspaces[ws][WS_OBJ_CNT]
         print('\nProcessing workspace {}, {} objects'.format(
             ws, wsobjcount))
+        if ws in exclude_ws:
+            print('\tIn exclude list, skipping')
+            continue
         for lim in xrange(LIMIT, wsobjcount + LIMIT, LIMIT):
             print('\tProcessing objects {} - {} at {}'.format(
                 lim - LIMIT + 1, wsobjcount if lim > wsobjcount else lim,
@@ -247,7 +253,6 @@ def process_objects(db, workspaces):
 #             objcount += objsproc
 #             print('total objects processed: ' + str(objcount))
             sys.stdout.flush()
-        wscount += 1
     return d
 
 
@@ -285,7 +290,7 @@ def main():
         srcdb.authenticate(sourcecfg[CFG_USER], sourcecfg[CFG_PWD])
     ws = process_workspaces(srcdb)
 
-    objdata = process_objects(srcdb, ws)
+    objdata = process_objects(srcdb, ws, sourcecfg[CFG_EXCLUDE_WS])
 
     rows = [['user',
              'pub-bytes', 'pub-#', 'pub-del-bytes', 'pub-del-#',
