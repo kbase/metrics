@@ -5,23 +5,43 @@
 # and generates summaries including a histogram of # of days
 # using kbase.
 #
-# TODO: Dump in JSON format
+
+use JSON;
+
+my $json = JSON->new->allow_nonref;
 
 my $nBuckets=5;
 
-
+# Read in the Staff list
+#
 open(E,"kbase-staff.lst") or die "Unable to open KBase Staff list";
 while(<E>){
   chomp;
   $staff{$_}=1;
+  $users->{$_}->{'staff'}='Y';
 }
 close E;
 
+# Get all the users from the log and skip over some bogus splunk columns
+#
 $_=<STDIN>;
 chomp;
-@users=split /,/;
-shift @users;
+@userl=split /,/;
+shift @userl;
+for my $u (@userl){
+  next if defined $staff{$_};
+  next if $u eq '"-"';
+  next if $u eq 'NULL';
+  next if $u =~ '_span';
+  next if $u =~ '_spandays';
+  $users->{$u}->{'staff'}='N';
+}
 
+my $start_date=0;
+my $end_date=0;
+
+# Go through each day and tally up visits
+#
 while(<STDIN>){
   chomp;
   @list=split /,/;
@@ -29,57 +49,71 @@ while(<STDIN>){
   $time=~s/T.*//;
   $time=~s/"//;
   $i=0;
+  $start_date=$time unless $start_date ne 0;
   foreach (@list){
-    $user=$users[$i];
+    $user=$userl[$i];
     $i++;
-    next if $user eq '"-"';
-    next if $user eq 'NULL';
+    # Skip if the user isn't in our good list
+    #
+    next unless defined $users->{$user};
     next if $_ == 0;
+    $users->{$user}->{visits}++;
+    $users->{$user}->{first}=$time if ! defined $users->{$user}->{first};
+    $users->{$user}->{last}=$time;
     $visits{$user}++;
-    #print "$user $_\n";
   }
 }
+$end_date=$time;
 
-print "User,Visits,Staff\n";
-foreach my $t (sort {$visits{$a}<=>$visits{$b}} keys %visits){
-  next if $visits{$t} < 2;
-  $s='';
-  $s='Y' if defined $staff{$t};
-  printf "%s,%4d,%s\n",$t,$visits{$t},$s;
+# Figure out how many users there are and the max visits
+#
+foreach my $u (sort {$visits{$a}<=>$visits{$b}} keys %visits){
+  next if $visits{$u} < 2;
   $totUsers++;
+  $max=$visits{$u} if $visits{$u}>$max;
 }
 
-my $cs=1;
+my $counts;
 foreach my $t (sort keys %visits){
   next if $visits{$t} < 2;
-  my $bucket=int($visits{$t}/$cs);
-  $count[$bucket]++;
-  $external[$bucket]++ if ! defined $staff{$t};
-  print STDERR "Staff - $t\n" if defined $staff{$t};
+  my $bucket=int($visits{$t});
+  $counts->{'all'}->{$bucket}++;
+  $counts->{'nonkbase'}->{$bucket}++ if ! defined $staff{$t};
 }
 
-print "Visits,Total,Non-KBase\n";
-foreach my $t (0..365){
-  next if $count[$t]==0;
-  printf "\"%3d days\",%4d,%4d\n",$t*$cs,$count[$t],$external[$t];
-}
-
-print "\nVisits,Total,Non-KBase\n";
 my $end;
-foreach my $t (2..365){
+my $b=0;
+my $histo;
+#$histo->{'buckets'}=$nBuckets;
+$end=365;
+foreach my $t (2..$max){
   $start="$t" if $start eq '';
-  next if $count[$t] == 0;
-  $tot+=$count[$t];
-  $ext+=$external[$t];
+  my $ct=$counts->{'all'}->{$t};
+  my $ex=$counts->{'nonkbase'}->{$t};
+  next unless defined $ct;
+  $tot+=$ct;
+  $ext+=$ex;
   $end=$t;
-  if ($tot>($totUsers/$nBuckets)){
+  if ($tot>($totUsers/$nBuckets) || $t eq $max){
     $label="$start to $end visits";
     $label="$end visits" if $start eq $end;
-    printf "\"%s\",%5d,%5d\n",$label,$tot,$ext;
+    $histo->[$b]->{label}=$label;
+    $histo->[$b]->{range}->{start}=$start;
+    $histo->[$b]->{range}->{end}=$end;
+    $histo->[$b]->{counts}->{all}=$tot;
+    $histo->[$b]->{counts}->{nonkbase}=$ext;
     $tot=0;
     $ext=0;
     $start='';
+    $b++;
   }
 }
-$label="$start to $end visits";
-printf "\"%s\",%5d,%5d\n",$label,$tot,$ext;
+
+my $jo;
+$jo->{by_user}=$users;
+$jo->{counts_by_visits}=$counts;
+$jo->{histogram}=$histo;
+$jo->{range}->{start}=$start_date;
+$jo->{range}->{end}=$end_date;
+print $json->encode($jo);
+
