@@ -81,7 +81,7 @@ TYPES = 'types'
 
 LIMIT = 10000
 OR_QUERY_SIZE = 100  # 75 was slower, 150 was slower
-MAX_WS = 50  # for testing, set to < 1 for all ws
+MAX_WS = -1  # for testing, set to < 1 for all ws
 
 
 def _parseArgs():
@@ -92,7 +92,7 @@ def _parseArgs():
                         'script looks for a file called ' + CFG_FILE_DEFAULT +
                         ' in the working directory.',
                         default=CFG_FILE_DEFAULT)
-    parser.add_argument('-j', '--json-output',
+    parser.add_argument('-o', '--output',
                         help='write json output to this directory. If it ' +
                         'does not exist it will be created.')
     return parser.parse_args()
@@ -325,7 +325,7 @@ def make_and_check_output_dir(outdir):
 
 def main():
     args = _parseArgs()
-    outdir = args.json_output
+    outdir = args.output
     make_and_check_output_dir(outdir)
     sourcecfg, targetcfg = get_config(args.config)  # @UnusedVariable
     starttime = time.time()
