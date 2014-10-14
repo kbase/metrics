@@ -55,6 +55,7 @@ CFG_EXCLUDE_WS = 'exclude-ws'
 
 # output file names
 USER_FILE = 'user_data.json'
+WS_FILE = 'ws_data.json'
 
 # collection names
 COL_WS = 'workspaces'
@@ -67,6 +68,7 @@ WS_OBJ_CNT = 'numObj'
 WS_DELETED = 'del'
 WS_OWNER = 'owner'
 WS_ID = 'ws'
+WS_NAME = 'name'
 
 # program fields
 PUBLIC = 'pub'
@@ -77,6 +79,8 @@ DELETED = WS_DELETED
 NOT_DEL = 'std'
 OWNER = WS_OWNER
 TYPES = 'types'
+NAME = WS_NAME
+SHARED = 'shd'
 
 
 LIMIT = 10000
@@ -191,19 +195,27 @@ def get_config(cfgfile):
     return co[s], co[t]
 
 
+# this might need to be batched at some point
 def process_workspaces(db):
     user = 'user'
     all_users = '*'
     acl_id = 'id'
-    ws_cursor = db[COL_WS].find({}, [WS_ID, WS_OBJ_CNT, WS_OWNER, WS_DELETED])
+    ws_cursor = db[COL_WS].find({}, [WS_ID, WS_OBJ_CNT, WS_OWNER, WS_DELETED,
+                                     NAME])
     pub_read = db[COL_ACLS].find({user: all_users}, [acl_id])
-    workspaces = defaultdict(dict)
+    workspaces = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
     for ws in ws_cursor:
+        # this could be faster via batching
+        workspaces[ws[WS_ID]][SHARED] = \
+            db[COL_ACLS].find({acl_id: ws[WS_ID]}).count() - 1
         workspaces[ws[WS_ID]][PUBLIC] = PRIVATE
         workspaces[ws[WS_ID]][WS_OBJ_CNT] = ws[WS_OBJ_CNT]
         workspaces[ws[WS_ID]][OWNER] = ws[WS_OWNER]
+        workspaces[ws[WS_ID]][NAME] = ws[NAME]
     for pr in pub_read:
         workspaces[pr[acl_id]][PUBLIC] = PUBLIC
+        if workspaces[pr[acl_id]][SHARED] > 0:
+            workspaces[pr[acl_id]][SHARED] -= 1
     return workspaces
 
 
@@ -234,6 +246,8 @@ def process_object_versions(db, userdata, typedata, objects, workspaces,
         deleted = DELETED if odel[v[obj_id]] else NOT_DEL
         userdata[wsowner][wspub][deleted][OBJ_CNT] += 1
         userdata[wsowner][wspub][deleted][BYTES] += v[size]
+        workspaces[ws][deleted][OBJ_CNT] += 1
+        workspaces[ws][deleted][BYTES] += v[size]
         t = v[type_].split('-')[0]
         if t in incl_types:
             typedata[wsowner][t][wspub][deleted][OBJ_CNT] += 1
@@ -273,10 +287,7 @@ def process_objects(db, workspaces, exclude_ws, incl_types):
             ttlstart = time.time()
             vers = process_object_versions(db, d, types, objs, workspaces,
                                            incl_types, lim - LIMIT, lim)
-#             size, objsproc = process_objects(
-#                 objs, unique_users, types, workspaces)
 
-#             total_size += size
             print('\ttotal ver query time: ' + str(time.time() - ttlstart))
             print('\ttotal object versions: ' + str(vers))
 #             print('\tobjects processed: ' + str(objsproc))
@@ -338,11 +349,16 @@ def main():
 
     objdata, typedata = process_objects(srcdb, ws, sourcecfg[CFG_EXCLUDE_WS],
                                         sourcecfg[CFG_TYPES])
+
+    for wsid in ws:
+        del ws[wsid][WS_OBJ_CNT]
     for u in objdata:
         objdata[u][TYPES] = typedata[u]
     if outdir:
         with open(os.path.join(outdir, USER_FILE), 'w') as f:
             f.write(json.dumps(objdata))
+        with open(os.path.join(outdir, WS_FILE), 'w') as f:
+            f.write(json.dumps(ws))
 
 #     rows = [['user',
 #              'pub-bytes', 'pub-#', 'pub-del-bytes', 'pub-del-#',
