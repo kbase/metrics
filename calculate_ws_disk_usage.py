@@ -33,6 +33,7 @@ import os
 from collections import defaultdict
 import datetime
 from argparse import ArgumentParser
+import json
 
 # where to get credentials (don't check these into git, idiot)
 CFG_FILE_DEFAULT = 'usage.cfg'
@@ -45,26 +46,35 @@ CFG_DB = 'db'
 CFG_USER = 'user'
 CFG_PWD = 'pwd'
 
+CFG_TYPES = 'types'
+CFG_EXCLUDE_WS = 'exclude-ws'
+
 # collection names
 COL_WS = 'workspaces'
 COL_ACLS = 'workspaceACLs'
 COL_OBJ = 'workspaceObjects'
 COL_VERS = 'workspaceObjVersions'
 
+# workspace fields
+WS_OBJ_CNT = 'numObj'
+WS_DELETED = 'del'
+WS_OWNER = 'owner'
+WS_ID = 'ws'
+
+# program fields
 PUBLIC = 'pub'
 PRIVATE = 'priv'
-
-WS_OBJ_CNT = 'numObj'
-DELETED = 'del'
-OWNER = 'owner'
-
-OBJ_CNT = 'objs'
-BYTES = 'b'
+OBJ_CNT = 'cnt'
+BYTES = 'byte'
+DELETED = WS_DELETED
+NOT_DEL = 'std'
+OWNER = WS_OWNER
+TYPES = 'types'
 
 
 LIMIT = 10000
 OR_QUERY_SIZE = 100  # 75 was slower, 150 was slower
-MAX_WS = -1  # for testing, set to < 1 for all ws
+MAX_WS = 10  # for testing, set to < 1 for all ws
 
 
 def _parseArgs():
@@ -76,7 +86,8 @@ def _parseArgs():
                         ' in the working directory.',
                         default=CFG_FILE_DEFAULT)
     parser.add_argument('-j', '--json-output',
-                        help='write json output to this file.')
+                        help='write json output to this directory. If it ' +
+                        'does not exist it will be created.')
     return parser.parse_args()
 
 
@@ -132,6 +143,7 @@ def get_config(cfgfile):
         except ValueError:
             print('Port {} is not a valid port number at {}.{}'.format(
                 co[sec][CFG_PORT], sec, CFG_PORT))
+            sys.exit(1)
     for sec in (s, t):
         u = process_optional_key(co, sec, CFG_USER)
         p = process_optional_key(co, sec, CFG_PWD)
@@ -139,24 +151,41 @@ def get_config(cfgfile):
             print ('If {} specified, {} must be specified in section '.format(
                 CFG_USER, CFG_PWD) + '{} from file {}'.format(sec, cfgfile))
             sys.exit(1)
+
+    types = co[s][CFG_TYPES]
+    if types:
+        if type(types) is not list:
+            co[s][CFG_TYPES] = set([types])
+        else:
+            co[s][CFG_TYPES] = set(types)
+    exclude = co[s][CFG_EXCLUDE_WS]
+    if exclude:
+        if type(exclude) is not list:
+            exclude = [exclude]
+        ints = set()
+        for ws in exclude:
+            try:
+                ints.add(int(ws))
+            except ValueError:
+                print ('Workspace id {} must be an integer'.format(ws))
+                sys.exit(1)
+        co[s][CFG_EXCLUDE_WS] = ints
     return co[s], co[t]
 
 
 def process_workspaces(db):
-    ws_id = 'ws'
     user = 'user'
     all_users = '*'
     acl_id = 'id'
-    ws_cursor = db[COL_WS].find({}, [ws_id, WS_OBJ_CNT, OWNER, DELETED])
+    ws_cursor = db[COL_WS].find({}, [WS_ID, WS_OBJ_CNT, WS_OWNER, WS_DELETED])
     pub_read = db[COL_ACLS].find({user: all_users}, [acl_id])
     workspaces = defaultdict(dict)
     for ws in ws_cursor:
-        workspaces[ws[ws_id]][PUBLIC] = False
-        workspaces[ws[ws_id]][WS_OBJ_CNT] = ws[WS_OBJ_CNT]
-        workspaces[ws[ws_id]][OWNER] = ws[OWNER]
-        workspaces[ws[ws_id]][DELETED] = ws[DELETED]
+        workspaces[ws[WS_ID]][PUBLIC] = PRIVATE
+        workspaces[ws[WS_ID]][WS_OBJ_CNT] = ws[WS_OBJ_CNT]
+        workspaces[ws[WS_ID]][OWNER] = ws[WS_OWNER]
     for pr in pub_read:
-        workspaces[pr[acl_id]][PUBLIC] = True
+        workspaces[pr[acl_id]][PUBLIC] = PUBLIC
     return workspaces
 
 
@@ -164,7 +193,6 @@ def process_object_versions(db, userdata, objects, workspaces,
                             start_id, end_id):
     # note all objects are from the same workspace
     obj_id = 'id'
-    ws_id = 'ws'
     size = 'size'
 
     odel = {}
@@ -173,23 +201,23 @@ def process_object_versions(db, userdata, objects, workspaces,
     if not odel:
         return 0
 
-    ws = o[ws_id]  # all objects in same ws
+    ws = o[WS_ID]  # all objects in same ws
     wsowner = workspaces[ws][OWNER]
     wspub = workspaces[ws][PUBLIC]
 
-    res = db[COL_VERS].find({ws_id: ws,
+    res = db[COL_VERS].find({WS_ID: ws,
                              obj_id: {'$gt': start_id, '$lte': end_id}},
-                            [ws_id, obj_id, size])
+                            [WS_ID, obj_id, size])
     vers = 0
     for v in res:
         vers += 1
-        deleted = odel[v[obj_id]]
+        deleted = DELETED if odel[v[obj_id]] else NOT_DEL
         userdata[wsowner][wspub][deleted][OBJ_CNT] += 1
         userdata[wsowner][wspub][deleted][BYTES] += v[size]
     return vers
 
 
-def process_objects(db, workspaces):
+def process_objects(db, workspaces, exclude_ws):
     ws_id = 'ws'
     obj_id = 'id'
     # user -> pub -> del -> du or objs -> #
@@ -200,9 +228,13 @@ def process_objects(db, workspaces):
     for ws in workspaces:
         if MAX_WS > 0 and wscount > MAX_WS:
             break
+        wscount += 1
         wsobjcount = workspaces[ws][WS_OBJ_CNT]
         print('\nProcessing workspace {}, {} objects'.format(
             ws, wsobjcount))
+        if ws in exclude_ws:
+            print('\tIn exclude list, skipping')
+            continue
         for lim in xrange(LIMIT, wsobjcount + LIMIT, LIMIT):
             print('\tProcessing objects {} - {} at {}'.format(
                 lim - LIMIT + 1, wsobjcount if lim > wsobjcount else lim,
@@ -210,7 +242,7 @@ def process_objects(db, workspaces):
             sys.stdout.flush()
             objtime = time.time()
             query = {ws_id: ws, obj_id: {'$gt': lim - LIMIT, '$lte': lim}}
-            objs = db[COL_OBJ].find(query, [ws_id, obj_id, DELETED])
+            objs = db[COL_OBJ].find(query, [ws_id, obj_id, WS_DELETED])
             print('\ttotal obj query time: ' + str(time.time() - objtime))
             ttlstart = time.time()
             vers = process_object_versions(db, d, objs, workspaces,
@@ -225,7 +257,6 @@ def process_objects(db, workspaces):
 #             objcount += objsproc
 #             print('total objects processed: ' + str(objcount))
             sys.stdout.flush()
-        wscount += 1
     return d
 
 
@@ -254,7 +285,7 @@ def print_table(rows):
 
 def main():
     args = _parseArgs()
-    sourcecfg, targetcfg = get_config(args.config)
+    sourcecfg, targetcfg = get_config(args.config)  # @UnusedVariable
     starttime = time.time()
     srcmongo = MongoClient(sourcecfg[CFG_HOST], sourcecfg[CFG_PORT],
                            slaveOk=True)
@@ -263,15 +294,9 @@ def main():
         srcdb.authenticate(sourcecfg[CFG_USER], sourcecfg[CFG_PWD])
     ws = process_workspaces(srcdb)
 
-    objdata = process_objects(srcdb, ws)
-#     print(objdata)
-#     print('name', 'pub', 'del', 'type', '#')
-#     for name_ in sorted(objdata):
-#         for pub in sorted(objdata[name_], reverse=True):
-#             for deleted in sorted(objdata[name_][pub], reverse=True):
-#                 for t in sorted(objdata[name_][pub][deleted]):
-#                     print(name_, pub, deleted, t,
-#                           objdata[name_][pub][deleted][t])
+    objdata = process_objects(srcdb, ws, sourcecfg[CFG_EXCLUDE_WS])
+    print(json.dumps(objdata))
+
     rows = [['user',
              'pub-bytes', 'pub-#', 'pub-del-bytes', 'pub-del-#',
              'priv-bytes', 'priv-#', 'priv-del-bytes', 'priv-del-#']]
@@ -280,14 +305,14 @@ def main():
     for name_ in sorted(objdata):
         row = [name_]
         rows.append(row)
-        row.append(str(objdata[name_][True][False][BYTES]))
-        row.append(str(objdata[name_][True][False][OBJ_CNT]))
-        row.append(str(objdata[name_][True][True][BYTES]))
-        row.append(str(objdata[name_][True][True][OBJ_CNT]))
-        row.append(str(objdata[name_][False][False][BYTES]))
-        row.append(str(objdata[name_][False][False][OBJ_CNT]))
-        row.append(str(objdata[name_][False][True][BYTES]))
-        row.append(str(objdata[name_][False][True][OBJ_CNT]))
+        row.append(str(objdata[name_][PUBLIC][NOT_DEL][BYTES]))
+        row.append(str(objdata[name_][PUBLIC][NOT_DEL][OBJ_CNT]))
+        row.append(str(objdata[name_][PUBLIC][DELETED][BYTES]))
+        row.append(str(objdata[name_][PUBLIC][DELETED][OBJ_CNT]))
+        row.append(str(objdata[name_][PRIVATE][NOT_DEL][BYTES]))
+        row.append(str(objdata[name_][PRIVATE][NOT_DEL][OBJ_CNT]))
+        row.append(str(objdata[name_][PRIVATE][DELETED][BYTES]))
+        row.append(str(objdata[name_][PRIVATE][DELETED][OBJ_CNT]))
 
     print_table(rows)
     # print time, object data
