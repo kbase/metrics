@@ -45,6 +45,9 @@ CFG_DB = 'db'
 CFG_USER = 'user'
 CFG_PWD = 'pwd'
 
+CFG_TYPES = 'types'
+CFG_EXCLUDE_WS = 'exclude-ws'
+
 # collection names
 COL_WS = 'workspaces'
 COL_ACLS = 'workspaceACLs'
@@ -76,7 +79,8 @@ def _parseArgs():
                         ' in the working directory.',
                         default=CFG_FILE_DEFAULT)
     parser.add_argument('-j', '--json-output',
-                        help='write json output to this file.')
+                        help='write json output to this directory. If it ' +
+                        'does not exist it will be created.')
     return parser.parse_args()
 
 
@@ -132,6 +136,7 @@ def get_config(cfgfile):
         except ValueError:
             print('Port {} is not a valid port number at {}.{}'.format(
                 co[sec][CFG_PORT], sec, CFG_PORT))
+            sys.exit(1)
     for sec in (s, t):
         u = process_optional_key(co, sec, CFG_USER)
         p = process_optional_key(co, sec, CFG_PWD)
@@ -139,6 +144,23 @@ def get_config(cfgfile):
             print ('If {} specified, {} must be specified in section '.format(
                 CFG_USER, CFG_PWD) + '{} from file {}'.format(sec, cfgfile))
             sys.exit(1)
+
+    types = co[s][CFG_TYPES]
+    if types:
+        if type(types) is not list:
+            co[s][CFG_TYPES] = [types]
+    exclude = co[s][CFG_EXCLUDE_WS]
+    if exclude:
+        if type(exclude) is not list:
+            exclude = [exclude]
+        ints = []
+        for ws in exclude:
+            try:
+                ints.append(int(ws))
+            except ValueError:
+                print ('Workspace id {} must be an integer'.format(ws))
+                sys.exit(1)
+        co[s][CFG_EXCLUDE_WS] = ints
     return co[s], co[t]
 
 
@@ -254,7 +276,7 @@ def print_table(rows):
 
 def main():
     args = _parseArgs()
-    sourcecfg, targetcfg = get_config(args.config)
+    sourcecfg, targetcfg = get_config(args.config)  # @UnusedVariable
     starttime = time.time()
     srcmongo = MongoClient(sourcecfg[CFG_HOST], sourcecfg[CFG_PORT],
                            slaveOk=True)
@@ -264,14 +286,7 @@ def main():
     ws = process_workspaces(srcdb)
 
     objdata = process_objects(srcdb, ws)
-#     print(objdata)
-#     print('name', 'pub', 'del', 'type', '#')
-#     for name_ in sorted(objdata):
-#         for pub in sorted(objdata[name_], reverse=True):
-#             for deleted in sorted(objdata[name_][pub], reverse=True):
-#                 for t in sorted(objdata[name_][pub][deleted]):
-#                     print(name_, pub, deleted, t,
-#                           objdata[name_][pub][deleted][t])
+
     rows = [['user',
              'pub-bytes', 'pub-#', 'pub-del-bytes', 'pub-del-#',
              'priv-bytes', 'priv-#', 'priv-del-bytes', 'priv-del-#']]
