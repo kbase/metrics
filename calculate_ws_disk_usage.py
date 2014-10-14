@@ -54,20 +54,26 @@ COL_ACLS = 'workspaceACLs'
 COL_OBJ = 'workspaceObjects'
 COL_VERS = 'workspaceObjVersions'
 
+# workspace fields
+WS_OBJ_CNT = 'numObj'
+WS_DELETED = 'del'
+WS_OWNER = 'owner'
+WS_ID = 'ws'
+
+# program fields
 PUBLIC = 'pub'
 PRIVATE = 'priv'
-
-WS_OBJ_CNT = 'numObj'
-DELETED = 'del'
-OWNER = 'owner'
-
-OBJ_CNT = 'objs'
-BYTES = 'b'
+OBJ_CNT = 'cnt'
+BYTES = 'byte'
+DELETED = WS_DELETED
+NOT_DEL = 'std'
+OWNER = WS_OWNER
+TYPES = 'types'
 
 
 LIMIT = 10000
 OR_QUERY_SIZE = 100  # 75 was slower, 150 was slower
-MAX_WS = -1  # for testing, set to < 1 for all ws
+MAX_WS = 10  # for testing, set to < 1 for all ws
 
 
 def _parseArgs():
@@ -167,18 +173,17 @@ def get_config(cfgfile):
 
 
 def process_workspaces(db):
-    ws_id = 'ws'
     user = 'user'
     all_users = '*'
     acl_id = 'id'
-    ws_cursor = db[COL_WS].find({}, [ws_id, WS_OBJ_CNT, OWNER, DELETED])
+    ws_cursor = db[COL_WS].find({}, [WS_ID, WS_OBJ_CNT, WS_OWNER, WS_DELETED])
     pub_read = db[COL_ACLS].find({user: all_users}, [acl_id])
     workspaces = defaultdict(dict)
     for ws in ws_cursor:
-        workspaces[ws[ws_id]][PUBLIC] = False
-        workspaces[ws[ws_id]][WS_OBJ_CNT] = ws[WS_OBJ_CNT]
-        workspaces[ws[ws_id]][OWNER] = ws[OWNER]
-        workspaces[ws[ws_id]][DELETED] = ws[DELETED]
+        workspaces[ws[WS_ID]][PUBLIC] = False
+        workspaces[ws[WS_ID]][WS_OBJ_CNT] = ws[WS_OBJ_CNT]
+        workspaces[ws[WS_ID]][OWNER] = ws[WS_OWNER]
+        workspaces[ws[WS_ID]][DELETED] = ws[WS_DELETED]
     for pr in pub_read:
         workspaces[pr[acl_id]][PUBLIC] = True
     return workspaces
@@ -188,7 +193,6 @@ def process_object_versions(db, userdata, objects, workspaces,
                             start_id, end_id):
     # note all objects are from the same workspace
     obj_id = 'id'
-    ws_id = 'ws'
     size = 'size'
 
     odel = {}
@@ -197,13 +201,13 @@ def process_object_versions(db, userdata, objects, workspaces,
     if not odel:
         return 0
 
-    ws = o[ws_id]  # all objects in same ws
+    ws = o[WS_ID]  # all objects in same ws
     wsowner = workspaces[ws][OWNER]
     wspub = workspaces[ws][PUBLIC]
 
-    res = db[COL_VERS].find({ws_id: ws,
+    res = db[COL_VERS].find({WS_ID: ws,
                              obj_id: {'$gt': start_id, '$lte': end_id}},
-                            [ws_id, obj_id, size])
+                            [WS_ID, obj_id, size])
     vers = 0
     for v in res:
         vers += 1
@@ -238,7 +242,7 @@ def process_objects(db, workspaces, exclude_ws):
             sys.stdout.flush()
             objtime = time.time()
             query = {ws_id: ws, obj_id: {'$gt': lim - LIMIT, '$lte': lim}}
-            objs = db[COL_OBJ].find(query, [ws_id, obj_id, DELETED])
+            objs = db[COL_OBJ].find(query, [ws_id, obj_id, WS_DELETED])
             print('\ttotal obj query time: ' + str(time.time() - objtime))
             ttlstart = time.time()
             vers = process_object_versions(db, d, objs, workspaces,
