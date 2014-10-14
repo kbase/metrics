@@ -20,9 +20,12 @@ reasons:
 All versions are included in the counts and disk usage statistics.
 
 Don't run this during high loads - runs through every object in the DB
-Hasn't been optimized much either
+Hasn't been optimized much either, could probably optimize by not querying
+ws by ws.
 '''
 
+# TODO: checks to see this is accurate
+# TODO: some basic sanity checking
 
 from __future__ import print_function
 from configobj import ConfigObj
@@ -78,7 +81,7 @@ TYPES = 'types'
 
 LIMIT = 10000
 OR_QUERY_SIZE = 100  # 75 was slower, 150 was slower
-MAX_WS = 10  # for testing, set to < 1 for all ws
+MAX_WS = 50  # for testing, set to < 1 for all ws
 
 
 def _parseArgs():
@@ -204,11 +207,13 @@ def process_workspaces(db):
     return workspaces
 
 
-def process_object_versions(db, userdata, objects, workspaces,
-                            start_id, end_id):
+# this method sig is getting way to big
+def process_object_versions(db, userdata, typedata, objects, workspaces,
+                            incl_types, start_id, end_id):
     # note all objects are from the same workspace
     obj_id = 'id'
     size = 'size'
+    type_ = 'type'
 
     odel = {}
     for o in objects:
@@ -222,23 +227,29 @@ def process_object_versions(db, userdata, objects, workspaces,
 
     res = db[COL_VERS].find({WS_ID: ws,
                              obj_id: {'$gt': start_id, '$lte': end_id}},
-                            [WS_ID, obj_id, size])
+                            [WS_ID, obj_id, size, type_])
     vers = 0
     for v in res:
         vers += 1
         deleted = DELETED if odel[v[obj_id]] else NOT_DEL
         userdata[wsowner][wspub][deleted][OBJ_CNT] += 1
         userdata[wsowner][wspub][deleted][BYTES] += v[size]
+        t = v[type_].split('-')[0]
+        if t in incl_types:
+            typedata[wsowner][t][wspub][deleted][OBJ_CNT] += 1
+            typedata[wsowner][t][wspub][deleted][BYTES] += v[size]
     return vers
 
 
-def process_objects(db, workspaces, exclude_ws):
+def process_objects(db, workspaces, exclude_ws, incl_types):
     ws_id = 'ws'
     obj_id = 'id'
     # user -> pub -> del -> du or objs -> #
-    # TODO switch to len 8 named tuple, this is stupid
     d = defaultdict(lambda: defaultdict(lambda: defaultdict(
         lambda: defaultdict(int))))
+    # user -> type -> pub -> del -> du or objs -> #
+    types = defaultdict(lambda: defaultdict(lambda: defaultdict(
+        lambda: defaultdict(lambda: defaultdict(int)))))
     wscount = 0
     for ws in workspaces:
         if MAX_WS > 0 and wscount > MAX_WS:
@@ -260,8 +271,8 @@ def process_objects(db, workspaces, exclude_ws):
             objs = db[COL_OBJ].find(query, [ws_id, obj_id, WS_DELETED])
             print('\ttotal obj query time: ' + str(time.time() - objtime))
             ttlstart = time.time()
-            vers = process_object_versions(db, d, objs, workspaces,
-                                           lim - LIMIT, lim)
+            vers = process_object_versions(db, d, types, objs, workspaces,
+                                           incl_types, lim - LIMIT, lim)
 #             size, objsproc = process_objects(
 #                 objs, unique_users, types, workspaces)
 
@@ -272,7 +283,7 @@ def process_objects(db, workspaces, exclude_ws):
 #             objcount += objsproc
 #             print('total objects processed: ' + str(objcount))
             sys.stdout.flush()
-    return d
+    return d, types
 
 
 # from https://gist.github.com/lonetwin/4721748
@@ -325,29 +336,32 @@ def main():
         srcdb.authenticate(sourcecfg[CFG_USER], sourcecfg[CFG_PWD])
     ws = process_workspaces(srcdb)
 
-    objdata = process_objects(srcdb, ws, sourcecfg[CFG_EXCLUDE_WS])
+    objdata, typedata = process_objects(srcdb, ws, sourcecfg[CFG_EXCLUDE_WS],
+                                        sourcecfg[CFG_TYPES])
+    for u in objdata:
+        objdata[u][TYPES] = typedata[u]
     if outdir:
         with open(os.path.join(outdir, USER_FILE), 'w') as f:
             f.write(json.dumps(objdata))
 
-    rows = [['user',
-             'pub-bytes', 'pub-#', 'pub-del-bytes', 'pub-del-#',
-             'priv-bytes', 'priv-#', 'priv-del-bytes', 'priv-del-#']]
+#     rows = [['user',
+#              'pub-bytes', 'pub-#', 'pub-del-bytes', 'pub-del-#',
+#              'priv-bytes', 'priv-#', 'priv-del-bytes', 'priv-del-#']]
 
     print('\nElapsed time: ' + str(time.time() - starttime))
-    for name_ in sorted(objdata):
-        row = [name_]
-        rows.append(row)
-        row.append(str(objdata[name_][PUBLIC][NOT_DEL][BYTES]))
-        row.append(str(objdata[name_][PUBLIC][NOT_DEL][OBJ_CNT]))
-        row.append(str(objdata[name_][PUBLIC][DELETED][BYTES]))
-        row.append(str(objdata[name_][PUBLIC][DELETED][OBJ_CNT]))
-        row.append(str(objdata[name_][PRIVATE][NOT_DEL][BYTES]))
-        row.append(str(objdata[name_][PRIVATE][NOT_DEL][OBJ_CNT]))
-        row.append(str(objdata[name_][PRIVATE][DELETED][BYTES]))
-        row.append(str(objdata[name_][PRIVATE][DELETED][OBJ_CNT]))
+#     for name_ in sorted(objdata):
+#         row = [name_]
+#         rows.append(row)
+#         row.append(str(objdata[name_][PUBLIC][NOT_DEL][BYTES]))
+#         row.append(str(objdata[name_][PUBLIC][NOT_DEL][OBJ_CNT]))
+#         row.append(str(objdata[name_][PUBLIC][DELETED][BYTES]))
+#         row.append(str(objdata[name_][PUBLIC][DELETED][OBJ_CNT]))
+#         row.append(str(objdata[name_][PRIVATE][NOT_DEL][BYTES]))
+#         row.append(str(objdata[name_][PRIVATE][NOT_DEL][OBJ_CNT]))
+#         row.append(str(objdata[name_][PRIVATE][DELETED][BYTES]))
+#         row.append(str(objdata[name_][PRIVATE][DELETED][OBJ_CNT]))
 
-    print_table(rows)
+#     print_table(rows)
     # print time, object data
 
 if __name__ == '__main__':
