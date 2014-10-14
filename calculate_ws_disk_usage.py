@@ -34,6 +34,7 @@ from collections import defaultdict
 import datetime
 from argparse import ArgumentParser
 import json
+import errno
 
 # where to get credentials (don't check these into git, idiot)
 CFG_FILE_DEFAULT = 'usage.cfg'
@@ -48,6 +49,9 @@ CFG_PWD = 'pwd'
 
 CFG_TYPES = 'types'
 CFG_EXCLUDE_WS = 'exclude-ws'
+
+# output file names
+USER_FILE = 'user_data.json'
 
 # collection names
 COL_WS = 'workspaces'
@@ -112,6 +116,17 @@ def chunkiter(iterable, size):
         yield inneriter(it.next(), it, size)
 
 
+# http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
+
+
 def process_optional_key(configObj, section, key):
     v = configObj[section].get(key)
     v = None if v == '' else v
@@ -121,7 +136,7 @@ def process_optional_key(configObj, section, key):
 
 def get_config(cfgfile):
     if not os.path.isfile(cfgfile) and not os.access(cfgfile, os.R_OK):
-        print ('Cannot read file ' + cfgfile)
+        print('Cannot read file ' + cfgfile)
         sys.exit(1)
     co = ConfigObj(cfgfile)
     s = CFG_SECTION_SOURCE
@@ -283,8 +298,24 @@ def print_table(rows):
         print(" | ".join(format(cdata, "%ds" % width) for width, cdata in zip(widths, row))) #@IgnorePep8
 
 
+def make_and_check_output_dir(outdir):
+    if outdir:
+        try:
+            mkdir_p(outdir)
+        except Exception as e:
+            print(e.__repr__())
+            print("Couldn't create or read output directory {}: {}".format(
+                outdir, e.strerror))
+            sys.exit(1)
+        if not os.path.isdir(outdir) or not os.access(outdir, os.W_OK):
+            print('Cannot write to directory ' + outdir)
+            sys.exit(1)
+
+
 def main():
     args = _parseArgs()
+    outdir = args.json_output
+    make_and_check_output_dir(outdir)
     sourcecfg, targetcfg = get_config(args.config)  # @UnusedVariable
     starttime = time.time()
     srcmongo = MongoClient(sourcecfg[CFG_HOST], sourcecfg[CFG_PORT],
@@ -295,7 +326,9 @@ def main():
     ws = process_workspaces(srcdb)
 
     objdata = process_objects(srcdb, ws, sourcecfg[CFG_EXCLUDE_WS])
-    print(json.dumps(objdata))
+    if outdir:
+        with open(os.path.join(outdir, USER_FILE), 'w') as f:
+            f.write(json.dumps(objdata))
 
     rows = [['user',
              'pub-bytes', 'pub-#', 'pub-del-bytes', 'pub-del-#',
