@@ -7,10 +7,18 @@
 #
 
 use JSON;
+use strict;
+use Date::Calc qw(Delta_Days);
 
 my $json = JSON->new->allow_nonref;
+my $nBuckets=6;
+my $users;
+my $maxVisits;
+my %staff;
+my %visits;
+my $users;
+my $totUsers=0;
 
-my $nBuckets=5;
 
 # Read in the Staff list
 #
@@ -26,10 +34,10 @@ close E;
 #
 $_=<STDIN>;
 chomp;
-@userl=split /,/;
+my @userl=split /,/;
 shift @userl;
 for my $u (@userl){
-  next if defined $staff{$_};
+  next if defined $staff{$u};
   next if $u eq '"-"';
   next if $u eq 'NULL';
   next if $u =~ '_span';
@@ -39,19 +47,21 @@ for my $u (@userl){
 
 my $start_date=0;
 my $end_date=0;
+my $time;
+my $counts;
 
 # Go through each day and tally up visits
 #
 while(<STDIN>){
   chomp;
-  @list=split /,/;
+  my @list=split /,/;
   $time=shift @list;
   $time=~s/T.*//;
   $time=~s/"//;
-  $i=0;
+  my $i=0;
   $start_date=$time unless $start_date ne 0;
   foreach (@list){
-    $user=$userl[$i];
+    my $user=$userl[$i];
     $i++;
     # Skip if the user isn't in our good list
     #
@@ -61,19 +71,25 @@ while(<STDIN>){
     $users->{$user}->{first}=$time if ! defined $users->{$user}->{first};
     $users->{$user}->{last}=$time;
     $visits{$user}++;
+    $counts->{visitors_by_date_all}->{$time}++;
+    $counts->{visitors_by_date_ext}->{$time}++ if ! defined $staff{$user};
   }
 }
 $end_date=$time;
 
-# Figure out how many users there are and the max visits
+# Calculate user related stats
 #
-foreach my $u (sort {$visits{$a}<=>$visits{$b}} keys %visits){
-  next if $visits{$u} < 2;
-  $totUsers++;
-  $max=$visits{$u} if $visits{$u}>$max;
+foreach my $u (%{$users}){
+  next if ! defined $visits{$u};
+  $maxVisits=$visits{$u} if $visits{$u}>$maxVisits;
+  my @st=split /-/,$users->{$u}->{first};
+  my @en=split /-/,$end_date;
+  my $span=Delta_Days(@st,@en);
+  $users->{$u}->{span}=$span;
+  $users->{$u}->{visitation_rate}=$visits{$u}/$span; 
+  $totUsers++ if $visits{$u} > 1;
 }
 
-my $counts;
 foreach my $t (sort keys %visits){
   next if $visits{$t} < 2;
   my $bucket=int($visits{$t});
@@ -84,18 +100,20 @@ foreach my $t (sort keys %visits){
 my $end;
 my $b=0;
 my $histo;
+my $tot=0;
+my $ext=0;
+my $start='';
 #$histo->{'buckets'}=$nBuckets;
-$end=365;
-foreach my $t (2..$max){
-  $start="$t" if $start eq '';
+foreach my $t (2..$maxVisits){
+  my $start="$t" if $start eq '';
   my $ct=$counts->{'all'}->{$t};
   my $ex=$counts->{'nonkbase'}->{$t};
   next unless defined $ct;
   $tot+=$ct;
   $ext+=$ex;
   $end=$t;
-  if ($tot>($totUsers/$nBuckets) || $t eq $max){
-    $label="$start to $end visits";
+  if ($tot>($totUsers/$nBuckets) || $t eq $maxVisits){
+    my $label="$start to $end visits";
     $label="$end visits" if $start eq $end;
     $histo->[$b]->{label}=$label;
     $histo->[$b]->{range}->{start}=$start;
