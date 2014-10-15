@@ -191,16 +191,20 @@ def processNames(srcdb, excluded_names):
     return uuid2name, excluded
 
 
-def processNodeRecs(userdata, recs, uuid2name):
+def processNodeRecs(userdata, recs, uuid2name, excludedUUIDs):
     acl = 'acl'
     read = 'read'
     owner = 'owner'
     file_ = 'file'
     size = 'size'
     count = 0
+    ttl = 0
     for rec in recs:
+        ttl += 1
         s = rec[file_][size]
         o = rec[acl].get(owner)
+        if o in excludedUUIDs:
+            continue
         if not o:
             o = NO_OWNER
         else:
@@ -210,7 +214,7 @@ def processNodeRecs(userdata, recs, uuid2name):
         userdata[o][pub][OBJ_CNT] += 1
         userdata[o][pub][BYTES] += s
         count += 1
-    return count
+    return count, ttl
 
 
 def processNodes(srcdb, uuid2name, excludedUUIDs):
@@ -225,19 +229,21 @@ def processNodes(srcdb, uuid2name, excludedUUIDs):
     hexwidth = int(math.ceil(math.log(rec_cnt/MAX_NODES_PER_CALL) /
                              math.log(16)))
     if hexwidth < 1:
+        t = time.time()
         print('Processing all nodes')
-        recs = nodecol.find({NODE_OWNER: {'$nin': excludedUUIDs}}, proj)
-        count = processNodeRecs(d, recs, uuid2name)
-        print('Processed {} nodes'.format(count))
+        recs = nodecol.find({}, proj)
+        count, ttl = processNodeRecs(d, recs, uuid2name, excludedUUIDs)
+        print('Processed {} nodes in {} s, excluded {}\n'.format(
+            count, time.time() - t, ttl))
     else:
         hexinc = HexIterator(hexwidth)
         for prefix in hexinc:
             t = time.time()
             print('Processing nodes with prefix ' + prefix)
-            recs = nodecol.find({NODE_OWNER: {'$nin': excludedUUIDs},
-                                 NODE_ID: {'$regex': '^' + prefix}}, proj)
-            count = processNodeRecs(d, recs, uuid2name)
-            print('Processed {} nodes in {} s'.format(count, time.time() - t))
+            recs = nodecol.find({NODE_ID: {'$regex': '^' + prefix}}, proj)
+            count, ttl = processNodeRecs(d, recs, uuid2name, excludedUUIDs)
+            print('Processed {} nodes in {} s, excluded {}\n'.format(
+                count, time.time() - t, ttl))
     return d
 
 
