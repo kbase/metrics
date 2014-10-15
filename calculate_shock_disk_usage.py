@@ -198,14 +198,14 @@ def processNodeRecs(userdata, recs, uuid2name):
     file_ = 'file'
     size = 'size'
     count = 0
-    for r in recs:
-        s = r[file_][size]
-        o = r[acl].get(owner)
+    for rec in recs:
+        s = rec[file_][size]
+        o = rec[acl].get(owner)
         if not o:
             o = NO_OWNER
         else:
-            o = uuid2name(o)
-        read = r[acl][read]
+            o = uuid2name[o]
+        r = rec[acl][read]
         pub = PUBLIC if len(r) == 0 else PRIVATE
         userdata[o][pub][OBJ_CNT] += 1
         userdata[o][pub][BYTES] += s
@@ -216,14 +216,14 @@ def processNodeRecs(userdata, recs, uuid2name):
 def processNodes(srcdb, uuid2name, excludedUUIDs):
     nodecol = srcdb[COL_NODE]
     proj = [NODE_OWNER, NODE_READ, NODE_SIZE]
-    d = defaultdict(lambda: defaultdict(int))
-    print('Counting non-excluded records... ', end='')
+    d = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+    print('Counting records... ', end='')
     sys.stdout.flush()
-    # TODO this query is insanely slow - just count the collection and exclude
-    # on the record query
-    rec_cnt = nodecol.find({NODE_OWNER: {'$nin': excludedUUIDs}}).count()
+    # querying a count with a $nin on excludedUUIDs is insanely slow
+    rec_cnt = nodecol.find().count()
     print(rec_cnt)
-    hexwidth = math.log(rec_cnt/MAX_NODES_PER_CALL) / math.log(16)
+    hexwidth = int(math.ceil(math.log(rec_cnt/MAX_NODES_PER_CALL) /
+                             math.log(16)))
     if hexwidth < 1:
         print('Processing all nodes')
         recs = nodecol.find({NODE_OWNER: {'$nin': excludedUUIDs}}, proj)
@@ -232,11 +232,12 @@ def processNodes(srcdb, uuid2name, excludedUUIDs):
     else:
         hexinc = HexIterator(hexwidth)
         for prefix in hexinc:
+            t = time.time()
             print('Processing nodes with prefix ' + prefix)
             recs = nodecol.find({NODE_OWNER: {'$nin': excludedUUIDs},
                                  NODE_ID: {'$regex': '^' + prefix}}, proj)
             count = processNodeRecs(d, recs, uuid2name)
-            print('Processed {} nodes'.format(count))
+            print('Processed {} nodes in {} s'.format(count, time.time() - t))
     return d
 
 
