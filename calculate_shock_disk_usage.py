@@ -205,15 +205,15 @@ def processNodes(srcdb, uuid2name, excludedUUIDs):
     # turns out the stupid query is the fastest, trying to page via UUID
     # prefixes is way slower (confirmed was only scanning ~2k records via
     # explain(), so not sure why it's so slow - was taking 50s for the 2k
-    # records). Using $nin or $ne to exclude UUIDs was also obscenely slow.
+    # records).
     # See previous commits for those implementations.
     # Note skip() / limit() don't scale:
     # http://docs.mongodb.org/manual/reference/method/cursor.skip/
     # this approach won't work for most cases - only useful if you want
     # to scan the whole collection and can let mongo do the batching for you.\
 
-    # TODO - actually retry $nin like this - might be slightly faster
-    recs = srcdb[COL_NODE].find({}, [NODE_OWNER, NODE_READ, NODE_SIZE])
+    recs = srcdb[COL_NODE].find({NODE_OWNER: {'$nin': excludedUUIDs}},
+                                [NODE_OWNER, NODE_READ, NODE_SIZE])
     processNodeRecs(d, recs, uuid2name, excludedUUIDs)
     return d
 
