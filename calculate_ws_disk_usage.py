@@ -20,9 +20,12 @@ reasons:
 All versions are included in the counts and disk usage statistics.
 
 Don't run this during high loads - runs through every object in the DB
-Hasn't been optimized much either
+Hasn't been optimized much either, could probably optimize by not querying
+ws by ws.
 '''
 
+# TODO: checks to see this is accurate
+# TODO: some basic sanity checking
 
 from __future__ import print_function
 from configobj import ConfigObj
@@ -34,6 +37,7 @@ from collections import defaultdict
 import datetime
 from argparse import ArgumentParser
 import json
+import errno
 
 # where to get credentials (don't check these into git, idiot)
 CFG_FILE_DEFAULT = 'usage.cfg'
@@ -49,6 +53,10 @@ CFG_PWD = 'pwd'
 CFG_TYPES = 'types'
 CFG_EXCLUDE_WS = 'exclude-ws'
 
+# output file names
+USER_FILE = 'user_data.json'
+WS_FILE = 'ws_data.json'
+
 # collection names
 COL_WS = 'workspaces'
 COL_ACLS = 'workspaceACLs'
@@ -60,6 +68,7 @@ WS_OBJ_CNT = 'numObj'
 WS_DELETED = 'del'
 WS_OWNER = 'owner'
 WS_ID = 'ws'
+WS_NAME = 'name'
 
 # program fields
 PUBLIC = 'pub'
@@ -70,11 +79,13 @@ DELETED = WS_DELETED
 NOT_DEL = 'std'
 OWNER = WS_OWNER
 TYPES = 'types'
+NAME = WS_NAME
+SHARED = 'shd'
 
 
 LIMIT = 10000
 OR_QUERY_SIZE = 100  # 75 was slower, 150 was slower
-MAX_WS = 10  # for testing, set to < 1 for all ws
+MAX_WS = -1  # for testing, set to < 1 for all ws
 
 
 def _parseArgs():
@@ -85,7 +96,7 @@ def _parseArgs():
                         'script looks for a file called ' + CFG_FILE_DEFAULT +
                         ' in the working directory.',
                         default=CFG_FILE_DEFAULT)
-    parser.add_argument('-j', '--json-output',
+    parser.add_argument('-o', '--output',
                         help='write json output to this directory. If it ' +
                         'does not exist it will be created.')
     return parser.parse_args()
@@ -112,6 +123,17 @@ def chunkiter(iterable, size):
         yield inneriter(it.next(), it, size)
 
 
+# http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
+
+
 def process_optional_key(configObj, section, key):
     v = configObj[section].get(key)
     v = None if v == '' else v
@@ -121,7 +143,7 @@ def process_optional_key(configObj, section, key):
 
 def get_config(cfgfile):
     if not os.path.isfile(cfgfile) and not os.access(cfgfile, os.R_OK):
-        print ('Cannot read file ' + cfgfile)
+        print('Cannot read file ' + cfgfile)
         sys.exit(1)
     co = ConfigObj(cfgfile)
     s = CFG_SECTION_SOURCE
@@ -173,27 +195,37 @@ def get_config(cfgfile):
     return co[s], co[t]
 
 
+# this might need to be batched at some point
 def process_workspaces(db):
     user = 'user'
     all_users = '*'
     acl_id = 'id'
-    ws_cursor = db[COL_WS].find({}, [WS_ID, WS_OBJ_CNT, WS_OWNER, WS_DELETED])
+    ws_cursor = db[COL_WS].find({}, [WS_ID, WS_OBJ_CNT, WS_OWNER, WS_DELETED,
+                                     NAME])
     pub_read = db[COL_ACLS].find({user: all_users}, [acl_id])
-    workspaces = defaultdict(dict)
+    workspaces = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
     for ws in ws_cursor:
+        # this could be faster via batching
+        workspaces[ws[WS_ID]][SHARED] = \
+            db[COL_ACLS].find({acl_id: ws[WS_ID]}).count() - 1
         workspaces[ws[WS_ID]][PUBLIC] = PRIVATE
         workspaces[ws[WS_ID]][WS_OBJ_CNT] = ws[WS_OBJ_CNT]
         workspaces[ws[WS_ID]][OWNER] = ws[WS_OWNER]
+        workspaces[ws[WS_ID]][NAME] = ws[NAME]
     for pr in pub_read:
         workspaces[pr[acl_id]][PUBLIC] = PUBLIC
+        if workspaces[pr[acl_id]][SHARED] > 0:
+            workspaces[pr[acl_id]][SHARED] -= 1
     return workspaces
 
 
-def process_object_versions(db, userdata, objects, workspaces,
-                            start_id, end_id):
+# this method sig is getting way to big
+def process_object_versions(db, userdata, typedata, objects, workspaces,
+                            incl_types, start_id, end_id):
     # note all objects are from the same workspace
     obj_id = 'id'
     size = 'size'
+    type_ = 'type'
 
     odel = {}
     for o in objects:
@@ -207,23 +239,31 @@ def process_object_versions(db, userdata, objects, workspaces,
 
     res = db[COL_VERS].find({WS_ID: ws,
                              obj_id: {'$gt': start_id, '$lte': end_id}},
-                            [WS_ID, obj_id, size])
+                            [WS_ID, obj_id, size, type_])
     vers = 0
     for v in res:
         vers += 1
         deleted = DELETED if odel[v[obj_id]] else NOT_DEL
         userdata[wsowner][wspub][deleted][OBJ_CNT] += 1
         userdata[wsowner][wspub][deleted][BYTES] += v[size]
+        workspaces[ws][deleted][OBJ_CNT] += 1
+        workspaces[ws][deleted][BYTES] += v[size]
+        t = v[type_].split('-')[0]
+        if t in incl_types:
+            typedata[wsowner][t][wspub][deleted][OBJ_CNT] += 1
+            typedata[wsowner][t][wspub][deleted][BYTES] += v[size]
     return vers
 
 
-def process_objects(db, workspaces, exclude_ws):
+def process_objects(db, workspaces, exclude_ws, incl_types):
     ws_id = 'ws'
     obj_id = 'id'
     # user -> pub -> del -> du or objs -> #
-    # TODO switch to len 8 named tuple, this is stupid
     d = defaultdict(lambda: defaultdict(lambda: defaultdict(
         lambda: defaultdict(int))))
+    # user -> type -> pub -> del -> du or objs -> #
+    types = defaultdict(lambda: defaultdict(lambda: defaultdict(
+        lambda: defaultdict(lambda: defaultdict(int)))))
     wscount = 0
     for ws in workspaces:
         if MAX_WS > 0 and wscount > MAX_WS:
@@ -245,19 +285,16 @@ def process_objects(db, workspaces, exclude_ws):
             objs = db[COL_OBJ].find(query, [ws_id, obj_id, WS_DELETED])
             print('\ttotal obj query time: ' + str(time.time() - objtime))
             ttlstart = time.time()
-            vers = process_object_versions(db, d, objs, workspaces,
-                                           lim - LIMIT, lim)
-#             size, objsproc = process_objects(
-#                 objs, unique_users, types, workspaces)
+            vers = process_object_versions(db, d, types, objs, workspaces,
+                                           incl_types, lim - LIMIT, lim)
 
-#             total_size += size
             print('\ttotal ver query time: ' + str(time.time() - ttlstart))
             print('\ttotal object versions: ' + str(vers))
 #             print('\tobjects processed: ' + str(objsproc))
 #             objcount += objsproc
 #             print('total objects processed: ' + str(objcount))
             sys.stdout.flush()
-    return d
+    return d, types
 
 
 # from https://gist.github.com/lonetwin/4721748
@@ -283,8 +320,24 @@ def print_table(rows):
         print(" | ".join(format(cdata, "%ds" % width) for width, cdata in zip(widths, row))) #@IgnorePep8
 
 
+def make_and_check_output_dir(outdir):
+    if outdir:
+        try:
+            mkdir_p(outdir)
+        except Exception as e:
+            print(e.__repr__())
+            print("Couldn't create or read output directory {}: {}".format(
+                outdir, e.strerror))
+            sys.exit(1)
+        if not os.path.isdir(outdir) or not os.access(outdir, os.W_OK):
+            print('Cannot write to directory ' + outdir)
+            sys.exit(1)
+
+
 def main():
     args = _parseArgs()
+    outdir = args.output
+    make_and_check_output_dir(outdir)
     sourcecfg, targetcfg = get_config(args.config)  # @UnusedVariable
     starttime = time.time()
     srcmongo = MongoClient(sourcecfg[CFG_HOST], sourcecfg[CFG_PORT],
@@ -294,27 +347,37 @@ def main():
         srcdb.authenticate(sourcecfg[CFG_USER], sourcecfg[CFG_PWD])
     ws = process_workspaces(srcdb)
 
-    objdata = process_objects(srcdb, ws, sourcecfg[CFG_EXCLUDE_WS])
-    print(json.dumps(objdata))
+    objdata, typedata = process_objects(srcdb, ws, sourcecfg[CFG_EXCLUDE_WS],
+                                        sourcecfg[CFG_TYPES])
 
-    rows = [['user',
-             'pub-bytes', 'pub-#', 'pub-del-bytes', 'pub-del-#',
-             'priv-bytes', 'priv-#', 'priv-del-bytes', 'priv-del-#']]
+    for wsid in ws:
+        del ws[wsid][WS_OBJ_CNT]
+    for u in objdata:
+        objdata[u][TYPES] = typedata[u]
+    if outdir:
+        with open(os.path.join(outdir, USER_FILE), 'w') as f:
+            f.write(json.dumps(objdata))
+        with open(os.path.join(outdir, WS_FILE), 'w') as f:
+            f.write(json.dumps(ws))
+
+#     rows = [['user',
+#              'pub-bytes', 'pub-#', 'pub-del-bytes', 'pub-del-#',
+#              'priv-bytes', 'priv-#', 'priv-del-bytes', 'priv-del-#']]
 
     print('\nElapsed time: ' + str(time.time() - starttime))
-    for name_ in sorted(objdata):
-        row = [name_]
-        rows.append(row)
-        row.append(str(objdata[name_][PUBLIC][NOT_DEL][BYTES]))
-        row.append(str(objdata[name_][PUBLIC][NOT_DEL][OBJ_CNT]))
-        row.append(str(objdata[name_][PUBLIC][DELETED][BYTES]))
-        row.append(str(objdata[name_][PUBLIC][DELETED][OBJ_CNT]))
-        row.append(str(objdata[name_][PRIVATE][NOT_DEL][BYTES]))
-        row.append(str(objdata[name_][PRIVATE][NOT_DEL][OBJ_CNT]))
-        row.append(str(objdata[name_][PRIVATE][DELETED][BYTES]))
-        row.append(str(objdata[name_][PRIVATE][DELETED][OBJ_CNT]))
+#     for name_ in sorted(objdata):
+#         row = [name_]
+#         rows.append(row)
+#         row.append(str(objdata[name_][PUBLIC][NOT_DEL][BYTES]))
+#         row.append(str(objdata[name_][PUBLIC][NOT_DEL][OBJ_CNT]))
+#         row.append(str(objdata[name_][PUBLIC][DELETED][BYTES]))
+#         row.append(str(objdata[name_][PUBLIC][DELETED][OBJ_CNT]))
+#         row.append(str(objdata[name_][PRIVATE][NOT_DEL][BYTES]))
+#         row.append(str(objdata[name_][PRIVATE][NOT_DEL][OBJ_CNT]))
+#         row.append(str(objdata[name_][PRIVATE][DELETED][BYTES]))
+#         row.append(str(objdata[name_][PRIVATE][DELETED][OBJ_CNT]))
 
-    print_table(rows)
+#     print_table(rows)
     # print time, object data
 
 if __name__ == '__main__':
