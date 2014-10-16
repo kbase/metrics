@@ -5,11 +5,16 @@
 # Reads a CSV file of visits by day (genreated from Splunk)
 # and dumps out summaries statistics by month.
 #
-# TODO: Convert to JSON format
+use JSON;
+use strict;
+
+my $json = JSON->new->allow_nonref;
 
 $_=<STDIN>;
-@users=split /,/;
+my @users=split /,/;
 shift @users;
+
+my %staff;
 
 open(E,"kbase-staff.lst") or die "Unable to open KBase Staff list";
 while(<E>){
@@ -18,53 +23,57 @@ while(<E>){
 }
 close E;
 
+my %new;
+my %newbytime;
+my %repbytime;
+my %totbytime;
+my %repeat;
+my $users;
+
+my $cts;
+$cts->{excludes_internal_kbase}='Y';
+$cts->{return_user_window}='> 1 Month';
+
 while(<STDIN>){
-  @list=split /,/;
-  $time=shift @list;
+  my @list=split /,/;
+  my $time=shift @list;
+  # Convert to a month
   $time=~s/...T.*//;
   $time=~s/"//;
-  $i=0;
-  $newusers=0;
-  $repusers=0;
+  my $i=0;
+  $cts->{start}=$time unless defined $cts->{start};
+  $cts->{end}=$time;
   foreach (@list){
-    $user=$users[$i];
+    my $user=$users[$i];
     $i++;
     next if $user eq '"-"';
     next if $user eq 'NULL';
     next if defined $staff{$user};
-    next if $_ eq 0;
+    next if $_ < 1;
+    $users->{$user}->{first}=$time unless defined $users->{$user}->{first};
     if ( ! defined $new{$user}){
       $new{$user}=$time;
       $newbytime{$time}{$user}=1;
-      $cumnew++;
-      $newusers++;
+      $cts->{cummulative_users}++;
       #$newtime{$time}.=" $user";
       #print "$time new    $user\n";
     }
-    elsif ( ! defined $repeat{$user}){
-      #print "$time repeat $user\n";
+    elsif ( ( ! defined $repeat{$user} ) && $users->{$user}->{first} ne $time){
+      #print "rep: $time repeat $user\n";
       $repeat{$user}=$time;
       $repbytime{$time}{$user}=1;
       #$reptime{$time}.=" $user";
-      $repusers++;
-      $cumrep++;
+      $cts->{cummulative_return_users}++;
     }
     #$tot{$time}.=" $user" if $_ > 0;
     $totbytime{$time}{$user}=1;
-    $tot{$time}++;
   }
-  $cum{$time}=scalar keys %new;
-  $cumrep{$time}=scalar keys %repeat;
-  $newtime{$time}=scalar keys %{$newbytime{$time}};
-  $reptime{$time}=scalar keys %{$repbytime{$time}};
-  $tot{$time}=scalar keys %{$totbytime{$time}};
+  $cts->{by_month}->{$time}->{cummulative_users}=scalar keys %new;
+  $cts->{by_month}->{$time}->{cummulative_return_users}=scalar keys %repeat;
+  $cts->{by_month}->{$time}->{new_users}=scalar keys %{$newbytime{$time}};
+  $cts->{by_month}->{$time}->{return_users}=scalar keys %{$repbytime{$time}};
+  $cts->{by_month}->{$time}->{total_users}=scalar keys %{$totbytime{$time}};
   #$reptime{$time}=$repusers;
 }
 
-print "Date,New,Ret,Users,Cummulative,CumRep\n";
-foreach my $t (sort keys %newtime){
-  #$reps=scalar split / /,$reptime{$t};
-  #printf "%s %d %s\n",$t,scalar @l-1, $newtime{$t};
-  #printf "%s %4d %4d %4d\n",$t,$new,$reps,$tot;
-  printf "%s,%4d,%4d,%4d,%4d,%4d\n",$t,$newtime{$t},$reptime{$t},$tot{$t},$cum{$t},$cumrep{$t};
-}
+print $json->encode($cts);
