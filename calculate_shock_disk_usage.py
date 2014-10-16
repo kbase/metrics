@@ -21,7 +21,6 @@ Hasn't been optimized much either.
 # TODO: some basic sanity checking
 
 from __future__ import print_function
-import math
 from argparse import ArgumentParser
 import os
 import sys
@@ -45,7 +44,6 @@ CFG_PWD = 'pwd'
 
 CFG_EXCLUDE_USER = 'exclude-user'
 
-
 # output file names
 USER_FILE = 'shock_user_data.json'
 
@@ -59,7 +57,6 @@ USER_NAME = 'username'
 NODE_OWNER = 'acl.owner'
 NODE_READ = 'acl.read'
 NODE_SIZE = 'file.size'
-NODE_ID = 'id'
 
 PUBLIC = 'pub'
 PRIVATE = 'priv'
@@ -69,25 +66,6 @@ BYTES = 'byte'
 NO_OWNER = '__NONE__'
 
 MAX_NODES_PER_CALL = 10000
-
-
-class HexIterator(object):
-
-    def __init__(self, width):
-        self._width = width
-        self._max = math.pow(16, width)
-        self._current = 0
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        if self._current >= self._max:
-            raise StopIteration
-
-        h = "{0:0{1}x}".format(self._current, self._width)
-        self._current += 1
-        return h
 
 
 def _parseArgs():
@@ -191,52 +169,52 @@ def processNames(srcdb, excluded_names):
     return uuid2name, excluded
 
 
-def processNodeRecs(userdata, recs, uuid2name):
+def processNodeRecs(userdata, recs, uuid2name, excludedUUIDs):
     acl = 'acl'
     read = 'read'
     owner = 'owner'
     file_ = 'file'
     size = 'size'
     count = 0
-    for r in recs:
-        s = r[file_][size]
-        o = r[acl].get(owner)
+    ttl = 0
+    t = time.time()
+    for rec in recs:
+        if ttl % 10000 == 0:
+            print("Processed {} records, kept {} in {} s".format(
+                ttl, count, time.time() - t))
+            sys.stdout.flush()
+        ttl += 1
+        s = rec[file_][size]
+        o = rec[acl].get(owner)
+        if o in excludedUUIDs:
+            continue
         if not o:
             o = NO_OWNER
         else:
-            o = uuid2name(o)
-        read = r[acl][read]
+            o = uuid2name[o]
+        r = rec[acl][read]
         pub = PUBLIC if len(r) == 0 else PRIVATE
         userdata[o][pub][OBJ_CNT] += 1
         userdata[o][pub][BYTES] += s
         count += 1
-    return count
 
 
 def processNodes(srcdb, uuid2name, excludedUUIDs):
-    nodecol = srcdb[COL_NODE]
-    proj = [NODE_OWNER, NODE_READ, NODE_SIZE]
-    d = defaultdict(lambda: defaultdict(int))
-    print('Counting non-excluded records... ', end='')
-    sys.stdout.flush()
-    # TODO this query is insanely slow - just count the collection and exclude
-    # on the record query
-    rec_cnt = nodecol.find({NODE_OWNER: {'$nin': excludedUUIDs}}).count()
-    print(rec_cnt)
-    hexwidth = math.log(rec_cnt/MAX_NODES_PER_CALL) / math.log(16)
-    if hexwidth < 1:
-        print('Processing all nodes')
-        recs = nodecol.find({NODE_OWNER: {'$nin': excludedUUIDs}}, proj)
-        count = processNodeRecs(d, recs, uuid2name)
-        print('Processed {} nodes'.format(count))
-    else:
-        hexinc = HexIterator(hexwidth)
-        for prefix in hexinc:
-            print('Processing nodes with prefix ' + prefix)
-            recs = nodecol.find({NODE_OWNER: {'$nin': excludedUUIDs},
-                                 NODE_ID: {'$regex': '^' + prefix}}, proj)
-            count = processNodeRecs(d, recs, uuid2name)
-            print('Processed {} nodes'.format(count))
+    d = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+
+    # turns out the stupid query is the fastest, trying to page via UUID
+    # prefixes is way slower (confirmed was only scanning ~2k records via
+    # explain(), so not sure why it's so slow - was taking 50s for the 2k
+    # records).
+    # See previous commits for those implementations.
+    # Note skip() / limit() don't scale:
+    # http://docs.mongodb.org/manual/reference/method/cursor.skip/
+    # this approach won't work for most cases - only useful if you want
+    # to scan the whole collection and can let mongo do the batching for you.\
+
+    recs = srcdb[COL_NODE].find({NODE_OWNER: {'$nin': excludedUUIDs}},
+                                [NODE_OWNER, NODE_READ, NODE_SIZE])
+    processNodeRecs(d, recs, uuid2name, excludedUUIDs)
     return d
 
 
@@ -266,8 +244,7 @@ def main():
 
 if __name__ == '__main__':
     main()
-#     width = log(n/10000) / log(16)
-#    16^w * 10000 = n
+
 '''
 user
     pub
