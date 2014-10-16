@@ -32,7 +32,19 @@ my $users;
 
 my $cts;
 $cts->{excludes_internal_kbase}='Y';
-$cts->{return_user_window}='> 1 Month';
+my $daily=1;
+
+$daily=0 if $ARGV[0] eq '-m';
+
+if ($daily){
+  $cts->{return_user_window}='> 1 day';
+}
+else{
+  $cts->{return_user_window}='> 1 month';
+}
+
+my $slot=-1;
+my $lasttime;
 
 while(<STDIN>){
   my @list=split /,/;
@@ -40,6 +52,13 @@ while(<STDIN>){
   # Convert to a month
   $time=~s/...T.*//;
   $time=~s/"//;
+  if ($time ne $lasttime){
+    $lasttime=$time;
+    $slot++;
+    my ($year,$mon)=split /-/,$time;
+    $cts->{by_month}->[$slot]->{year}=$year;
+    $cts->{by_month}->[$slot]->{month}=$mon;
+  }
   my $i=0;
   $cts->{start}=$time unless defined $cts->{start};
   $cts->{end}=$time;
@@ -58,7 +77,7 @@ while(<STDIN>){
       #$newtime{$time}.=" $user";
       #print "$time new    $user\n";
     }
-    elsif ( ( ! defined $repeat{$user} ) && $users->{$user}->{first} ne $time){
+    elsif ( ( ! defined $repeat{$user} ) && ($daily || $users->{$user}->{first} ne $time) ){
       #print "rep: $time repeat $user\n";
       $repeat{$user}=$time;
       $repbytime{$time}{$user}=1;
@@ -68,11 +87,11 @@ while(<STDIN>){
     #$tot{$time}.=" $user" if $_ > 0;
     $totbytime{$time}{$user}=1;
   }
-  $cts->{by_month}->{$time}->{cummulative_users}=scalar keys %new;
-  $cts->{by_month}->{$time}->{cummulative_return_users}=scalar keys %repeat;
-  $cts->{by_month}->{$time}->{new_users}=scalar keys %{$newbytime{$time}};
-  $cts->{by_month}->{$time}->{return_users}=scalar keys %{$repbytime{$time}};
-  $cts->{by_month}->{$time}->{total_users}=scalar keys %{$totbytime{$time}};
+  $cts->{by_month}->[$slot]->{cummulative_users}=scalar keys %new;
+  $cts->{by_month}->[$slot]->{cummulative_return_users}=scalar keys %repeat;
+  $cts->{by_month}->[$slot]->{new_users}=scalar keys %{$newbytime{$time}};
+  $cts->{by_month}->[$slot]->{return_users}=scalar keys %{$repbytime{$time}};
+  $cts->{by_month}->[$slot]->{total_users}=scalar keys %{$totbytime{$time}};
   #$reptime{$time}=$repusers;
 }
 
