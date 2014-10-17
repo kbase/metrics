@@ -9,6 +9,7 @@
 use JSON;
 use strict;
 use Date::Calc qw(Delta_Days);
+use POSIX qw/strftime/;
 
 my $json = JSON->new->allow_nonref;
 my $nBuckets=6;
@@ -133,5 +134,9 @@ $jo->{counts_by_visits}=$counts;
 $jo->{histogram}=$histo;
 $jo->{range}->{start}=$start_date;
 $jo->{range}->{end}=$end_date;
+$jo->{meta}->{comments}="Generated from a Splunk query and summarized by user_visits_histogram";
+$jo->{meta}->{author}="Shane Canon";
+my $date=strftime('%Y-%m-%d',localtime);
+$jo->{meta}->{generated_on}=$date;
 print $json->encode($jo);
 
