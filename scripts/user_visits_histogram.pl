@@ -85,7 +85,7 @@ foreach my $u (%{$users}){
   $maxVisits=$visits{$u} if $visits{$u}>$maxVisits;
   my @st=split /-/,$users->{$u}->{first};
   my @en=split /-/,$end_date;
-  my $span=Delta_Days(@st,@en);
+  my $span=Delta_Days(@st,@en)+1;
   $users->{$u}->{span}=$span;
   $users->{$u}->{visitation_rate}=$visits{$u}/$span; 
   $totUsers++ if $visits{$u} > 1;
