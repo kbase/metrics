@@ -242,6 +242,8 @@ def process_object_versions(db, userdata, typedata, objects, workspaces,
                             [WS_ID, obj_id, size, type_])
     vers = 0
     for v in res:
+        if v[obj_id] not in odel:  # new object was made just now in ws
+            continue
         vers += 1
         deleted = DELETED if odel[v[obj_id]] else NOT_DEL
         userdata[wsowner][wspub][deleted][OBJ_CNT] += 1
