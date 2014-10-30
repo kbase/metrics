@@ -51,11 +51,13 @@ CFG_USER = 'user'
 CFG_PWD = 'pwd'
 
 CFG_TYPES = 'types'
+CFG_LIST_OBJS = 'list-objects'
 CFG_EXCLUDE_WS = 'exclude-ws'
 
 # output file names
 USER_FILE = 'user_data.json'
 WS_FILE = 'ws_data.json'
+OBJECT_FILE = 'ws_object_list.json'
 
 # collection names
 COL_WS = 'workspaces'
@@ -85,7 +87,7 @@ SHARED = 'shd'
 
 LIMIT = 10000
 OR_QUERY_SIZE = 100  # 75 was slower, 150 was slower
-MAX_WS = -1  # for testing, set to < 1 for all ws
+MAX_WS = 10  # for testing, set to < 1 for all ws
 
 
 def _parseArgs():
@@ -174,12 +176,9 @@ def get_config(cfgfile):
                 CFG_USER, CFG_PWD) + '{} from file {}'.format(sec, cfgfile))
             sys.exit(1)
 
-    types = co[s][CFG_TYPES]
-    if types:
-        if type(types) is not list:
-            co[s][CFG_TYPES] = set([types])
-        else:
-            co[s][CFG_TYPES] = set(types)
+    process_config_string_list(CFG_TYPES, co[s])
+    process_config_string_list(CFG_LIST_OBJS, co[s])
+
     exclude = co[s][CFG_EXCLUDE_WS]
     if exclude:
         if type(exclude) is not list:
@@ -193,6 +192,17 @@ def get_config(cfgfile):
                 sys.exit(1)
         co[s][CFG_EXCLUDE_WS] = ints
     return co[s], co[t]
+
+
+def process_config_string_list(config_name, config_section):
+    c = config_section[config_name]
+    if c:
+        if type(c) is not list:
+            config_section[config_name] = set([c])
+        else:
+            config_section[config_name] = set(c)
+    else:
+        config_section[config_name] = None
 
 
 # this might need to be batched at some point
@@ -341,6 +351,7 @@ def main():
     outdir = args.output
     make_and_check_output_dir(outdir)
     sourcecfg, targetcfg = get_config(args.config)  # @UnusedVariable
+    print(sourcecfg)
     starttime = time.time()
     srcmongo = MongoClient(sourcecfg[CFG_HOST], sourcecfg[CFG_PORT],
                            slaveOk=True)
