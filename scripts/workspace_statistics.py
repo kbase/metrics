@@ -71,6 +71,12 @@ WS_DELETED = 'del'
 WS_OWNER = 'owner'
 WS_ID = 'ws'
 WS_NAME = 'name'
+OBJ_NAME = 'name'
+OBJ_ID = 'id'
+OBJ_VERSION = 'ver'
+OBJ_TYPE = 'type'
+OBJ_SAVED_BY = 'savedby'
+OBJ_SAVE_DATE = 'savedate'
 
 # program fields
 PUBLIC = 'pub'
@@ -87,7 +93,7 @@ SHARED = 'shd'
 
 LIMIT = 10000
 OR_QUERY_SIZE = 100  # 75 was slower, 150 was slower
-MAX_WS = 10  # for testing, set to < 1 for all ws
+MAX_WS = -1  # for testing, set to < 1 for all ws
 
 
 def _parseArgs():
@@ -229,18 +235,31 @@ def process_workspaces(db):
     return workspaces
 
 
-# this method sig is getting way to big
-def process_object_versions(db, userdata, typedata, objects, workspaces,
-                            incl_types, start_id, end_id):
-    # note all objects are from the same workspace
-    obj_id = 'id'
-    size = 'size'
-    type_ = 'type'
+def update_object_list(objlist, obj, version):
+    obj_kbid = 'ws.' + str(version[WS_ID]) + '.obj.' + str(version[OBJ_ID])
+    if (obj_kbid in objlist and
+            objlist[obj_kbid][OBJ_VERSION] > version[OBJ_VERSION]):
+        return
+    objlist[obj_kbid] = {DELETED: obj[DELETED],
+                         OBJ_NAME: obj[OBJ_NAME],
+                         OBJ_SAVED_BY: version[OBJ_SAVED_BY],
+                         OBJ_VERSION: version[OBJ_VERSION],
+                         OBJ_TYPE: version[OBJ_TYPE],
+                         OBJ_SAVE_DATE: version[OBJ_SAVE_DATE].isoformat()
+                         }
 
-    odel = {}
+
+# this method sig is way too big
+def process_object_versions(
+        db, userdata, typedata, objlist, objects, workspaces, incl_types,
+        list_types, start_id, end_id):
+    # note all objects are from the same workspace
+    size = 'size'
+
+    id2obj = {}
     for o in objects:
-        odel[o[obj_id]] = o[DELETED]
-    if not odel:
+        id2obj[o[OBJ_ID]] = o
+    if not id2obj:
         return 0
 
     ws = o[WS_ID]  # all objects in same ws
@@ -248,34 +267,38 @@ def process_object_versions(db, userdata, typedata, objects, workspaces,
     wspub = workspaces[ws][PUBLIC]
 
     res = db[COL_VERS].find({WS_ID: ws,
-                             obj_id: {'$gt': start_id, '$lte': end_id}},
-                            [WS_ID, obj_id, size, type_])
+                             OBJ_ID: {'$gt': start_id, '$lte': end_id}},
+                            [WS_ID, OBJ_ID, size, OBJ_TYPE, OBJ_VERSION,
+                             OBJ_SAVED_BY, OBJ_SAVE_DATE])
     vers = 0
     for v in res:
-        if v[obj_id] not in odel:  # new object was made just now in ws
+        if v[OBJ_ID] not in id2obj:  # new object was made just now in ws
             continue
+        o = id2obj[v[OBJ_ID]]
         vers += 1
-        deleted = DELETED if odel[v[obj_id]] else NOT_DEL
+        deleted = DELETED if o[DELETED] else NOT_DEL
         userdata[wsowner][wspub][deleted][OBJ_CNT] += 1
         userdata[wsowner][wspub][deleted][BYTES] += v[size]
         workspaces[ws][deleted][OBJ_CNT] += 1
         workspaces[ws][deleted][BYTES] += v[size]
-        t = v[type_].split('-')[0]
+        t = v[OBJ_TYPE].split('-')[0]
         if t in incl_types:
             typedata[wsowner][t][wspub][deleted][OBJ_CNT] += 1
             typedata[wsowner][t][wspub][deleted][BYTES] += v[size]
+        if t in list_types:
+            update_object_list(objlist, o, v)
     return vers
 
 
-def process_objects(db, workspaces, exclude_ws, incl_types):
-    ws_id = 'ws'
-    obj_id = 'id'
+def process_objects(db, workspaces, exclude_ws, incl_types, list_types):
     # user -> pub -> del -> du or objs -> #
     d = defaultdict(lambda: defaultdict(lambda: defaultdict(
         lambda: defaultdict(int))))
     # user -> type -> pub -> del -> du or objs -> #
     types = defaultdict(lambda: defaultdict(lambda: defaultdict(
         lambda: defaultdict(lambda: defaultdict(int)))))
+    # objid -> obj
+    objlist = defaultdict(dict)
     wscount = 0
     for ws in workspaces:
         if MAX_WS > 0 and wscount > MAX_WS:
@@ -293,20 +316,19 @@ def process_objects(db, workspaces, exclude_ws, incl_types):
                 datetime.datetime.now()))
             sys.stdout.flush()
             objtime = time.time()
-            query = {ws_id: ws, obj_id: {'$gt': lim - LIMIT, '$lte': lim}}
-            objs = db[COL_OBJ].find(query, [ws_id, obj_id, WS_DELETED])
+            query = {WS_ID: ws, OBJ_ID: {'$gt': lim - LIMIT, '$lte': lim}}
+            objs = db[COL_OBJ].find(query, [WS_ID, OBJ_ID, WS_DELETED,
+                                            OBJ_NAME])
             print('\ttotal obj query time: ' + str(time.time() - objtime))
             ttlstart = time.time()
-            vers = process_object_versions(db, d, types, objs, workspaces,
-                                           incl_types, lim - LIMIT, lim)
+            vers = process_object_versions(
+                db, d, types, objlist, objs, workspaces, incl_types,
+                list_types, lim - LIMIT, lim)
 
             print('\ttotal ver query time: ' + str(time.time() - ttlstart))
             print('\ttotal object versions: ' + str(vers))
-#             print('\tobjects processed: ' + str(objsproc))
-#             objcount += objsproc
-#             print('total objects processed: ' + str(objcount))
             sys.stdout.flush()
-    return d, types
+    return d, types, objlist
 
 
 # from https://gist.github.com/lonetwin/4721748
@@ -351,17 +373,17 @@ def main():
     outdir = args.output
     make_and_check_output_dir(outdir)
     sourcecfg, targetcfg = get_config(args.config)  # @UnusedVariable
-    print(sourcecfg)
     starttime = time.time()
     srcmongo = MongoClient(sourcecfg[CFG_HOST], sourcecfg[CFG_PORT],
-                           slaveOk=True)
+                           slaveOk=True, tz_aware=True)
     srcdb = srcmongo[sourcecfg[CFG_DB]]
     if sourcecfg[CFG_USER]:
         srcdb.authenticate(sourcecfg[CFG_USER], sourcecfg[CFG_PWD])
     ws = process_workspaces(srcdb)
 
-    objdata, typedata = process_objects(srcdb, ws, sourcecfg[CFG_EXCLUDE_WS],
-                                        sourcecfg[CFG_TYPES])
+    objdata, typedata, obj_list = process_objects(
+        srcdb, ws, sourcecfg[CFG_EXCLUDE_WS], sourcecfg[CFG_TYPES],
+        sourcecfg[CFG_LIST_OBJS])
 
     for wsid in ws:
         del ws[wsid][WS_OBJ_CNT]
@@ -372,26 +394,10 @@ def main():
             f.write(json.dumps(objdata))
         with open(os.path.join(outdir, WS_FILE), 'w') as f:
             f.write(json.dumps(ws))
-
-#     rows = [['user',
-#              'pub-bytes', 'pub-#', 'pub-del-bytes', 'pub-del-#',
-#              'priv-bytes', 'priv-#', 'priv-del-bytes', 'priv-del-#']]
+        with open(os.path.join(outdir, OBJECT_FILE), 'w') as f:
+            f.write(json.dumps(obj_list))
 
     print('\nElapsed time: ' + str(time.time() - starttime))
-#     for name_ in sorted(objdata):
-#         row = [name_]
-#         rows.append(row)
-#         row.append(str(objdata[name_][PUBLIC][NOT_DEL][BYTES]))
-#         row.append(str(objdata[name_][PUBLIC][NOT_DEL][OBJ_CNT]))
-#         row.append(str(objdata[name_][PUBLIC][DELETED][BYTES]))
-#         row.append(str(objdata[name_][PUBLIC][DELETED][OBJ_CNT]))
-#         row.append(str(objdata[name_][PRIVATE][NOT_DEL][BYTES]))
-#         row.append(str(objdata[name_][PRIVATE][NOT_DEL][OBJ_CNT]))
-#         row.append(str(objdata[name_][PRIVATE][DELETED][BYTES]))
-#         row.append(str(objdata[name_][PRIVATE][DELETED][OBJ_CNT]))
-
-#     print_table(rows)
-    # print time, object data
 
 if __name__ == '__main__':
     main()
