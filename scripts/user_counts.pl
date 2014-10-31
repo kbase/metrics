@@ -96,7 +96,7 @@ while(<STDIN>){
   #$reptime{$time}=$repusers;
 }
 
-my $date=strftime('%Y-%m-%dT%H:%s',localtime);
+my $date=strftime('%Y-%m-%dT%H:%s',gmtime);
 $cts->{meta}->{comments}="Generated from a Splunk query and summarized by user_counts";
 $cts->{meta}->{author}="Shane Canon";
 $cts->{meta}->{generated}=$date;

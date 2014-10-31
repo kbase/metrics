@@ -27,7 +27,7 @@ open(E,"kbase-staff.lst") or die "Unable to open KBase Staff list";
 while(<E>){
   chomp;
   $staff{$_}=1;
-  $users->{$_}->{'staff'}='Y';
+  $users->{$_}->{'staff'}=JSON::true;
 }
 close E;
 
@@ -43,7 +43,7 @@ for my $u (@userl){
   next if $u eq 'NULL';
   next if $u =~ '_span';
   next if $u =~ '_spandays';
-  $users->{$u}->{'staff'}='N';
+  $users->{$u}->{'staff'}=JSON::true;
 }
 
 my $start_date=0;
@@ -136,7 +136,7 @@ $jo->{range}->{start}=$start_date;
 $jo->{range}->{end}=$end_date;
 $jo->{meta}->{comments}="Generated from a Splunk query and summarized by user_visits_histogram";
 $jo->{meta}->{author}="Shane Canon";
-my $date=strftime('%Y-%m-%d',localtime);
+my $date=strftime('%Y-%m-%d',gmtime);
 $jo->{meta}->{generated_on}=$date;
 print $json->encode($jo);
 

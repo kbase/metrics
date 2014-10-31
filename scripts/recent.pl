@@ -24,7 +24,7 @@ open(E,"kbase-staff.lst") or die "Unable to open KBase Staff list";
 while(<E>){
   chomp;
   $staff{$_}=1;
-  $users->{$_}->{'staff'}='Y';
+  $users->{$_}->{'staff'}=JSON::true;
 }
 close E;
 
@@ -40,7 +40,7 @@ for my $u (@userl){
   next if $u eq 'NULL';
   next if $u =~ '_span';
   next if $u =~ '_spandays';
-  $users->{$u}->{'staff'}='N';
+  $users->{$u}->{'staff'}=JSON::false;
 }
 
 my $start_date=0;
@@ -74,13 +74,13 @@ foreach (@list){
   next unless defined $users->{$user};
   next if $_ == 0;
   my $u->{userid}=$user;
-  $u->{staff}='false';
-  $u->{staff}='true' if defined $staff{$user};
+  $u->{staff}=JSON::false;
+  $u->{staff}=JSON::true if defined $staff{$user};
   push $recent->{users},$u;
   #push $recent->{users},$user if ! defined $staff{$user};
   #push $recent->{internal},$user if defined $staff{$user};
 }
-my $date=strftime('%Y-%m-%dT%H:%s',localtime);
+my $date=strftime('%Y-%m-%dT%H:%S',gmtime);
 $recent->{meta}->{generated}=$date;
 $recent->{meta}->{dataset}= "kbase-daily-user-access",
 $recent->{meta}->{description} = "List of users who accessed KBase services during the given time range.";
