@@ -6,6 +6,7 @@
 # and dumps out summaries statistics by month.
 #
 use JSON;
+use POSIX qw/strftime/;
 use strict;
 
 my $json = JSON->new->allow_nonref;
@@ -31,7 +32,7 @@ my %repeat;
 my $users;
 
 my $cts;
-$cts->{excludes_internal_kbase}='Y';
+$cts->{excludes_internal_kbase}=JSON::true;
 my $daily=1;
 
 $daily=0 if $ARGV[0] eq '-m';
@@ -56,8 +57,8 @@ while(<STDIN>){
     $lasttime=$time;
     $slot++;
     my ($year,$mon)=split /-/,$time;
-    $cts->{by_month}->[$slot]->{year}=$year;
-    $cts->{by_month}->[$slot]->{month}=$mon;
+    $cts->{by_month}->[$slot]->{year}=int($year);
+    $cts->{by_month}->[$slot]->{month}=int($mon);
   }
   my $i=0;
   $cts->{start}=$time unless defined $cts->{start};
@@ -73,7 +74,7 @@ while(<STDIN>){
     if ( ! defined $new{$user}){
       $new{$user}=$time;
       $newbytime{$time}{$user}=1;
-      $cts->{cummulative_users}++;
+      $cts->{cumulative_users}++;
       #$newtime{$time}.=" $user";
       #print "$time new    $user\n";
     }
@@ -94,5 +95,12 @@ while(<STDIN>){
   $cts->{by_month}->[$slot]->{total_users}=scalar keys %{$totbytime{$time}};
   #$reptime{$time}=$repusers;
 }
+
+my $date=strftime('%Y-%m-%dT%H:%s',localtime);
+$cts->{meta}->{comments}="Generated from a Splunk query and summarized by user_counts";
+$cts->{meta}->{author}="Shane Canon";
+$cts->{meta}->{generated}=$date;
+$cts->{meta}->{dataset}= "splunk-users-by-day";
+$cts->{meta}->{description} = "Summary of users of KBase over time";
 
 print $json->encode($cts);
