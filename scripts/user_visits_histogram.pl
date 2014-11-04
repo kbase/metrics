@@ -43,7 +43,7 @@ for my $u (@userl){
   next if $u eq 'NULL';
   next if $u =~ '_span';
   next if $u =~ '_spandays';
-  $users->{$u}->{'staff'}=JSON::true;
+  $users->{$u}->{'staff'}=JSON::false;
 }
 
 my $start_date=0;
