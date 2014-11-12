@@ -106,7 +106,7 @@ my $ext=0;
 my $start='';
 #$histo->{'buckets'}=$nBuckets;
 foreach my $t (2..$maxVisits){
-  my $start="$t" if $start eq '';
+  $start=$t if $start == '';
   my $ct=$counts->{'all'}->{$t};
   my $ex=$counts->{'nonkbase'}->{$t};
   next unless defined $ct;
@@ -117,15 +117,20 @@ foreach my $t (2..$maxVisits){
     my $label="$start to $end visits";
     $label="$end visits" if $start eq $end;
     $histo->[$b]->{label}=$label;
-    $histo->[$b]->{range}->{start}=$start;
-    $histo->[$b]->{range}->{end}=$end;
-    $histo->[$b]->{counts}->{all}=$tot;
+    $histo->[$b]->{range}->{start}=int($start);
+    $histo->[$b]->{range}->{end}=int($end);
+    $histo->[$b]->{counts}->{all}=int($tot);
     $histo->[$b]->{counts}->{nonkbase}=$ext;
     $tot=0;
     $ext=0;
     $start='';
     $b++;
   }
+}
+
+# Remove empty entries from staff list
+foreach my $user (keys %staff){
+  delete $users->{$user} if ! defined $users->{$user}->{visits};
 }
 
 my $jo;
