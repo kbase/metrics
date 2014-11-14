@@ -30,6 +30,8 @@ from pymongo.mongo_client import MongoClient
 import time
 from _collections import defaultdict
 import json
+from datetime import date
+
 
 # where to get credentials (don't check these into git, idiot)
 CFG_FILE_DEFAULT = 'shock_usage.cfg'
@@ -45,7 +47,7 @@ CFG_PWD = 'pwd'
 CFG_EXCLUDE_USER = 'exclude-user'
 
 # output file names
-USER_FILE = 'shock_user_data.json'
+USER_FILE = 'shock_data.json'
 
 # collection names
 COL_USER = 'Users'
@@ -186,6 +188,10 @@ def processNodeRecs(userdata, recs, uuid2name, excludedUUIDs):
         ttl += 1
         s = rec[file_][size]
         o = rec[acl].get(owner)
+        o_str = str(rec['_id']) 
+        id_time = int(o_str[0:8], 16)
+        month=date.fromtimestamp(id_time).strftime('%Y%m')
+
         if o in excludedUUIDs:
             continue
         if not o:
@@ -194,13 +200,16 @@ def processNodeRecs(userdata, recs, uuid2name, excludedUUIDs):
             o = uuid2name[o]
         r = rec[acl][read]
         pub = PUBLIC if len(r) == 0 else PRIVATE
-        userdata[o][pub][OBJ_CNT] += 1
-        userdata[o][pub][BYTES] += s
+        userdata['by_user'][o][pub][OBJ_CNT] += 1
+        userdata['by_user'][o][pub][BYTES] += s
+        
+        userdata['by_month'][month][pub][OBJ_CNT] += 1
+        userdata['by_month'][month][pub][BYTES] += s
         count += 1
 
 
 def processNodes(srcdb, uuid2name, excludedUUIDs):
-    d = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+    d = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(int))))
 
     # turns out the stupid query is the fastest, trying to page via UUID
     # prefixes is way slower (confirmed was only scanning ~2k records via
@@ -237,7 +246,7 @@ def main():
 
     if outdir:
         with open(os.path.join(outdir, USER_FILE), 'w') as f:
-            f.write(json.dumps(userdata))
+            f.write(json.dumps(userdata,indent=2,sort_keys=True))
 
     print('\nElapsed time: ' + str(time.time() - starttime))
 
