@@ -23,7 +23,7 @@ cat $VF|./scripts/recent.pl|python -m json.tool  		> $WEB/recent.json
 
 # Shock/AWE/WS
 
-./scripts/calculate_ws_disk_usage.py --output $WEB  		> /tmp/ws.out
+./scripts/workspace_statistics.py --output $WEB  		> /tmp/ws.out
 
 ./scripts/calculate_shock_disk_usage.py  --output $WEB  	> /tmp/shock.out
 
@@ -33,3 +33,5 @@ cat $VF|./scripts/recent.pl|python -m json.tool  		> $WEB/recent.json
 ./scripts/splunk-methods-by-day.pl > $MF
 
 cat $MF |./scripts/methods_summary.pl|python -mjson.tool > $WEB/methods.json
+
+./scripts/merge_narrative.pl $WEB
