@@ -58,6 +58,7 @@ CFG_EXCLUDE_WS = 'exclude-ws'
 USER_FILE = 'user_data.json'
 WS_FILE = 'ws_data.json'
 OBJECT_FILE = 'ws_object_list.json'
+BYMONTH_FILE = 'ws_bymonth.json'
 
 # collection names
 COL_WS = 'workspaces'
@@ -251,7 +252,7 @@ def update_object_list(objlist, obj, version):
 
 # this method sig is way too big
 def process_object_versions(
-        db, userdata, typedata, objlist, objects, workspaces, incl_types,
+        db, userdata, typedata, bymonth, objlist, objects, workspaces, incl_types,
         list_types, start_id, end_id):
     # note all objects are from the same workspace
     size = 'size'
@@ -282,6 +283,11 @@ def process_object_versions(
         workspaces[ws][deleted][OBJ_CNT] += 1
         workspaces[ws][deleted][BYTES] += v[size]
         t = v[OBJ_TYPE].split('-')[0]
+        o_str = str(v['_id']) 
+        id_time = int(o_str[0:8], 16)
+        month=datetime.date.fromtimestamp(id_time).strftime('%Y%m')
+        bymonth[month][wspub][deleted][OBJ_CNT] += 1
+        bymonth[month][wspub][deleted][BYTES] += v[size]
         if t in incl_types:
             typedata[wsowner][t][wspub][deleted][OBJ_CNT] += 1
             typedata[wsowner][t][wspub][deleted][BYTES] += v[size]
@@ -297,6 +303,9 @@ def process_objects(db, workspaces, exclude_ws, incl_types, list_types):
     # user -> type -> pub -> del -> du or objs -> #
     types = defaultdict(lambda: defaultdict(lambda: defaultdict(
         lambda: defaultdict(lambda: defaultdict(int)))))
+    # month -> pub -> del -> du or objs -> #
+    bymonth = defaultdict(lambda: defaultdict(lambda: defaultdict(
+        lambda: defaultdict(int))))
     # objid -> obj
     objlist = defaultdict(dict)
     wscount = 0
@@ -319,16 +328,16 @@ def process_objects(db, workspaces, exclude_ws, incl_types, list_types):
             query = {WS_ID: ws, OBJ_ID: {'$gt': lim - LIMIT, '$lte': lim}}
             objs = db[COL_OBJ].find(query, [WS_ID, OBJ_ID, WS_DELETED,
                                             OBJ_NAME])
+
             print('\ttotal obj query time: ' + str(time.time() - objtime))
             ttlstart = time.time()
             vers = process_object_versions(
-                db, d, types, objlist, objs, workspaces, incl_types,
+                db, d, types, bymonth, objlist, objs, workspaces, incl_types,
                 list_types, lim - LIMIT, lim)
-
             #print('\ttotal ver query time: ' + str(time.time() - ttlstart))
             #print('\ttotal object versions: ' + str(vers))
             sys.stdout.flush()
-    return d, types, objlist
+    return d, types, bymonth, objlist
 
 
 # from https://gist.github.com/lonetwin/4721748
@@ -383,7 +392,7 @@ def main():
     ws = process_workspaces(srcdb)
 
     print('Prcoessing objects')
-    objdata, typedata, obj_list = process_objects(
+    objdata, typedata, by_month, obj_list = process_objects(
         srcdb, ws, sourcecfg[CFG_EXCLUDE_WS], sourcecfg[CFG_TYPES],
         sourcecfg[CFG_LIST_OBJS])
 
@@ -393,11 +402,17 @@ def main():
         objdata[u][TYPES] = typedata[u]
     if outdir:
         with open(os.path.join(outdir, USER_FILE), 'w') as f:
-            f.write(json.dumps(objdata))
+            f.write(json.dumps(objdata,indent=2,sort_keys=True))
         with open(os.path.join(outdir, WS_FILE), 'w') as f:
-            f.write(json.dumps(ws))
+            f.write(json.dumps(ws,indent=2,sort_keys=True))
         with open(os.path.join(outdir, OBJECT_FILE), 'w') as f:
-            f.write(json.dumps(obj_list))
+            f.write(json.dumps(obj_list,indent=2,sort_keys=True))
+        with open(os.path.join(outdir, BYMONTH_FILE), 'w') as f:
+            data = { 'data' : by_month,
+                     'meta': {'comments' :'This data comes from workspace.  Dates are calculated from the Mongo ID',
+                              'author':'Gavin Price, Shane Canon',
+                              'description':'Summary of amount of data stored in workspace by month' }}
+            f.write(json.dumps(data,indent=2,sort_keys=True))
 
     print('\nElapsed time: ' + str(time.time() - starttime))
 
