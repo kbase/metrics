@@ -101,6 +101,6 @@ $cts->{meta}->{comments}="Generated from a Splunk query and summarized by user_c
 $cts->{meta}->{author}="Shane Canon";
 $cts->{meta}->{generated}=$date;
 $cts->{meta}->{dataset}= "splunk-users-by-day";
-$cts->{meta}->{description} = "Summary of users of KBase over time";
+$cts->{meta}->{description} = "Summary of users of KBase over time.  Excludes internal KBase users.";
 
-print $json->encode($cts);
+print $json->pretty->canonical->encode($cts);
