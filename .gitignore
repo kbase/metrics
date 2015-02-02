@@ -1,4 +1,5 @@
 *.csv
 *.json
+/usage.cfg
 /usage-test.cfg
 /shock_usage-test.cfg
