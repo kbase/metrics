@@ -143,5 +143,5 @@ $jo->{meta}->{comments}="Generated from a Splunk query and summarized by user_vi
 $jo->{meta}->{author}="Shane Canon";
 my $date=strftime('%Y-%m-%d',gmtime);
 $jo->{meta}->{generated_on}=$date;
-print $json->encode($jo);
+print $json->pretty->canonical->encode($jo);
 
