@@ -45,6 +45,7 @@ CFG_USER = 'user'
 CFG_PWD = 'pwd'
 
 CFG_EXCLUDE_USER = 'exclude-user'
+CFG_STAFF_FILE = 'staff-file'
 
 # output file names
 USER_FILE = 'shock_data.json'
@@ -62,6 +63,8 @@ NODE_SIZE = 'file.size'
 
 PUBLIC = 'pub'
 PRIVATE = 'priv'
+STAFF = ':staff'
+USER = ':user'
 OBJ_CNT = 'cnt'
 BYTES = 'byte'
 
@@ -69,6 +72,7 @@ NO_OWNER = '__NONE__'
 
 MAX_NODES_PER_CALL = 10000
 
+staff = {}
 
 def _parseArgs():
     parser = ArgumentParser(description='Calculate shock disk usage by ' +
@@ -202,6 +206,12 @@ def processNodeRecs(userdata, recs, uuid2name, excludedUUIDs):
         pub = PUBLIC if len(r) == 0 else PRIVATE
         userdata['by_user'][o][pub][OBJ_CNT] += 1
         userdata['by_user'][o][pub][BYTES] += s
+        userdata['by_month'][month][pub][OBJ_CNT] += 1
+        userdata['by_month'][month][pub][BYTES] += s
+        if o in staff:
+            pub=pub+STAFF
+        else:
+            pub=pub+USER
         
         userdata['by_month'][month][pub][OBJ_CNT] += 1
         userdata['by_month'][month][pub][BYTES] += s
@@ -224,8 +234,21 @@ def processNodes(srcdb, uuid2name, excludedUUIDs):
     recs = srcdb[COL_NODE].find({NODE_OWNER: {'$nin': excludedUUIDs}},
                                 [NODE_OWNER, NODE_READ, NODE_SIZE])
     processNodeRecs(d, recs, uuid2name, excludedUUIDs)
+    cum=defaultdict(lambda: defaultdict(int))
+    for month in sorted(d['by_month']):
+        types=d['by_month'][month].keys();
+        for type in (PUBLIC,PRIVATE,PUBLIC+STAFF,PRIVATE+STAFF,PUBLIC+USER,PRIVATE+USER) :
+            for acc in ("byte","cnt"):
+               cum[type][acc]+=d['by_month'][month][type][acc]
+               d['by_month'][month]['cumulative_'+type][acc]=cum[type][acc]
+               
+        
     return d
 
+def processStaff(file):
+    f=open(file)
+    for name in f:
+        staff[name.rstrip('\n')]=True 
 
 def main():
     args = _parseArgs()
@@ -241,8 +264,14 @@ def main():
     print('Processing user names... ', end='')
     uuid2name, excludedUUIDs = processNames(srcdb, sourcecfg[CFG_EXCLUDE_USER])
     print('done.')
+    if CFG_STAFF_FILE in sourcecfg:
+      print('Processing staff file ',sourcecfg[CFG_STAFF_FILE])
+      processStaff(sourcecfg[CFG_STAFF_FILE])
 
     userdata = processNodes(srcdb, uuid2name, excludedUUIDs)
+    userdata['meta']['comments']='This data comes from shock and filters out the workspace objects'
+    userdata['meta']['author']='Gavin Price, Jared Bischof, Shane Canon'
+    userdata['meta']['description']='Summary of amount of data stored in shock both by user and by month'
 
     if outdir:
         with open(os.path.join(outdir, USER_FILE), 'w') as f:
