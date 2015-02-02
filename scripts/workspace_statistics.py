@@ -325,8 +325,8 @@ def process_objects(db, workspaces, exclude_ws, incl_types, list_types):
                 db, d, types, objlist, objs, workspaces, incl_types,
                 list_types, lim - LIMIT, lim)
 
-            print('\ttotal ver query time: ' + str(time.time() - ttlstart))
-            print('\ttotal object versions: ' + str(vers))
+            #print('\ttotal ver query time: ' + str(time.time() - ttlstart))
+            #print('\ttotal object versions: ' + str(vers))
             sys.stdout.flush()
     return d, types, objlist
 
@@ -379,8 +379,10 @@ def main():
     srcdb = srcmongo[sourcecfg[CFG_DB]]
     if sourcecfg[CFG_USER]:
         srcdb.authenticate(sourcecfg[CFG_USER], sourcecfg[CFG_PWD])
+    print('Prcoessing workspaces')
     ws = process_workspaces(srcdb)
 
+    print('Prcoessing objects')
     objdata, typedata, obj_list = process_objects(
         srcdb, ws, sourcecfg[CFG_EXCLUDE_WS], sourcecfg[CFG_TYPES],
         sourcecfg[CFG_LIST_OBJS])
