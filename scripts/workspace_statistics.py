@@ -39,6 +39,9 @@ from argparse import ArgumentParser
 import json
 import errno
 
+# workspace metadata to include
+WS_META_INC = ['is_temporary', 'narrative', 'narrative_nice_name']
+
 # where to get credentials (don't check these into git, idiot)
 CFG_FILE_DEFAULT = 'usage.cfg'
 CFG_SECTION_SOURCE = 'SourceMongo'
@@ -90,6 +93,7 @@ OWNER = WS_OWNER
 TYPES = 'types'
 NAME = WS_NAME
 SHARED = 'shd'
+SHARED_WITH = 'shdwith'
 
 
 LIMIT = 10000
@@ -217,22 +221,34 @@ def process_workspaces(db):
     user = 'user'
     all_users = '*'
     acl_id = 'id'
+    meta = 'meta'
     ws_cursor = db[COL_WS].find({}, [WS_ID, WS_OBJ_CNT, WS_OWNER, WS_DELETED,
-                                     NAME])
-    pub_read = db[COL_ACLS].find({user: all_users}, [acl_id])
+                                     NAME, meta])
     workspaces = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
     for ws in ws_cursor:
         # this could be faster via batching
-        workspaces[ws[WS_ID]][SHARED] = \
-            db[COL_ACLS].find({acl_id: ws[WS_ID]}).count() - 1
-        workspaces[ws[WS_ID]][PUBLIC] = PRIVATE
+        users = []
+        pub = PRIVATE
+        for aclrec in db[COL_ACLS].find({acl_id: ws[WS_ID]}):
+            if aclrec[user] != ws[WS_OWNER] and aclrec[user] != all_users:
+                users.append(aclrec[user])
+            if aclrec[user] == all_users:
+                pub = PUBLIC
+
+        workspaces[ws[WS_ID]][SHARED] = len(users)
+        workspaces[ws[WS_ID]][SHARED_WITH] = users
+        workspaces[ws[WS_ID]][PUBLIC] = pub
         workspaces[ws[WS_ID]][WS_OBJ_CNT] = ws[WS_OBJ_CNT]
         workspaces[ws[WS_ID]][OWNER] = ws[WS_OWNER]
         workspaces[ws[WS_ID]][NAME] = ws[NAME]
-    for pr in pub_read:
-        workspaces[pr[acl_id]][PUBLIC] = PUBLIC
-        if workspaces[pr[acl_id]][SHARED] > 0:
-            workspaces[pr[acl_id]][SHARED] -= 1
+        print(ws)
+        if meta in ws:
+            wsmeta = {}
+            for m in ws[meta]:
+                wsmeta[m['k']] = m['v']
+            for incmeta in WS_META_INC:
+                if incmeta in wsmeta:
+                    workspaces[ws[WS_ID]][meta][incmeta] = wsmeta[incmeta]
     return workspaces
 
 
@@ -252,8 +268,8 @@ def update_object_list(objlist, obj, version):
 
 # this method sig is way too big
 def process_object_versions(
-        db, userdata, typedata, bymonth, objlist, objects, workspaces, incl_types,
-        list_types, start_id, end_id):
+        db, userdata, typedata, bymonth, objlist, objects, workspaces,
+        incl_types, list_types, start_id, end_id):
     # note all objects are from the same workspace
     size = 'size'
 
@@ -283,9 +299,9 @@ def process_object_versions(
         workspaces[ws][deleted][OBJ_CNT] += 1
         workspaces[ws][deleted][BYTES] += v[size]
         t = v[OBJ_TYPE].split('-')[0]
-        o_str = str(v['_id']) 
+        o_str = str(v['_id'])
         id_time = int(o_str[0:8], 16)
-        month=datetime.date.fromtimestamp(id_time).strftime('%Y%m')
+        month = datetime.date.fromtimestamp(id_time).strftime('%Y%m')
         bymonth[month][wspub][deleted][OBJ_CNT] += 1
         bymonth[month][wspub][deleted][BYTES] += v[size]
         if t in incl_types:
@@ -330,12 +346,12 @@ def process_objects(db, workspaces, exclude_ws, incl_types, list_types):
                                             OBJ_NAME])
 
             print('\ttotal obj query time: ' + str(time.time() - objtime))
-            ttlstart = time.time()
-            vers = process_object_versions(
+#             ttlstart = time.time()
+            vers = process_object_versions(  # @UnusedVariable
                 db, d, types, bymonth, objlist, objs, workspaces, incl_types,
                 list_types, lim - LIMIT, lim)
-            #print('\ttotal ver query time: ' + str(time.time() - ttlstart))
-            #print('\ttotal object versions: ' + str(vers))
+#             print('\ttotal ver query time: ' + str(time.time() - ttlstart))
+#             print('\ttotal object versions: ' + str(vers))
             sys.stdout.flush()
     return d, types, bymonth, objlist
 
@@ -402,17 +418,19 @@ def main():
         objdata[u][TYPES] = typedata[u]
     if outdir:
         with open(os.path.join(outdir, USER_FILE), 'w') as f:
-            f.write(json.dumps(objdata,indent=2,sort_keys=True))
+            f.write(json.dumps(objdata, indent=2, sort_keys=True))
         with open(os.path.join(outdir, WS_FILE), 'w') as f:
-            f.write(json.dumps(ws,indent=2,sort_keys=True))
+            f.write(json.dumps(ws, indent=2, sort_keys=True))
         with open(os.path.join(outdir, OBJECT_FILE), 'w') as f:
-            f.write(json.dumps(obj_list,indent=2,sort_keys=True))
+            f.write(json.dumps(obj_list, indent=2, sort_keys=True))
         with open(os.path.join(outdir, BYMONTH_FILE), 'w') as f:
-            data = { 'data' : by_month,
-                     'meta': {'comments' :'This data comes from workspace.  Dates are calculated from the Mongo ID',
-                              'author':'Gavin Price, Shane Canon',
-                              'description':'Summary of amount of data stored in workspace by month' }}
-            f.write(json.dumps(data,indent=2,sort_keys=True))
+            data = {'data': by_month,
+                    'meta': {'comments': 'This data comes from workspace. ' +
+                             'Dates are calculated from the Mongo ID',
+                             'author': 'Gavin Price, Shane Canon',
+                             'description': 'Summary of amount of data ' +
+                             'stored in workspace by month'}}
+            f.write(json.dumps(data, indent=2, sort_keys=True))
 
     print('\nElapsed time: ' + str(time.time() - starttime))
 
