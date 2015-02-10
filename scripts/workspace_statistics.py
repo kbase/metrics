@@ -41,6 +41,7 @@ import errno
 
 # workspace metadata to include
 WS_META_INC = ['is_temporary', 'narrative', 'narrative_nice_name']
+OBJ_META_INC = ['methods', 'job_info']
 
 # where to get credentials (don't check these into git, idiot)
 CFG_FILE_DEFAULT = 'usage.cfg'
@@ -75,12 +76,14 @@ WS_DELETED = 'del'
 WS_OWNER = 'owner'
 WS_ID = 'ws'
 WS_NAME = 'name'
+WS_META = 'meta'
 OBJ_NAME = 'name'
 OBJ_ID = 'id'
 OBJ_VERSION = 'ver'
 OBJ_TYPE = 'type'
 OBJ_SAVED_BY = 'savedby'
 OBJ_SAVE_DATE = 'savedate'
+OBJ_META = 'meta'
 
 # program fields
 PUBLIC = 'pub'
@@ -94,6 +97,7 @@ TYPES = 'types'
 NAME = WS_NAME
 SHARED = 'shd'
 SHARED_WITH = 'shdwith'
+META = 'meta'
 
 
 LIMIT = 10000
@@ -216,15 +220,21 @@ def process_config_string_list(config_name, config_section):
         config_section[config_name] = None
 
 
+def convert_mongo_meta_to_dict(mongo_meta):
+    meta = {}
+    for m in mongo_meta:
+        meta[m['k']] = m['v']
+    return meta
+
+
 # this might need to be batched at some point
 def process_workspaces(db):
     user = 'user'
     all_users = '*'
     acl_id = 'id'
     acl_perm = 'perm'
-    meta = 'meta'
     ws_cursor = db[COL_WS].find({}, [WS_ID, WS_OBJ_CNT, WS_OWNER, WS_DELETED,
-                                     NAME, meta])
+                                     NAME, WS_META])
     workspaces = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
     for ws in ws_cursor:
         # this could be faster via batching
@@ -242,14 +252,11 @@ def process_workspaces(db):
         workspaces[ws[WS_ID]][WS_OBJ_CNT] = ws[WS_OBJ_CNT]
         workspaces[ws[WS_ID]][OWNER] = ws[WS_OWNER]
         workspaces[ws[WS_ID]][NAME] = ws[NAME]
-        print(ws)
-        if meta in ws:
-            wsmeta = {}
-            for m in ws[meta]:
-                wsmeta[m['k']] = m['v']
+        if WS_META in ws:
+            wsmeta = convert_mongo_meta_to_dict(ws[WS_META])
             for incmeta in WS_META_INC:
                 if incmeta in wsmeta:
-                    workspaces[ws[WS_ID]][meta][incmeta] = wsmeta[incmeta]
+                    workspaces[ws[WS_ID]][META][incmeta] = wsmeta[incmeta]
     return workspaces
 
 
@@ -265,6 +272,13 @@ def update_object_list(objlist, obj, version):
                          OBJ_TYPE: version[OBJ_TYPE],
                          OBJ_SAVE_DATE: version[OBJ_SAVE_DATE].isoformat()
                          }
+    if OBJ_META in version:
+        meta = {}
+        objmeta = convert_mongo_meta_to_dict(version[OBJ_META])
+        for incmeta in OBJ_META_INC:
+            if incmeta in objmeta:
+                meta[incmeta] = objmeta[incmeta]
+        objlist[obj_kbid][META] = meta
 
 
 # this method sig is way too big
@@ -287,7 +301,7 @@ def process_object_versions(
     res = db[COL_VERS].find({WS_ID: ws,
                              OBJ_ID: {'$gt': start_id, '$lte': end_id}},
                             [WS_ID, OBJ_ID, size, OBJ_TYPE, OBJ_VERSION,
-                             OBJ_SAVED_BY, OBJ_SAVE_DATE])
+                             OBJ_SAVED_BY, OBJ_SAVE_DATE, OBJ_META])
     vers = 0
     for v in res:
         if v[OBJ_ID] not in id2obj:  # new object was made just now in ws
@@ -426,11 +440,11 @@ def main():
             f.write(json.dumps(obj_list, indent=2, sort_keys=True))
         with open(os.path.join(outdir, BYMONTH_FILE), 'w') as f:
             data = {'data': by_month,
-                    'meta': {'comments': 'This data comes from workspace. ' +
-                             'Dates are calculated from the Mongo ID',
-                             'author': 'Gavin Price, Shane Canon',
-                             'description': 'Summary of amount of data ' +
-                             'stored in workspace by month'}}
+                    META: {'comments': 'This data comes from workspace. ' +
+                           'Dates are calculated from the Mongo ID',
+                           'author': 'Gavin Price, Shane Canon',
+                           'description': 'Summary of amount of data ' +
+                           'stored in workspace by month'}}
             f.write(json.dumps(data, indent=2, sort_keys=True))
 
     print('\nElapsed time: ' + str(time.time() - starttime))
