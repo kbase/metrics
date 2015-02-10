@@ -221,17 +221,18 @@ def process_workspaces(db):
     user = 'user'
     all_users = '*'
     acl_id = 'id'
+    acl_perm = 'perm'
     meta = 'meta'
     ws_cursor = db[COL_WS].find({}, [WS_ID, WS_OBJ_CNT, WS_OWNER, WS_DELETED,
                                      NAME, meta])
     workspaces = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
     for ws in ws_cursor:
         # this could be faster via batching
-        users = []
+        users = {}
         pub = PRIVATE
         for aclrec in db[COL_ACLS].find({acl_id: ws[WS_ID]}):
             if aclrec[user] != ws[WS_OWNER] and aclrec[user] != all_users:
-                users.append(aclrec[user])
+                users[aclrec[user]] = aclrec[acl_perm]
             if aclrec[user] == all_users:
                 pub = PUBLIC
 
@@ -404,10 +405,10 @@ def main():
     srcdb = srcmongo[sourcecfg[CFG_DB]]
     if sourcecfg[CFG_USER]:
         srcdb.authenticate(sourcecfg[CFG_USER], sourcecfg[CFG_PWD])
-    print('Prcoessing workspaces')
+    print('Processing workspaces')
     ws = process_workspaces(srcdb)
 
-    print('Prcoessing objects')
+    print('Processing objects')
     objdata, typedata, by_month, obj_list = process_objects(
         srcdb, ws, sourcecfg[CFG_EXCLUDE_WS], sourcecfg[CFG_TYPES],
         sourcecfg[CFG_LIST_OBJS])
