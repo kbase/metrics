@@ -80,6 +80,7 @@ WS_META = 'meta'
 OBJ_NAME = 'name'
 OBJ_ID = 'id'
 OBJ_VERSION = 'ver'
+OBJ_NUMVER = 'numver'
 OBJ_TYPE = 'type'
 OBJ_SAVED_BY = 'savedby'
 OBJ_SAVE_DATE = 'savedate'
@@ -116,6 +117,8 @@ def _parseArgs():
     parser.add_argument('-o', '--output',
                         help='write json output to this directory. If it ' +
                         'does not exist it will be created.')
+    parser.add_argument('--only-latest-ver', action='store_true',
+                        help='only process the latest version of each object.')
     return parser.parse_args()
 
 
@@ -284,7 +287,7 @@ def update_object_list(objlist, obj, version):
 # this method sig is way too big
 def process_object_versions(
         db, userdata, typedata, bymonth, objlist, objects, workspaces,
-        incl_types, list_types, start_id, end_id):
+        incl_types, list_types, start_id, end_id, only_latest_ver):
     # note all objects are from the same workspace
     size = 'size'
 
@@ -307,6 +310,8 @@ def process_object_versions(
         if v[OBJ_ID] not in id2obj:  # new object was made just now in ws
             continue
         o = id2obj[v[OBJ_ID]]
+        if only_latest_ver and v[OBJ_VERSION] != o[OBJ_NUMVER]:
+            continue
         vers += 1
         deleted = DELETED if o[DELETED] else NOT_DEL
         userdata[wsowner][wspub][deleted][OBJ_CNT] += 1
@@ -319,7 +324,7 @@ def process_object_versions(
         month = datetime.date.fromtimestamp(id_time).strftime('%Y%m')
         bymonth[month][wspub][deleted][OBJ_CNT] += 1
         bymonth[month][wspub][deleted][BYTES] += v[size]
-        if t in incl_types:
+        if t in incl_types or '*' in incl_types:
             typedata[wsowner][t][wspub][deleted][OBJ_CNT] += 1
             typedata[wsowner][t][wspub][deleted][BYTES] += v[size]
         if t in list_types:
@@ -327,7 +332,9 @@ def process_object_versions(
     return vers
 
 
-def process_objects(db, workspaces, exclude_ws, incl_types, list_types):
+def process_objects(db, workspaces, exclude_ws, incl_types, list_types,
+                    only_latest_ver):
+
     # user -> pub -> del -> du or objs -> #
     d = defaultdict(lambda: defaultdict(lambda: defaultdict(
         lambda: defaultdict(int))))
@@ -358,15 +365,15 @@ def process_objects(db, workspaces, exclude_ws, incl_types, list_types):
             objtime = time.time()
             query = {WS_ID: ws, OBJ_ID: {'$gt': lim - LIMIT, '$lte': lim}}
             objs = db[COL_OBJ].find(query, [WS_ID, OBJ_ID, WS_DELETED,
-                                            OBJ_NAME])
+                                            OBJ_NAME, OBJ_NUMVER])
 
             print('\ttotal obj query time: ' + str(time.time() - objtime))
 #             ttlstart = time.time()
             vers = process_object_versions(  # @UnusedVariable
                 db, d, types, bymonth, objlist, objs, workspaces, incl_types,
-                list_types, lim - LIMIT, lim)
+                list_types, lim - LIMIT, lim, only_latest_ver)
 #             print('\ttotal ver query time: ' + str(time.time() - ttlstart))
-#             print('\ttotal object versions: ' + str(vers))
+            print('\ttotal object versions: ' + str(vers))
             sys.stdout.flush()
     return d, types, bymonth, objlist
 
@@ -425,7 +432,7 @@ def main():
     print('Processing objects')
     objdata, typedata, by_month, obj_list = process_objects(
         srcdb, ws, sourcecfg[CFG_EXCLUDE_WS], sourcecfg[CFG_TYPES],
-        sourcecfg[CFG_LIST_OBJS])
+        sourcecfg[CFG_LIST_OBJS], args.only_latest_ver)
 
     for wsid in ws:
         del ws[wsid][WS_OBJ_CNT]
