@@ -40,8 +40,7 @@ import json
 import errno
 
 # workspace metadata to include
-WS_META_INC = ['is_temporary', 'narrative', 'narrative_nice_name']
-OBJ_META_INC = ['methods', 'job_info']
+WS_META_INC = set(['is_temporary', 'narrative', 'narrative_nice_name'])
 
 # where to get credentials (don't check these into git, idiot)
 CFG_FILE_DEFAULT = 'usage.cfg'
@@ -276,12 +275,7 @@ def update_object_list(objlist, obj, version):
                          OBJ_SAVE_DATE: version[OBJ_SAVE_DATE].isoformat()
                          }
     if OBJ_META in version:
-        meta = {}
-        objmeta = convert_mongo_meta_to_dict(version[OBJ_META])
-        for incmeta in OBJ_META_INC:
-            if incmeta in objmeta:
-                meta[incmeta] = objmeta[incmeta]
-        objlist[obj_kbid][META] = meta
+        objlist[obj_kbid][META] = convert_mongo_meta_to_dict(version[OBJ_META])
 
 
 # this method sig is way too big
