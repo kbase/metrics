@@ -8,10 +8,10 @@ databases.
 Current data sources are:
 Workspace 0.5.0
 UJS 0.2.1
-Shock
-AWE
+Shock 0.9.6
+AWE 0.9.11
 Handle Service (ignored. The chance a user is in HS and not in WS or Shock is virtually zero)
-User Profile Service
+User Profile Service a74c3ced0abdec6a986dbde1a04a95ae4c791a90
 Catalog
 Narrative Method Store
 
@@ -54,7 +54,7 @@ def proc_workspace(cfg):
         count += 1
         if count % 100000 == 0:
             print 'At provenance record ' + str(count)
-    users.union(uprov)
+    users.update(uprov)
     uobjs = set()
     count = 0
     for p in db.workspaceObjVersions.find(fields=['savedby']):  # aggregation runs out of memory
@@ -62,7 +62,7 @@ def proc_workspace(cfg):
         count += 1
         if count % 100000 == 0:
             print 'At object version record ' + str(count)
-    users.union(uobjs)
+    users.update(uobjs)
     return users
 
 
@@ -85,7 +85,7 @@ def proc_ujs(cfg):
         count += 1
         if count % 100000 == 0:
             print 'At job record ' + str(count)
-    users.union(ujobs)
+    users.update(ujobs)
     return set()
 
 
@@ -109,13 +109,25 @@ def proc_awe(cfg):
     return users
 
 
+def proc_userprof(cfg):
+    db = get_mongo_db(cfg, 'UserProfile', 'mongodb-host', 'mongodb-database', 'mongodb-user',
+                      'mongodb-pwd')
+
+    ret = db.profiles.aggregate([{'$group': {'_id': None, 'users': {'$push': '$user.username'}}}])
+    users = set(ret['result'][0]['users'])
+    print 'userprofile'
+    print users
+    return users
+
+
 def main():
     cfg = ConfigParser()
     cfg.read(sys.argv[1])
     names = proc_workspace(cfg)
-    names.union(proc_ujs(cfg))
-    names.union(proc_shock(cfg))
-#     names.union(proc_awe(cfg))  # TODO awe deploy entry is broken right now, need help from kk
+    names.update(proc_ujs(cfg))
+    names.update(proc_shock(cfg))
+#     names.update(proc_awe(cfg))  # TODO awe deploy entry is broken right now, need help from kk
+    names.update(proc_userprof(cfg))
     names.remove('*')
     print names
 
