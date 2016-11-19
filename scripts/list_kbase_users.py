@@ -67,7 +67,7 @@ def proc_workspace(cfg):
 
 
 def proc_ujs(cfg):
-    db = get_mongo_db(cfg, 'UserAndJobState',  'mongodb-host', 'mongodb-database', 'mongodb-user',
+    db = get_mongo_db(cfg, 'UserAndJobState', 'mongodb-host', 'mongodb-database', 'mongodb-user',
                       'mongodb-pwd')
 
     ret = db.userstate.aggregate([{'$group': {'_id': None, 'users': {'$push': '$user'}}}])
@@ -89,11 +89,33 @@ def proc_ujs(cfg):
     return set()
 
 
+def proc_shock(cfg):
+    db = get_mongo_db(cfg, 'shock', 'mongodb-host', 'mongodb-database', 'mongodb-user',
+                      'mongodb-pwd')
+
+    ret = db.Users.aggregate([{'$group': {'_id': None, 'users': {'$push': '$username'}}}])
+    users = set(ret['result'][0]['users'])
+    return users
+
+
+def proc_awe(cfg):
+    db = get_mongo_db(cfg, 'awe', 'mongodb-host', 'mongodb-database', 'mongodb-user',
+                      'mongodb-pwd')
+
+    ret = db.Users.aggregate([{'$group': {'_id': None, 'users': {'$push': '$username'}}}])
+    users = set(ret['result'][0]['users'])
+    print 'awe'
+    print users
+    return users
+
+
 def main():
     cfg = ConfigParser()
     cfg.read(sys.argv[1])
     names = proc_workspace(cfg)
     names.union(proc_ujs(cfg))
+    names.union(proc_shock(cfg))
+#     names.union(proc_awe(cfg))  # TODO awe deploy entry is broken right now, need help from kk
     names.remove('*')
     print names
 
