@@ -12,8 +12,9 @@ Shock 0.9.6
 AWE 0.9.11
 Handle Service (ignored. The chance a user is in HS and not in WS or Shock is virtually zero)
 User Profile Service a74c3ced0abdec6a986dbde1a04a95ae4c791a90
-Catalog
-Narrative Method Store
+Catalog 2.0.5
+Narrative Method Store 0.3.5 (note Catalog and NMS share the catalog DB but have separate
+    collections)
 
 Takes one argument: the path to the KBase deployment.cfg / cluster.ini file
 that contains the configurations for the KBase services above. The code
@@ -47,6 +48,11 @@ def proc_workspace(cfg):
 
     ret = db.workspaceACLs.aggregate([{'$group': {'_id': None, 'users': {'$push': '$user'}}}])
     users = set(ret['result'][0]['users'])
+
+    ret = db.admins.aggregate([{'$group': {'_id': None, 'users': {'$push': '$user'}}}])
+    admins = set(ret['result'][0]['users'])
+    users.update(admins)
+
     uprov = set()
     count = 0
     for p in db.provenance.find(fields=['user']):  # aggregation runs out of memory
@@ -55,6 +61,7 @@ def proc_workspace(cfg):
         if count % 100000 == 0:
             print 'At provenance record ' + str(count)
     users.update(uprov)
+
     uobjs = set()
     count = 0
     for p in db.workspaceObjVersions.find(fields=['savedby']):  # aggregation runs out of memory
@@ -63,6 +70,7 @@ def proc_workspace(cfg):
         if count % 100000 == 0:
             print 'At object version record ' + str(count)
     users.update(uobjs)
+    users.remove('*')
     return users
 
 
@@ -72,6 +80,7 @@ def proc_ujs(cfg):
 
     ret = db.userstate.aggregate([{'$group': {'_id': None, 'users': {'$push': '$user'}}}])
     users = set(ret['result'][0]['users'])
+
     ujobs = set()
     count = 0
     for j in db.jobstate.find():
@@ -86,7 +95,7 @@ def proc_ujs(cfg):
         if count % 100000 == 0:
             print 'At job record ' + str(count)
     users.update(ujobs)
-    return set()
+    return users
 
 
 def proc_shock(cfg):
@@ -95,6 +104,9 @@ def proc_shock(cfg):
 
     ret = db.Users.aggregate([{'$group': {'_id': None, 'users': {'$push': '$username'}}}])
     users = set(ret['result'][0]['users'])
+    users.remove('*')
+    users.remove('')
+    users.remove('1')
     return users
 
 
@@ -105,7 +117,7 @@ def proc_awe(cfg):
     ret = db.Users.aggregate([{'$group': {'_id': None, 'users': {'$push': '$username'}}}])
     users = set(ret['result'][0]['users'])
     print 'awe'
-    print users
+    print sorted(users)
     return users
 
 
@@ -115,8 +127,57 @@ def proc_userprof(cfg):
 
     ret = db.profiles.aggregate([{'$group': {'_id': None, 'users': {'$push': '$user.username'}}}])
     users = set(ret['result'][0]['users'])
-    print 'userprofile'
-    print users
+    return users
+
+
+def proc_catalog_nms(cfg):
+    db = get_mongo_db(cfg, 'catalog', 'mongodb-host', 'mongodb-database', 'mongodb-user',
+                      'mongodb-pwd')
+
+    ret = db.developers.aggregate([{'$group': {'_id': None, 'users': {'$push': '$kb_username'}}}])
+    users = set(ret['result'][0]['users'])
+
+    ret = db.exec_stats_raw.aggregate([{'$group': {'_id': None, 'users': {'$push': '$user_id'}}}])
+    ustatsraw = set(ret['result'][0]['users'])
+    users.update(ustatsraw)
+
+    ret = db.exec_stats_users.aggregate([{'$group': {'_id': None, 'users':
+                                                     {'$push': '$user_id'}}}])
+    ustatsuser = set(ret['result'][0]['users'])
+    users.update(ustatsuser)
+
+    ret = db.favorites.aggregate([{'$group': {'_id': None, 'users': {'$push': '$user'}}}])
+    ufav = set(ret['result'][0]['users'])
+    users.update(ufav)
+
+    authors = set()
+    count = 0
+    for a in db.local_functions.find():
+        authors.update(a['authors'])
+        count += 1
+        if count % 100000 == 0:
+            print 'At local_functions record ' + str(count)
+    users.update(authors)
+
+    modowners = set()
+    count = 0
+    for a in db.modules.find():
+        for o in a['owners']:
+            modowners.add(o['kb_username'])
+        count += 1
+        if count % 100000 == 0:
+            print 'At modules record ' + str(count)
+    users.update(modowners)
+
+    repoowners = set()
+    count = 0
+    for r in db.repo_history.find():
+        repoowners.update(r['repo_data']['owners'])
+        count += 1
+        if count % 100000 == 0:
+            print 'At repo_history record ' + str(count)
+    users.update(repoowners)
+
     return users
 
 
@@ -128,8 +189,9 @@ def main():
     names.update(proc_shock(cfg))
 #     names.update(proc_awe(cfg))  # TODO awe deploy entry is broken right now, need help from kk
     names.update(proc_userprof(cfg))
-    names.remove('*')
-    print names
+    names.update(proc_catalog_nms(cfg))
+    for n in sorted(names):
+        print n
 
 if __name__ == "__main__":
     main()
