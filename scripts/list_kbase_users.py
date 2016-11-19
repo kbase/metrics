@@ -25,27 +25,28 @@ import sys
 from pymongo.mongo_client import MongoClient
 
 
-def proc_workspace(cfg):
-    ws = 'Workspace'
-    mongohost = cfg.get(ws, 'mongodb-host')
-    mongodb = cfg.get(ws, 'mongodb-database')
-    u = 'mongodb-user'
+def get_mongo_db(cfg, section, hostkey, dbkey, userkey, pwdkey):
+    mongohost = cfg.get(section, hostkey)
+    mongodb = cfg.get(section, dbkey)
     mongouser = None
-    if cfg.has_option(ws, u):
-        mongouser = cfg.get(ws, u)
-    p = 'mongodb-pwd'
+    if cfg.has_option(section, userkey):
+        mongouser = cfg.get(section, userkey)
     mongopwd = None
-    if cfg.has_option(ws, p):
-        mongopwd = cfg.get(ws, p)
+    if cfg.has_option(section, pwdkey):
+        mongopwd = cfg.get(section, pwdkey)
     mcli = MongoClient(mongohost, slaveOk=True)
     db = mcli[mongodb]
     if mongouser:
         db.authenticate(mongouser, mongopwd)
+    return db
+
+
+def proc_workspace(cfg):
+    db = get_mongo_db(cfg, 'Workspace', 'mongodb-host', 'mongodb-database', 'mongodb-user',
+                      'mongodb-pwd')
 
     ret = db.workspaceACLs.aggregate([{'$group': {'_id': None, 'users': {'$push': '$user'}}}])
     users = set(ret['result'][0]['users'])
-    print 'workspaceACLs'
-    print users
     uprov = set()
     count = 0
     for p in db.provenance.find(fields=['user']):  # aggregation runs out of memory
@@ -53,8 +54,6 @@ def proc_workspace(cfg):
         count += 1
         if count % 100000 == 0:
             print 'At provenance record ' + str(count)
-    print 'provenance'
-    print uprov
     users.union(uprov)
     uobjs = set()
     count = 0
@@ -63,13 +62,30 @@ def proc_workspace(cfg):
         count += 1
         if count % 100000 == 0:
             print 'At object version record ' + str(count)
-    print 'object versions'
-    print uobjs
     users.union(uobjs)
     return users
 
 
 def proc_ujs(cfg):
+    db = get_mongo_db(cfg, 'UserAndJobState',  'mongodb-host', 'mongodb-database', 'mongodb-user',
+                      'mongodb-pwd')
+
+    ret = db.userstate.aggregate([{'$group': {'_id': None, 'users': {'$push': '$user'}}}])
+    users = set(ret['result'][0]['users'])
+    ujobs = set()
+    count = 0
+    for j in db.jobstate.find():
+        ujobs.add(j['user'])
+        cb = j.get('canceledby')
+        if cb:
+            ujobs.add(cb)
+        sh = j.get('shared')
+        if sh:
+            ujobs.update(sh)
+        count += 1
+        if count % 100000 == 0:
+            print 'At job record ' + str(count)
+    users.union(ujobs)
     return set()
 
 
@@ -78,6 +94,7 @@ def main():
     cfg.read(sys.argv[1])
     names = proc_workspace(cfg)
     names.union(proc_ujs(cfg))
+    names.remove('*')
     print names
 
 if __name__ == "__main__":
