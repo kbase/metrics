@@ -24,6 +24,7 @@ service.
 from ConfigParser import ConfigParser
 import sys
 from pymongo.mongo_client import MongoClient
+from _collections import defaultdict
 
 
 def get_mongo_db(cfg, section, hostkey, dbkey, userkey, pwdkey):
@@ -181,17 +182,25 @@ def proc_catalog_nms(cfg):
     return users
 
 
+def update_names(store, names, service):
+    for n in names:
+        store[n].add(service)
+
+
 def main():
     cfg = ConfigParser()
     cfg.read(sys.argv[1])
-    names = proc_workspace(cfg)
-    names.update(proc_ujs(cfg))
-    names.update(proc_shock(cfg))
-#     names.update(proc_awe(cfg))  # TODO awe deploy entry is broken right now, need help from kk
-    names.update(proc_userprof(cfg))
-    names.update(proc_catalog_nms(cfg))
-    for n in sorted(names):
-        print n
+    d = defaultdict(set)
+    update_names(d, proc_workspace(cfg), 'Workspace')
+    update_names(d, proc_ujs(cfg), 'UJS')
+    update_names(d, proc_shock(cfg), 'Shock')
+#     update_names(d, proc_awe(cfg), 'AWE')  # TODO awe deploy entry is broken right now, need help from kk @IgnorePep8
+    update_names(d, proc_userprof(cfg), 'User Profile')
+    update_names(d, proc_catalog_nms(cfg), 'Catalog/NMS')
+    for n in sorted(d.keys()):
+        line = [n]
+        line.extend(sorted(d[n]))
+        print ', '.join(line)
 
 if __name__ == "__main__":
     main()
