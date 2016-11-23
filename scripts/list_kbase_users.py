@@ -117,8 +117,6 @@ def proc_awe(cfg):
 
     ret = db.Users.aggregate([{'$group': {'_id': None, 'users': {'$push': '$username'}}}])
     users = set(ret['result'][0]['users'])
-    print 'awe'
-    print sorted(users)
     return users
 
 
@@ -194,7 +192,7 @@ def main():
     update_names(d, proc_workspace(cfg), 'Workspace')
     update_names(d, proc_ujs(cfg), 'UJS')
     update_names(d, proc_shock(cfg), 'Shock')
-#     update_names(d, proc_awe(cfg), 'AWE')  # TODO awe deploy entry is broken right now, need help from kk @IgnorePep8
+    update_names(d, proc_awe(cfg), 'AWE')
     update_names(d, proc_userprof(cfg), 'User Profile')
     update_names(d, proc_catalog_nms(cfg), 'Catalog/NMS')
     for n in sorted(d.keys()):
