@@ -43,15 +43,21 @@ def get_mongo_db(cfg, section, hostkey, dbkey, userkey, pwdkey):
     return db
 
 
+def make_set_from_agg_result(incoming, field_name):
+    if not incoming['result']:
+        return set()
+    return set(incoming['result'][0][field_name])
+
+
 def proc_workspace(cfg):
     db = get_mongo_db(cfg, 'Workspace', 'mongodb-host', 'mongodb-database', 'mongodb-user',
                       'mongodb-pwd')
 
     ret = db.workspaceACLs.aggregate([{'$group': {'_id': None, 'users': {'$push': '$user'}}}])
-    users = set(ret['result'][0]['users'])
+    users = make_set_from_agg_result(ret, 'users')
 
     ret = db.admins.aggregate([{'$group': {'_id': None, 'users': {'$push': '$user'}}}])
-    admins = set(ret['result'][0]['users'])
+    admins = make_set_from_agg_result(ret, 'users')
     users.update(admins)
 
     uprov = set()
@@ -80,7 +86,7 @@ def proc_ujs(cfg):
                       'mongodb-pwd')
 
     ret = db.userstate.aggregate([{'$group': {'_id': None, 'users': {'$push': '$user'}}}])
-    users = set(ret['result'][0]['users'])
+    users = make_set_from_agg_result(ret, 'users')
 
     ujobs = set()
     count = 0
@@ -104,7 +110,7 @@ def proc_shock(cfg):
                       'mongodb-pwd')
 
     ret = db.Users.aggregate([{'$group': {'_id': None, 'users': {'$push': '$username'}}}])
-    users = set(ret['result'][0]['users'])
+    users = make_set_from_agg_result(ret, 'users')
     users.remove('*')
     users.remove('')
     users.remove('1')
@@ -116,7 +122,7 @@ def proc_awe(cfg):
                       'mongodb-pwd')
 
     ret = db.Users.aggregate([{'$group': {'_id': None, 'users': {'$push': '$username'}}}])
-    users = set(ret['result'][0]['users'])
+    users = make_set_from_agg_result(ret, 'users')
     return users
 
 
@@ -125,7 +131,7 @@ def proc_userprof(cfg):
                       'mongodb-pwd')
 
     ret = db.profiles.aggregate([{'$group': {'_id': None, 'users': {'$push': '$user.username'}}}])
-    users = set(ret['result'][0]['users'])
+    users = make_set_from_agg_result(ret, 'users')
     return users
 
 
@@ -134,19 +140,19 @@ def proc_catalog_nms(cfg):
                       'mongodb-pwd')
 
     ret = db.developers.aggregate([{'$group': {'_id': None, 'users': {'$push': '$kb_username'}}}])
-    users = set(ret['result'][0]['users'])
+    users = make_set_from_agg_result(ret, 'users')
 
     ret = db.exec_stats_raw.aggregate([{'$group': {'_id': None, 'users': {'$push': '$user_id'}}}])
-    ustatsraw = set(ret['result'][0]['users'])
+    ustatsraw = make_set_from_agg_result(ret, 'users')
     users.update(ustatsraw)
 
     ret = db.exec_stats_users.aggregate([{'$group': {'_id': None, 'users':
                                                      {'$push': '$user_id'}}}])
-    ustatsuser = set(ret['result'][0]['users'])
+    ustatsuser = make_set_from_agg_result(ret, 'users')
     users.update(ustatsuser)
 
     ret = db.favorites.aggregate([{'$group': {'_id': None, 'users': {'$push': '$user'}}}])
-    ufav = set(ret['result'][0]['users'])
+    ufav = make_set_from_agg_result(ret, 'users')
     users.update(ufav)
 
     authors = set()
