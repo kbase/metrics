@@ -111,9 +111,13 @@ def proc_shock(cfg):
 
     ret = db.Users.aggregate([{'$group': {'_id': None, 'users': {'$push': '$username'}}}])
     users = make_set_from_agg_result(ret, 'users')
-    users.remove('*')
-    users.remove('')
-    users.remove('1')
+    if '*' in users:
+        users.remove('*')
+    if '' in users:
+        users.remove('')
+    if '1' in users:
+        users.remove('1')
+
     return users
 
 
