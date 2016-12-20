@@ -77,7 +77,8 @@ def proc_workspace(cfg):
         if count % 100000 == 0:
             print 'At object version record ' + str(count)
     users.update(uobjs)
-    users.remove('*')
+    if '*' in users:
+        users.remove('*')
     return users
 
 
