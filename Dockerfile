@@ -8,6 +8,8 @@ RUN mkdir -p /kb/runtime
 # but kind of guarantees that anything that runs in a narrative python setup
 # will run here as well
 COPY --from=narrative /kb/runtime/lib /kb/runtime/lib
+COPY source /root/source
+WORKDIR /root/source
 
 ENV PYTHONPATH=/kb/runtime/lib/python2.7/site-packages/
 
