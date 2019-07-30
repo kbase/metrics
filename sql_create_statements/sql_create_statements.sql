@@ -10,7 +10,7 @@ CREATE TABLE user_info (
 	institution VARCHAR(255),
 	country VARCHAR(255), 
 	signup_date TIMESTAMP NOT NULL,
-	last_signin_date TIMESTAMP,
+	active_token_date DATE,
 	PRIMARY KEY ( username )) ENGINE=InnoDB  DEFAULT CHARSET=utf8; 
 
 
