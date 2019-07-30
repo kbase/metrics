@@ -11,4 +11,6 @@ COPY --from=narrative /kb/runtime/lib /kb/runtime/lib
 
 ENV PYTHONPATH=/kb/runtime/lib/python2.7/site-packages/
 
-ENTRYPOINT ["/bin/bash"]
+ENTRYPOINT [ "/bin/bash" ]
+
+CMD [ ]
