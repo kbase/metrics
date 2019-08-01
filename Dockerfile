@@ -14,5 +14,3 @@ WORKDIR /root/source
 ENV PYTHONPATH=/kb/runtime/lib/python2.7/site-packages/
 
 ENTRYPOINT [ "/bin/bash" ]
-
-CMD [ ]
