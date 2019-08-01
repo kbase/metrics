@@ -1,0 +1,12 @@
+Before being able to run this docker container
+a ".env" file needs to be made. It should be called .env (nothing before the dot).
+cp the example.env to .env
+Then alter the file to include the correct information.
+
+Then do:
+docker build . -t test_build
+and 
+docker-compose run metrics
+
+That will take you into the docker environment (source folder of the metrics repo).
+From there you can run any program in that folder.

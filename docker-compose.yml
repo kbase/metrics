@@ -1,0 +1,4 @@
+metrics:
+  image: test_build    
+  environment:
+    MONGO_PWD: ${MONGO_PWD}
