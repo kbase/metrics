@@ -9,10 +9,11 @@ requests.packages.urllib3.disable_warnings()
 
 import os
 metrics_password = os.environ['MONGO_PWD']
+metrics_mysql_password = os.environ['METRICS_MYSQL_PWD']
+
 
 def get_user_info_from_auth2():
     #get auth2 info and kbase_internal_users. Creates initial dict for the data.
-#    client_auth2 = MongoClient("mongodb://kbasemetrics:crinkle-friable-smote@db5.chicago.kbase.us/auth2?readPreference=secondary")
     client_auth2 = MongoClient("mongodb://kbasemetrics:"+metrics_password+"@db5.chicago.kbase.us/auth2?readPreference=secondary")
     db_auth2 = client_auth2.auth2
     
@@ -171,7 +172,7 @@ def get_institution_and_country(user_stats_dict):
             user_stats_dict[obj['user']['username']]["institution"] = institution
     return user_stats_dict
 
-'''
+
 def upload_user_data(user_stats_dict):
     import mysql.connector as mysql
 
@@ -180,26 +181,32 @@ def upload_user_data(user_stats_dict):
     rows_info_updated = 0;
     rows_stats_inserted = 0;
     #connect to mysql
-    db_handle = mysql.connect(
-        host = "localhost",
-        user = "root",
-        passwd = "dbms",
-        database = "datacamp"
+    db_connection = mysql.connect(
+        host = "10.58.0.98",#"mysql1", #"localhost",
+        user = "metrics", #"root",
+        passwd = metrics_mysql_password,
+        database = "metrics" #"datacamp"
     )
 
+    cursor = db_connection.cursor()
+    query = "show tables"
+    cursor.execute(query)
+    for (table) in cursor:
+        print(str(table))
+    
 
     #get all existing users
 
     
 
-    for user in user_stats_dict:
+#    for user in user_stats_dict:
         # if user info exists, check to see information has changed at all, if so update.
 
 
         # else user info does not exist, insert a new user info record.
 
     return 1
-'''
+
 
 import time
 start_time = time.time()
@@ -213,3 +220,4 @@ print(str(user_stats_dict[u'zcrockett']))
 print(str(user_stats_dict[u'gonzalonm']))
 #print(str(user_stats_dict))
 print("--- %s seconds ---" % (time.time() - start_time))
+upload_user_data(user_stats_dict)

@@ -1,6 +1,22 @@
 FROM kbase/narrative:latest as narrative
 
+FROM mysql
+
+#FROM mysql:connector
+
 FROM python:2.7-slim
+
+#RUN apt-get update -y \
+#    && apt-get install -y python-mysql.connector
+#    && apt-get install -y mysql-connector-python-rf 
+
+RUN pip install mysql-connector-python-rf
+
+
+
+#FROM python:2.7
+
+#FROM mysql
 
 RUN mkdir -p /kb/runtime
 
