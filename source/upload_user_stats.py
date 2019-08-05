@@ -9,10 +9,11 @@ requests.packages.urllib3.disable_warnings()
 
 import os
 metrics_password = os.environ['MONGO_PWD']
+metrics_mysql_password = os.environ['METRICS_MYSQL_PWD']
+
 
 def get_user_info_from_auth2():
     #get auth2 info and kbase_internal_users. Creates initial dict for the data.
-#    client_auth2 = MongoClient("mongodb://kbasemetrics:crinkle-friable-smote@db5.chicago.kbase.us/auth2?readPreference=secondary")
     client_auth2 = MongoClient("mongodb://kbasemetrics:"+metrics_password+"@db5.chicago.kbase.us/auth2?readPreference=secondary")
     db_auth2 = client_auth2.auth2
     
@@ -23,6 +24,8 @@ def get_user_info_from_auth2():
 
     user_info_query = db_auth2.users.find({},{"_id":0,"user":1,"email":1,"display":1,"create":1,"login":1})
     for record in user_info_query:
+        if record["user"] =="***ROOT***":
+            continue
         user_stats_dict[record["user"]]={"name":record["display"],
                                          "signup_date":record["create"],
                                          "last_signin_date":record["login"],
@@ -30,6 +33,7 @@ def get_user_info_from_auth2():
                                          "kbase_internal_user":False,
                                          "institution":None,
                                          "country":None,
+                                         "orcid":None,
                                          "num_orgs":0,
                                          "narrative_count":0,
                                          "shared_count":0,
@@ -171,7 +175,7 @@ def get_institution_and_country(user_stats_dict):
             user_stats_dict[obj['user']['username']]["institution"] = institution
     return user_stats_dict
 
-'''
+
 def upload_user_data(user_stats_dict):
     import mysql.connector as mysql
 
@@ -180,26 +184,79 @@ def upload_user_data(user_stats_dict):
     rows_info_updated = 0;
     rows_stats_inserted = 0;
     #connect to mysql
-    db_handle = mysql.connect(
-        host = "localhost",
-        user = "root",
-        passwd = "dbms",
-        database = "datacamp"
+    db_connection = mysql.connect(
+        host = "10.58.0.98",#"mysql1", #"localhost",
+        user = "metrics", #"root",
+        passwd = metrics_mysql_password,
+        database = "metrics" #"datacamp"
     )
 
+    cursor = db_connection.cursor()
+    query = "show tables"
+    cursor.execute(query)
+    for (table) in cursor:
+        print(str(table))
 
-    #get all existing users
+    cursor = db_connection.cursor()
+    query = "use metrics"
+    cursor.execute(query)
 
-    
+    print("TRYING: GET USER INFO")
+    #get all existing users    
+    existing_user_info = dict()
+#    cursor = db_connection.cursor()
+    query = "select username, display_name, email, orcid, kb_internal_user, institution, country, signup_date, last_signin_date from user_info"
+    cursor.execute(query)
+    for (username, display_name, email, orcid, kb_internal_user, institution, country, signup_date, last_signin_date) in cursor:
+        existing_user_info[user_name]={"display_name":display_name,
+                                       "email":email, 
+                                       "kb_internal_user":kb_internal_user,
+                                       "institution":institution,
+                                       "country":country, 
+                                       "signup_date":signup_date,
+                                       "last_signin_date":last_signin_date}
+        if orcid is not None:
+            existing_user_info[user_name]["orcid"] = orcid,
 
-    for user in user_stats_dict:
+    print("Number of existing users:" + str(len(existing_user_info)))
+
+
+    print("TRYING: INSERT USER INFO")
+    prep_cursor = db_connection.cursor(prepared=True)
+
+    user_info_insert_statement = "insert into user_info " \
+                                 "(username,display_name,email,orcid,kb_internal_user, " \
+                                 "institution,country,signup_date,last_signin_date) " \
+                                 "values(%s,%s,%s,%s,%s, " \
+                                 "%s,%s,%s,%s);"
+
+
+    new_user_count = 0
+
+    for username in user_stats_dict:
+        #check if new user_info exists in the existing user info, if not insert the record.
+        if username not in existing_user_info:
+            input = (username,user_stats_dict[username]["name"],
+                     user_stats_dict[username]["email"],user_stats_dict[username]["orcid"],
+                     user_stats_dict[username]["kbase_internal_user"],
+                     user_stats_dict[username]["institution"],user_stats_dict[username]["country"],
+                     user_stats_dict[username]["signup_date"],user_stats_dict[username]["last_signin_date"])
+            prep_cursor.execute(user_info_insert_statement,input)
+
+            new_user_count+= 1
+    #Check if anything has changed in the user_info, if so update the record
+    db_connection.commit()
+
+    print("Number of new users inserted" + str(new_user_count))    
+
+#    for user in user_stats_dict:
         # if user info exists, check to see information has changed at all, if so update.
 
 
         # else user info does not exist, insert a new user info record.
 
     return 1
-'''
+
 
 import time
 start_time = time.time()
@@ -213,3 +270,4 @@ print(str(user_stats_dict[u'zcrockett']))
 print(str(user_stats_dict[u'gonzalonm']))
 #print(str(user_stats_dict))
 print("--- %s seconds ---" % (time.time() - start_time))
+upload_user_data(user_stats_dict)

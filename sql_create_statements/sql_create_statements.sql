@@ -10,7 +10,7 @@ CREATE TABLE user_info (
 	institution VARCHAR(255),
 	country VARCHAR(255), 
 	signup_date TIMESTAMP NOT NULL,
-	active_token_date DATE,
+	last_signin_date DATE,
 	PRIMARY KEY ( username )) ENGINE=InnoDB  DEFAULT CHARSET=utf8; 
 
 
@@ -21,6 +21,8 @@ CREATE INDEX idx_user_info_orcid ON user_info (orcid);
 CREATE INDEX idx_user_info_kbase_internal_user ON user_info (kb_internal_user);
 
 CREATE INDEX idx_user_info_signup_date ON user_info (signup_date);
+
+CREATE INDEX idx_user_info_last_signin_date ON user_info (last_signin_date);
 
 CREATE INDEX idx_user_info_institution ON user_info (institution);
 

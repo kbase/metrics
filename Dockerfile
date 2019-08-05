@@ -1,6 +1,8 @@
-FROM kbase/narrative:latest as narrative
+FROM kbase/narrative:py3-update as narrative
 
-FROM python:2.7-slim
+FROM python:3.7-slim
+
+RUN pip install mysql-connector-python-rf pymongo
 
 RUN mkdir -p /kb/runtime
 
@@ -11,6 +13,6 @@ COPY --from=narrative /kb/runtime/lib /kb/runtime/lib
 COPY source /root/source
 WORKDIR /root/source
 
-ENV PYTHONPATH=/kb/runtime/lib/python2.7/site-packages/
+ENV PYTHONPATH=/kb/runtime/lib/python3.7/site-packages/:/kb/runtime/lib/python3.6/site-packages/
 
 ENTRYPOINT [ "/bin/bash" ]
