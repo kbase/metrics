@@ -1,5 +1,6 @@
 from pymongo import MongoClient
 from pymongo import ReadPreference
+from datetime import datetime
 import json as _json
 import requests
 requests.packages.urllib3.disable_warnings()
@@ -105,23 +106,15 @@ def get_user_narrative_stats(user_stats_dict):
 
     return user_stats_dict
 
-class _JSONObjectEncoder(_json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, set):
-            return list(obj)
-        if isinstance(obj, frozenset):
-            return list(obj)
-        return _json.JSONEncoder.default(self, obj)
-
 def get_institution_and_country(user_stats_dict):  
     url = "https://kbase.us/services/user_profile/rpc"
     headers = dict()
     arg_hash = {'method': "UserProfile.get_user_profile",
-            'params': [user_stats_dict.keys()],
-            'version': '1.1',
-            'id': 123
-            }
-    body = _json.dumps(arg_hash, cls=_JSONObjectEncoder)
+                'params': [list(user_stats_dict.keys())],
+                'version': '1.1',
+                'id': 123
+               }
+    body = _json.dumps(arg_hash)
     timeout = 1800
     trust_all_ssl_certificates = 1
 
@@ -143,7 +136,7 @@ def get_institution_and_country(user_stats_dict):
     resp = ret.json()
     if 'result' not in resp:
         raise ServerError('Unknown', 0, 'An unknown server error occurred')
-    print len(resp['result'][0])
+    print(str(len(resp['result'][0])))
     replaceDict = { '-':' ', ')':' ', '.': ' ', '(':'', '/':'', ',':'', ' +': ' ' }
     counter = 0
     for obj in resp['result'][0] :
@@ -204,34 +197,35 @@ def upload_user_data(user_stats_dict):
     print("TRYING: GET USER INFO")
     #get all existing users    
     existing_user_info = dict()
-#    cursor = db_connection.cursor()
     query = "select username, display_name, email, orcid, kb_internal_user, institution, country, signup_date, last_signin_date from user_info"
     cursor.execute(query)
     for (username, display_name, email, orcid, kb_internal_user, institution, country, signup_date, last_signin_date) in cursor:
-        existing_user_info[user_name]={"display_name":display_name,
+        existing_user_info[username]={"name":display_name,
                                        "email":email, 
+                                       "orcid":orcid,
                                        "kb_internal_user":kb_internal_user,
                                        "institution":institution,
                                        "country":country, 
                                        "signup_date":signup_date,
                                        "last_signin_date":last_signin_date}
-        if orcid is not None:
-            existing_user_info[user_name]["orcid"] = orcid,
 
     print("Number of existing users:" + str(len(existing_user_info)))
 
-
-    print("TRYING: INSERT USER INFO")
     prep_cursor = db_connection.cursor(prepared=True)
-
     user_info_insert_statement = "insert into user_info " \
                                  "(username,display_name,email,orcid,kb_internal_user, " \
                                  "institution,country,signup_date,last_signin_date) " \
                                  "values(%s,%s,%s,%s,%s, " \
                                  "%s,%s,%s,%s);"
 
+    update_prep_cursor = db_connection.cursor(prepared=True)
+    user_info_update_statement = "update user_info " \
+                                 "set display_name = %s, email = %s, orcid = %s, kb_internal_user = %s, " \
+                                 "institution = %s, country = %s, signup_date = %s, last_signin_date = %s " \
+                                 "where username = %s;"
 
     new_user_count = 0
+    users_info_updated_count = 0
 
     for username in user_stats_dict:
         #check if new user_info exists in the existing user info, if not insert the record.
@@ -242,12 +236,28 @@ def upload_user_data(user_stats_dict):
                      user_stats_dict[username]["institution"],user_stats_dict[username]["country"],
                      user_stats_dict[username]["signup_date"],user_stats_dict[username]["last_signin_date"])
             prep_cursor.execute(user_info_insert_statement,input)
-
             new_user_count+= 1
-    #Check if anything has changed in the user_info, if so update the record
+        else:
+            #Check if anything has changed in the user_info, if so update the record
+            if not ((user_stats_dict[username]["last_signin_date"] is None or 
+                     user_stats_dict[username]["last_signin_date"].strftime("%Y-%m-%d %H:%M:%S") == str(existing_user_info[username]["last_signin_date"])) and
+                    user_stats_dict[username]["country"] == existing_user_info[username]["country"] and
+                    user_stats_dict[username]["institution"] == existing_user_info[username]["institution"] and
+                    user_stats_dict[username]["kbase_internal_user"] == existing_user_info[username]["kb_internal_user"] and
+                    user_stats_dict[username]["orcid"] == existing_user_info[username]["orcid"] and
+                    user_stats_dict[username]["email"] == existing_user_info[username]["email"] and
+                    user_stats_dict[username]["name"] == existing_user_info[username]["name"]):
+                input = (user_stats_dict[username]["name"],user_stats_dict[username]["email"],
+                         user_stats_dict[username]["orcid"],user_stats_dict[username]["kbase_internal_user"],
+                         user_stats_dict[username]["institution"],user_stats_dict[username]["country"],
+                         user_stats_dict[username]["signup_date"],user_stats_dict[username]["last_signin_date"],
+                         username)
+                update_prep_cursor.execute(user_info_update_statement,input)
+                users_info_updated_count += 1                    
     db_connection.commit()
 
-    print("Number of new users inserted" + str(new_user_count))    
+    print("Number of new users inserted:" + str(new_user_count))    
+    print("Number of users updated:" + str(users_info_updated_count))    
 
 #    for user in user_stats_dict:
         # if user info exists, check to see information has changed at all, if so update.

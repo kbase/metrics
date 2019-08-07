@@ -4,13 +4,13 @@
 CREATE TABLE user_info (
 	username VARCHAR(255) NOT NULL,  
 	display_name VARCHAR(255) NOT NULL,  
-	email VARCHAR(255) NOT NULL,  
+	email VARCHAR(255),  
 	orcid VARCHAR(255),
 	kb_internal_user BOOLEAN NOT NULL DEFAULT 0,
 	institution VARCHAR(255),
 	country VARCHAR(255), 
 	signup_date TIMESTAMP NOT NULL,
-	last_signin_date DATE,
+	last_signin_date TIMESTAMP NULL default NULL,
 	PRIMARY KEY ( username )) ENGINE=InnoDB  DEFAULT CHARSET=utf8; 
 
 
