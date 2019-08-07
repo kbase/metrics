@@ -36,17 +36,21 @@ CREATE TABLE user_system_summary_stats (
 	narrative_count INTEGER NOT NULL,
 	shared_count INTEGER NOT NULL,
 	narratives_shared INTEGER NOT NULL,    
-	record_date DATE,
+	record_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY fk_sys_narrative_username(username)
 	REFERENCES user_info(username)
 	ON UPDATE CASCADE
 	ON DELETE RESTRICT) ENGINE=InnoDB DEFAULT CHARSET=utf8; 
+
+#	record_date DATE,
 
 CREATE UNIQUE INDEX uk_user_system_summary_stats_record_date
 ON user_system_summary_stats(username,record_date);
 
 CREATE INDEX idx_user_system_summary_stats_record_date ON user_system_summary_stats (record_date);
 
+
+#PROBABLY DONT NEED THIS SWITCHING RECORD DATE TO TIMESTAMP I THINK
 # Trigger that will put in current date for record date for any insert without a record_date (should be default insert behavior).
 DELIMITER $$
 CREATE TRIGGER `user_system_summary_stats_record_date_trigger` BEFORE INSERT ON `user_system_summary_stats` FOR EACH ROW

@@ -145,9 +145,6 @@ def get_institution_and_country(user_stats_dict):
         counter += 1;
 
         if obj['user']['username'] in user_stats_dict:
-            if obj['user']['username'] == 'jkbaumohl':
-                print(str(obj))
-                print("JKBAUMOHL COUNTRY: " + str(obj['profile']['userdata'].get('country')))
             user_stats_dict[obj['user']['username']]["country"] = obj['profile']['userdata'].get('country')
             institution = obj['profile']['userdata'].get('organization')
             if institution == None:
@@ -185,16 +182,9 @@ def upload_user_data(user_stats_dict):
     )
 
     cursor = db_connection.cursor()
-    query = "show tables"
-    cursor.execute(query)
-    for (table) in cursor:
-        print(str(table))
-
-    cursor = db_connection.cursor()
     query = "use metrics"
     cursor.execute(query)
 
-    print("TRYING: GET USER INFO")
     #get all existing users    
     existing_user_info = dict()
     query = "select username, display_name, email, orcid, kb_internal_user, institution, country, signup_date, last_signin_date from user_info"
@@ -224,7 +214,7 @@ def upload_user_data(user_stats_dict):
                                  "institution = %s, country = %s, signup_date = %s, last_signin_date = %s " \
                                  "where username = %s;"
 
-    new_user_count = 0
+    new_user_info_count = 0
     users_info_updated_count = 0
 
     for username in user_stats_dict:
@@ -236,7 +226,7 @@ def upload_user_data(user_stats_dict):
                      user_stats_dict[username]["institution"],user_stats_dict[username]["country"],
                      user_stats_dict[username]["signup_date"],user_stats_dict[username]["last_signin_date"])
             prep_cursor.execute(user_info_insert_statement,input)
-            new_user_count+= 1
+            new_user_info_count+= 1
         else:
             #Check if anything has changed in the user_info, if so update the record
             if not ((user_stats_dict[username]["last_signin_date"] is None or 
@@ -256,17 +246,52 @@ def upload_user_data(user_stats_dict):
                 users_info_updated_count += 1                    
     db_connection.commit()
 
-    print("Number of new users inserted:" + str(new_user_count))    
+    print("Number of new users info inserted:" + str(new_user_info_count))    
     print("Number of users updated:" + str(users_info_updated_count))    
 
-#    for user in user_stats_dict:
-        # if user info exists, check to see information has changed at all, if so update.
+    #NOW DO USER SUMMARY STATS
+    user_summary_stats_insert_statement = "insert into user_system_summary_stats " \
+                                 "(username,num_orgs, narrative_count, shared_count, narratives_shared) " \
+                                 "values(%s,%s,%s,%s,%s);"
 
+    existing_user_summary_stats = dict()
+    query = "select username, num_orgs, narrative_count, shared_count, narratives_shared from user_system_summary_stats_current"
+    cursor.execute(query)
+    for (username, num_orgs, narrative_count, shared_count, narratives_shared) in cursor:
+        existing_user_summary_stats[username]={"num_orgs":num_orgs,
+                                       "narrative_count":narrative_count,
+                                       "shared_count":shared_count,
+                                       "narratives_shared":narratives_shared}
+    print("Number of existing user summaries:" + str(len(existing_user_summary_stats)))
 
-        # else user info does not exist, insert a new user info record.
+    new_user_summary_count= 0
+    existing_user_summary_count= 0
+    for username in user_stats_dict:
+        if username not in existing_user_summary_stats:
+            #if user does not exist insert
+            input = (username,user_stats_dict[username]["num_orgs"],
+                     user_stats_dict[username]["narrative_count"],user_stats_dict[username]["shared_count"],
+                     user_stats_dict[username]["narratives_shared"])
+            prep_cursor.execute(user_summary_stats_insert_statement,input)
+            new_user_summary_count+= 1
+        else:
+            #else see if the new data differs from the most recent snapshot. If it does differ, do an insert
+            if not (user_stats_dict[username]["num_orgs"] == existing_user_summary_stats[username]["num_orgs"] and 
+                    user_stats_dict[username]["narrative_count"] == existing_user_summary_stats[username]["narrative_count"] and 
+                    user_stats_dict[username]["shared_count"] == existing_user_summary_stats[username]["shared_count"] and 
+                    user_stats_dict[username]["narratives_shared"] == existing_user_summary_stats[username]["narratives_shared"]):
+                input = (username,user_stats_dict[username]["num_orgs"],
+                         user_stats_dict[username]["narrative_count"],user_stats_dict[username]["shared_count"],
+                         user_stats_dict[username]["narratives_shared"])
+                prep_cursor.execute(user_summary_stats_insert_statement,input)
+                existing_user_summary_count+= 1
+
+    db_connection.commit()
+
+    print("Number of new users summary inserted:" + str(new_user_summary_count))    
+    print("Number of existing users summary inserted:" + str(existing_user_summary_count))    
 
     return 1
-
 
 import time
 start_time = time.time()
@@ -275,9 +300,9 @@ user_stats_dict = get_internal_users(user_stats_dict)
 user_stats_dict = get_user_orgs_count(user_stats_dict)
 user_stats_dict = get_user_narrative_stats(user_stats_dict)
 user_stats_dict = get_institution_and_country(user_stats_dict)
-print(str(user_stats_dict[u'jkbaumohl']))
-print(str(user_stats_dict[u'zcrockett']))
-print(str(user_stats_dict[u'gonzalonm']))
+#print(str(user_stats_dict[u'jkbaumohl']))
+#print(str(user_stats_dict[u'zcrockett']))
 #print(str(user_stats_dict))
-print("--- %s seconds ---" % (time.time() - start_time))
+print("--- gather data %s seconds ---" % (time.time() - start_time))
 upload_user_data(user_stats_dict)
+print("--- including upload %s seconds ---" % (time.time() - start_time))
