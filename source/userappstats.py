@@ -1,11 +1,12 @@
-
+ 
 
 import requests
+import os
 requests.packages.urllib3.disable_warnings()
 from biokbase.catalog.Client import Catalog
 from biokbase.narrative_method_store.client import NarrativeMethodStore
 from category_to_app_dict import create_app_dictionary_1
-catalog = Catalog(url = "https://kbase.us/services/catalog")
+catalog = Catalog(url = "https://kbase.us/services/catalog", token = os.environ['METRICS_USER_TOKEN'])
 nms = NarrativeMethodStore(url = "https://kbase.us/services/narrative_method_store/rpc")
 
 import pandas as pd
@@ -16,8 +17,11 @@ from operator import itemgetter
 
 
 # Get User_App_Stats: Main Function
+
 """Requires a unique list of username as input and runs it 3-4min on average.
-outputs a list of user dictionaries with app statistics for each userm example user : [{app1_usage_info}, {app2_usage_info}]"""
+outputs a list of user dictionaries with app statistics for each userm example user : [{app1_usage_info}, {app2_usage_info}]
+
+If you would like to generate user-app stats for all of KBase time please choose: start = "2016-03-04" end = "todays-date"""
 
 
 # Get User_App_Stats
@@ -50,7 +54,6 @@ def user_app_stats(unique_usernames, start_date=datetime.datetime.now() - dateti
     catalog_data = catalog_data[catalog_data.app_id != "Not Specified"]
     # Initiate dictionaries and arrays
 
-    # Need app_dict here!
     app_dict = create_app_dictionary_1()
     total_user_app_stats = []
     values = app_dict.values()
@@ -58,12 +61,15 @@ def user_app_stats(unique_usernames, start_date=datetime.datetime.now() - dateti
 
     # Iterate over all KBase users
     for user in unique_usernames:
+            
         # Get catalog data for specific user
+
         user_condition = catalog_data.user_id == user
         user_specific_catdata = catalog_data[user_condition]
+        
         # Get all apps used by user
         app_lst = list(set(list(user_specific_catdata.app_id)))
-
+            
         if not app_lst:
             continue
 
