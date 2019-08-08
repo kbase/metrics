@@ -1,6 +1,6 @@
 
 
-Create App Dictionary: Main function
+#Create App Dictionary: Main function
 import requests
 requests.packages.urllib3.disable_warnings()
 from biokbase.catalog.Client import Catalog
