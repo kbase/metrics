@@ -10,3 +10,12 @@ docker-compose run metrics
 
 That will take you into the docker environment (source folder of the metrics repo).
 From there you can run any program in that folder.
+
+
+------------------
+
+If want to run a shell script. Here is an exmple with capturing the redirect in the environment that called Docker.
+
+docker-compose > user_info_dump.csv run metrics ../bin/dump_user_info.sh
+
+Put executables in the bin directory we will call scripts this way for the CRON jobs

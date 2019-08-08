@@ -30,7 +30,7 @@ def dump_user_info():
                 temp_string += str(row_values[i])
             temp_string += ","
         if row_values[8] is not None:
-            temp_string += str(row_values[i])
+            temp_string += str(row_values[8])
         print(temp_string)
     return 1
 
