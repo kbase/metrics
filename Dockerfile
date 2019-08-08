@@ -10,6 +10,7 @@ RUN mkdir -p /kb/runtime
 # but kind of guarantees that anything that runs in a narrative python setup
 # will run here as well
 COPY --from=narrative /kb/runtime/lib /kb/runtime/lib
+COPY bin /root/bin
 COPY source /root/source
 WORKDIR /root/source
 
@@ -22,3 +23,4 @@ RUN sed 's/^\./\/kb\/runtime\/lib\/python3.7\/site-packages/' /kb/runtime/lib/py
 ENV PYTHONPATH=/kb/runtime/lib/python3.7/site-packages/:/kb/runtime/lib/python3.6/site-packages/
 
 ENTRYPOINT [ "/bin/bash" ]
+

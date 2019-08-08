@@ -175,10 +175,10 @@ def upload_user_data(user_stats_dict):
     rows_stats_inserted = 0;
     #connect to mysql
     db_connection = mysql.connect(
-        host = "10.58.0.98",#"mysql1", #"localhost",
-        user = "metrics", #"root",
+        host = "10.58.0.98",
+        user = "metrics",
         passwd = metrics_mysql_password,
-        database = "metrics" #"datacamp"
+        database = "metrics" 
     )
 
     cursor = db_connection.cursor()
