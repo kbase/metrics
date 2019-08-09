@@ -5,7 +5,7 @@ import os
 requests.packages.urllib3.disable_warnings()
 from biokbase.catalog.Client import Catalog
 from biokbase.narrative_method_store.client import NarrativeMethodStore
-from category_to_app_dict import create_app_dictionary_1
+from category_to_app_dict import create_app_dictionary
 catalog = Catalog(url = "https://kbase.us/services/catalog", token = os.environ['METRICS_USER_TOKEN'])
 nms = NarrativeMethodStore(url = "https://kbase.us/services/narrative_method_store/rpc")
 
@@ -23,15 +23,19 @@ outputs a list of user dictionaries with app statistics for each userm example u
 
 If you would like to generate user-app stats for all of KBase time please choose: start = "2016-03-04" end = "todays-date"""
 
-
 # Get User_App_Stats
 
-def user_app_stats(unique_usernames, start_date=datetime.datetime.now() - datetime.timedelta(days=1),
-                   end_date=datetime.datetime.now()):
-
+yesterday = (datetime.date.today() - datetime.timedelta(days=1))
+             
+def user_app_stats(unique_usernames, start_date= datetime.datetime.combine(yesterday, datetime.datetime.min.time()), end_date=datetime.datetime.combine(yesterday, datetime.datetime.max.time()) ):
+    
     now = int(time.time())
     time_interval = {'begin': 1, 'end': now}
-
+    
+    # From date to datetime
+    start_date = datetime.datetime.combine(start_date, datetime.datetime.min.time())
+    end_date = datetime.datetime.combine(end_date, datetime.datetime.max.time())
+    
     stats = catalog.get_exec_raw_stats(time_interval)
     stats = sorted(stats, key=itemgetter('exec_start_time'), reverse=True)
     catalog_data_all = pd.DataFrame.from_dict(stats)
@@ -39,37 +43,33 @@ def user_app_stats(unique_usernames, start_date=datetime.datetime.now() - dateti
     catalog_data_all.creation_time = pd.to_datetime(catalog_data_all['creation_time'], unit='s')
     catalog_data_all.exec_start_time = pd.to_datetime(catalog_data_all['exec_start_time'], unit='s')
     catalog_data_all.finish_time = pd.to_datetime(catalog_data_all['finish_time'], unit='s')
-    catalog_data_all.drop(['git_commit_hash', 'app_module_name', 'func_module_name', 'func_name', 'job_id'], axis=1,
-                          inplace=True)
-    catalog_data_all = catalog_data_all.assign(run_time=(catalog_data_all['finish_time'] -
-                                                         catalog_data_all['exec_start_time']).astype('timedelta64[s]'))
+    catalog_data_all.drop( ['git_commit_hash','func_module_name', 'func_name', 'job_id'], axis=1, inplace=True)
+    catalog_data_all = catalog_data_all.assign(run_time = (catalog_data_all['finish_time'] - catalog_data_all['exec_start_time']).astype('timedelta64[s]') )
+    catalog_data_all["full_app_id"] = catalog_data_all["app_module_name"] + "/" + catalog_data_all["app_id"]
 
-    # Slice catalog data by data range
+    # Slice catalog data by data range 
     catalog_data_all.index = catalog_data_all['creation_time']
     catalog_data_all.sort_index(inplace=True)
     catalog_data = catalog_data_all[start_date:end_date]
-
     # Filter null values in app_id
-    catalog_data["app_id"].fillna("Not Specified", inplace=True)
-    catalog_data = catalog_data[catalog_data.app_id != "Not Specified"]
+    catalog_data["full_app_id"].fillna("Not Specified", inplace=True)
+    catalog_data = catalog_data[catalog_data.full_app_id != "Not Specified"]
     # Initiate dictionaries and arrays
 
-    app_dict = create_app_dictionary_1()
+    # Need app_dict here!
+    app_dict = create_app_dictionary()
     total_user_app_stats = []
     values = app_dict.values()
     KBase_apps = [item for sublist in values for item in sublist]
 
     # Iterate over all KBase users
     for user in unique_usernames:
-            
         # Get catalog data for specific user
-
         user_condition = catalog_data.user_id == user
         user_specific_catdata = catalog_data[user_condition]
-        
         # Get all apps used by user
-        app_lst = list(set(list(user_specific_catdata.app_id)))
-            
+        app_lst = list(set(list(user_specific_catdata.full_app_id)))
+
         if not app_lst:
             continue
 
@@ -81,7 +81,7 @@ def user_app_stats(unique_usernames, start_date=datetime.datetime.now() - dateti
             if app in KBase_apps:
 
                 # Initiate app and error condition
-                app_condition = user_specific_catdata.app_id == app
+                app_condition = user_specific_catdata.full_app_id == app
                 # Count app usage and errors
                 catalog_at_app = user_specific_catdata[app_condition]
 

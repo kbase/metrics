@@ -11,7 +11,7 @@ from data_configure import data_configure
 
 import pandas as pd
 
-def create_app_dictionary_1():
+def create_app_dictionary():
     apps = nms.list_methods({"tag": "release"})
     apps_datastruc = pd.DataFrame.from_dict(apps)
     ModDfApps = data_configure(apps_datastruc)
