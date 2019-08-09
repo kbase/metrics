@@ -33,16 +33,12 @@ def update_app_category_mappings():
     insert_statement =  "insert into app_name_category_map " \
                         "(app_name, app_category) "\
                         "values(%s, %s);"
-    #HAVE TO CLEAN THE DATA, it is dirty with duplicates
-    new_distinct_mappings = dict()
+
     for category_name in cat_app_dict:
         for app_name in cat_app_dict[category_name]:    
-            new_distinct_mappings[app_name+":"+category_name] = [app_name,category_name]
-
-    for key in new_distinct_mappings:
-        input =  (new_distinct_mappings[key][0], new_distinct_mappings[key][1])       
-        prep_cursor.execute(insert_statement,input)
-        mapping_count+= 1
+            input =  (app_name, category_name)       
+            prep_cursor.execute(insert_statement,input)
+            mapping_count+= 1
     
     db_connection.commit()
     print("Post input mapping_count : " + str(mapping_count))
