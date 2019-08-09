@@ -20,13 +20,4 @@ def data_configure(app_df):
     modDF = app_df.drop(my_idx_list)
     modDF.categories = categories
 
-    app_ids_nonconfig = list(modDF.id)
-
-    for string in app_ids_nonconfig:
-        new_string = string.split('/')
-        del new_string[0]
-        app_ids.append(new_string[0])
-
-    modDF.id = app_ids
-
     return modDF
