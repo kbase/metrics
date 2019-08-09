@@ -26,6 +26,7 @@ def create_app_dictionary_1():
         for category in app_category_lst:
             if category in app_dict.keys():
                 app_dict[category].append(ModDfApps["id"][i])
+                app_dict[category] = list(set(app_dict[category]))
             else:
                 raise KeyError("{} not a KBase app category".format(category))
 
