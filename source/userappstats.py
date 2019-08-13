@@ -50,7 +50,7 @@ def user_app_stats(unique_usernames, start_date= datetime.datetime.combine(yeste
     catalog_data_all["full_app_id"] = catalog_data_all["app_module_name"] + "/" + catalog_data_all["app_id"]
 
     # Slice catalog data by data range 
-    catalog_data_all.index = catalog_data_all['creation_time']
+    catalog_data_all.index = catalog_data_all['finish_time']
     catalog_data_all.sort_index(inplace=True)
     catalog_data = catalog_data_all[start_date:end_date]
     # Filter null values in app_id
