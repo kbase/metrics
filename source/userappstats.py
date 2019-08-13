@@ -35,9 +35,8 @@ def user_app_stats(unique_usernames, start_date= datetime.datetime.combine(yeste
     # From str to datetime:
     if type(start_date) == str:
         start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
-        start_date = datetime.datetime.combine(start_date, datetime.datetime.min.time())
         end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
-        end_date = datetime.datetime.combine(end_date, datetime.datetime.max.time())
+
 
     stats = catalog.get_exec_raw_stats(time_interval)
     stats = sorted(stats, key=itemgetter('exec_start_time'), reverse=True)
