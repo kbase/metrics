@@ -45,7 +45,7 @@ def user_app_stats(unique_usernames, start_date= datetime.datetime.combine(yeste
     catalog_data_all.creation_time = pd.to_datetime(catalog_data_all['creation_time'], unit='s')
     catalog_data_all.exec_start_time = pd.to_datetime(catalog_data_all['exec_start_time'], unit='s')
     catalog_data_all.finish_time = pd.to_datetime(catalog_data_all['finish_time'], unit='s')
-    catalog_data_all.drop( ['git_commit_hash','func_module_name', 'func_name', 'job_id'], axis=1, inplace=True)
+    catalog_data_all.drop( ['func_module_name', 'func_name'], axis=1, inplace=True)
     catalog_data_all = catalog_data_all.assign(run_time = (catalog_data_all['finish_time'] - catalog_data_all['exec_start_time']).astype('timedelta64[s]') )
     catalog_data_all["full_app_id"] = catalog_data_all["app_module_name"] + "/" + catalog_data_all["app_id"]
 
@@ -92,10 +92,11 @@ def user_app_stats(unique_usernames, start_date= datetime.datetime.combine(yeste
                     finish_date = catalog_at_app.finish_time[i]
                     run_time = catalog_at_app.run_time[i]
                     is_error = catalog_at_app.is_error[i]
-
+                    job_ID = catalog_at_app.job_id[i]
+                    git_commit_hash = catalog_at_app.git_commit_hash[i]
+                
                     # Make app_stats dictionary for app and append to array
-                    app_stats = {"user_name": user, "app_name": app, "start_date": start_date,
-                                 "finish_date": finish_date, "run_time": run_time, "is_error": is_error}
+                    app_stats = {"user_name" : user, "app_name": app, "start_date":start_date, "finish_date":finish_date, "run_time": run_time, "job_ID" : job_ID, "is_error": is_error, "git_commit_hash": git_commit_hash}
                     user_app_dict_lst.append(app_stats)
 
         # user_app_dict_lst = [item for sublist in user_app_dict_lst for item in sublist]
