@@ -28,7 +28,7 @@ def dump_user_info():
         for i in range(8):
             if row_values[i] is not None:
                 temp_string += str(row_values[i])
-            temp_string += ","
+            temp_string += "\t"
         if row_values[8] is not None:
             temp_string += str(row_values[8])
         print(temp_string)

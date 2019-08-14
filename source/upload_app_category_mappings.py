@@ -26,7 +26,7 @@ def update_app_category_mappings():
     cursor.execute(query)
 
     mapping_count = 0;
-    cat_app_dict = category_to_app_dict.create_app_dictionary_1()
+    cat_app_dict = category_to_app_dict.create_app_dictionary()
 #    print("RESULT: CAT_TO_APP : "+ str(cat_app_dict))
 
     prep_cursor = db_connection.cursor(prepared=True)

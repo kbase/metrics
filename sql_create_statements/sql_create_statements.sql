@@ -64,20 +64,26 @@ delimiter ;
 #user_app_usage
 
 CREATE TABLE user_app_usage (
-	username VARCHAR(255) NOT NULL,  
-	app_name VARCHAR(255) NOT NULL,
-	start_date	TIMESTAMP NOT NULL,
-	finish_date	TIMESTAMP NOT NULL,
-	run_time INTEGER NOT NULL,
-	is_error BOOLEAN NOT NULL DEFAULT 0,
-	FOREIGN KEY fk_app_usage_username(username)
-	REFERENCES user_info(username)
-	ON UPDATE CASCADE
-	ON DELETE RESTRICT) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+        job_id VARCHAR(255) NOT NULL,
+        username VARCHAR(255) NOT NULL,
+        app_name VARCHAR(255) NOT NULL,
+        start_date      TIMESTAMP NOT NULL,
+        finish_date     TIMESTAMP NOT NULL,
+        run_time INTEGER NOT NULL,
+        is_error BOOLEAN NOT NULL DEFAULT 0,
+	git_commit_hash VARCHAR(255) NOT NULL,
+	PRIMARY KEY ( job_id ), 
+        FOREIGN KEY fk_app_usage_username(username)
+        REFERENCES user_info(username)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE UNIQUE INDEX uk_user_app_usage
-ON user_app_usage(username, app_name, 
-start_date,finish_date,run_time,is_error);
+
+
+#WITH ADDITION OF JOB ID AS A PRIMARY KEY THIS IS NOT LONGER NEEDED
+#CREATE UNIQUE INDEX uk_user_app_usage
+#ON user_app_usage(username, app_name, 
+#start_date,finish_date,run_time,is_error);
 
 ######################
 #app_name_category_map

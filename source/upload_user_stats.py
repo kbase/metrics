@@ -293,6 +293,64 @@ def upload_user_data(user_stats_dict):
 
     return 1
 
+
+def upload_user_app_stats(user_stats_dict, start_date=None, end_date=None):
+    import mysql.connector as mysql
+    import userappstats
+
+
+    start_date = '2018-08-01'
+#    end_date = None
+    end_date = '2019-09-01'
+    if start_date is not None or end_date is not None:
+        if start_date is not None and  end_date is not None:
+            app_usage_list = userappstats.user_app_stats(['jkbaumohl','cnelson'],start_date,end_date)
+#           app_usage_list = userappstats.user_app_stats(user_stats_dict.keys(),start_date,end_date)
+        else:
+            raise ValueError("If start_date or end_date is set, then both must be set.")
+    else:
+        app_usage_list = userappstats.user_app_stats(user_stats_dict.keys())
+
+#    print("APP_USAGE_LIST:"+str(app_usage_list))
+#    raise ValueError("PLANNED STOP")
+
+    #connect to mysql
+    db_connection = mysql.connect(
+        host = "10.58.0.98",
+    user = "metrics",
+        passwd = metrics_mysql_password,
+        database = "metrics"
+    )
+
+    cursor = db_connection.cursor()
+    query = "use metrics"
+    cursor.execute(query)
+
+    prep_cursor = db_connection.cursor(prepared=True)
+    user_app_insert_statement = "insert into user_app_usage " \
+                                "(job_id, username, app_name, start_date, finish_date, run_time, is_error, git_commit_hash) " \
+                                "values(%s,%s,%s,%s,%s,%s,%s,%s);"
+    num_rows_inserted = 0;
+    num_rows_failed_duplicates = 0;
+
+    for record in app_usage_list:
+        is_error = False
+        if record['is_error'] == 1:
+            is_error = True
+        input = (record['job_ID'],record['user_name'], record['app_name'], record['start_date'], record['finish_date'], record['run_time'], is_error, record['git_commit_hash'])   
+        #Error handling from https://www.programcreek.com/python/example/93043/mysql.connector.Error
+        try:
+            prep_cursor.execute(user_app_insert_statement,input)
+            num_rows_inserted += 1
+        except mysql.Error as err:
+            num_rows_failed_duplicates += 1
+
+    db_connection.commit()
+    print("Number of app records inserted : " + str(num_rows_inserted))
+    print("Number of app records duplicate : " + str(num_rows_failed_duplicates))
+    return 1;
+
+
 import time
 start_time = time.time()
 user_stats_dict = get_user_info_from_auth2()
@@ -305,4 +363,12 @@ user_stats_dict = get_institution_and_country(user_stats_dict)
 #print(str(user_stats_dict))
 print("--- gather data %s seconds ---" % (time.time() - start_time))
 upload_user_data(user_stats_dict)
-print("--- including upload %s seconds ---" % (time.time() - start_time))
+print("--- including user info and user_stats upload %s seconds ---" % (time.time() - start_time))
+start_date = '2019-06-01'
+#end_date = None
+end_date = '2019-06-03'
+upload_user_app_stats(user_stats_dict,start_date,end_date)
+#upload_user_app_stats(user_stats_dict)
+print("--- including app_stats upload %s seconds ---" % (time.time() - start_time))
+
+
