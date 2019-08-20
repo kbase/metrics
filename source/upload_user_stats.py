@@ -299,17 +299,18 @@ def upload_user_app_stats(user_stats_dict, start_date=None, end_date=None):
     import userappstats
 
 
-    start_date = '2018-08-01'
+    start_date = '2018-07-01'
 #    end_date = None
-    end_date = '2019-09-01'
+    end_date = '2019-07-04'
     if start_date is not None or end_date is not None:
         if start_date is not None and  end_date is not None:
-            app_usage_list = userappstats.user_app_stats(['jkbaumohl','cnelson'],start_date,end_date)
-#           app_usage_list = userappstats.user_app_stats(user_stats_dict.keys(),start_date,end_date)
+#            app_usage_list = userappstats.user_app_stats(['jkbaumohl','cnelson'],start_date,end_date)
+            app_usage_list = userappstats.user_app_stats(user_stats_dict.keys(),start_date,end_date)
         else:
             raise ValueError("If start_date or end_date is set, then both must be set.")
     else:
-        app_usage_list = userappstats.user_app_stats(user_stats_dict.keys())
+        app_usage_list = userappstats.user_app_stats(['jkbaumohl','cnelson'])
+#        app_usage_list = userappstats.user_app_stats(user_stats_dict.keys())
 
 #    print("APP_USAGE_LIST:"+str(app_usage_list))
 #    raise ValueError("PLANNED STOP")
@@ -317,7 +318,7 @@ def upload_user_app_stats(user_stats_dict, start_date=None, end_date=None):
     #connect to mysql
     db_connection = mysql.connect(
         host = "10.58.0.98",
-    user = "metrics",
+        user = "metrics",
         passwd = metrics_mysql_password,
         database = "metrics"
     )
@@ -333,10 +334,18 @@ def upload_user_app_stats(user_stats_dict, start_date=None, end_date=None):
     num_rows_inserted = 0;
     num_rows_failed_duplicates = 0;
 
+    num_bad_records
+
     for record in app_usage_list:
         is_error = False
-        if record['is_error'] == 1:
-            is_error = True
+#        print("Record:"+str(record))
+        try:
+            if record['is_error'] == 1:
+                is_error = True
+        except Exception as e:
+            num_bad_records += 1
+
+
         input = (record['job_ID'],record['user_name'], record['app_name'], record['start_date'], record['finish_date'], record['run_time'], is_error, record['git_commit_hash'])   
         #Error handling from https://www.programcreek.com/python/example/93043/mysql.connector.Error
         try:
@@ -367,8 +376,9 @@ print("--- including user info and user_stats upload %s seconds ---" % (time.tim
 start_date = '2019-06-01'
 #end_date = None
 end_date = '2019-06-03'
-upload_user_app_stats(user_stats_dict,start_date,end_date)
-#upload_user_app_stats(user_stats_dict)
+#DO NOT USE APP STATS RIGHT NOW
+    #upload_user_app_stats(user_stats_dict,start_date,end_date)
+    #upload_user_app_stats(user_stats_dict)
 print("--- including app_stats upload %s seconds ---" % (time.time() - start_time))
 
 
