@@ -5,7 +5,8 @@ import json as _json
 import requests
 requests.packages.urllib3.disable_warnings()
 
-# NOTE get_user_info_from_auth2 sets up the initial dict. The following functions update certain fields in the dict.
+# NOTE get_user_info_from_auth2 sets up the initial dict. 
+#The following functions update certain fields in the dict.
 # So get_user_info_from_auth2 must be called before get_internal_users and get_user_orgs_count
 
 import os
@@ -14,12 +15,14 @@ metrics_mysql_password = os.environ['METRICS_MYSQL_PWD']
 
 
 def get_user_info_from_auth2():
-    #get auth2 info and kbase_internal_users. Creates initial dict for the data.
-    client_auth2 = MongoClient("mongodb://kbasemetrics:"+metrics_password+"@db5.chicago.kbase.us/auth2?readPreference=secondary")
+    """ get auth2 info and kbase_internal_users. Creates initial dict for the data. """
+    client_auth2 = MongoClient("mongodb://kbasemetrics:"+metrics_password+
+                               "@db5.chicago.kbase.us/auth2?readPreference=secondary")
     db_auth2 = client_auth2.auth2
     
     user_stats_dict = {} #dict that will have userid as the key,
-                         #value is a dict with name, signup_date, last_signin_date, and email (that gets values from this function)
+                         #value is a dict with name, signup_date, last_signin_date, 
+                         #and email (that gets values from this function)
                          #orcid may be present and populated by this function.
                          #later called functions will populate kbase_internal_user, num_orgs and ...
 
@@ -42,7 +45,8 @@ def get_user_info_from_auth2():
                                          }
 
     #Get all users with an ORCID authentication set up.
-    users_orcid_query = db_auth2.users.find({"idents.prov": "OrcID"},{"user":1,"idents.prov":1,"idents.prov_id":1,"_id":0})
+    users_orcid_query = db_auth2.users.find({"idents.prov": "OrcID"},
+                                            {"user":1,"idents.prov":1,"idents.prov_id":1,"_id":0})
     for record in users_orcid_query:
         for ident in record["idents"]:
             if ident["prov"] == "OrcID":
@@ -54,9 +58,15 @@ def get_user_info_from_auth2():
     return user_stats_dict
 
 def get_internal_users(user_stats_dict):
-    client_metrics = MongoClient("mongodb://kbasemetrics:"+metrics_password+"@db5.chicago.kbase.us/metrics?readPreference=secondary")
+    """ 
+    Gets the internal users from the old metrics data storage.  Populates the ongoing data structure. 
+    This will be replaced down the line 
+    """
+    client_metrics = MongoClient("mongodb://kbasemetrics:"+metrics_password+
+                                 "@db5.chicago.kbase.us/metrics?readPreference=secondary")
     db_metrics = client_metrics.metrics
-    kb_internal_user_query = db_metrics.users.find({"kbase_staff":True},{"_id":0,"username":1,"kbase_staff":1})
+    kb_internal_user_query = db_metrics.users.find({"kbase_staff":True},
+                                                   {"_id":0,"username":1,"kbase_staff":1})
     for record in kb_internal_user_query:
         if record["username"] in user_stats_dict:
             user_stats_dict[record["username"]]["kbase_internal_user"] = True
@@ -64,7 +74,9 @@ def get_internal_users(user_stats_dict):
     return user_stats_dict
             
 def get_user_orgs_count(user_stats_dict):
-    client_orgs = MongoClient("mongodb://kbasemetrics:"+metrics_password+"@db5.chicago.kbase.us/groups?readPreference=secondary")
+    """ Gets the count of the orgs that users belong to and populates the onging data structure"""
+    client_orgs = MongoClient("mongodb://kbasemetrics:"+metrics_password+
+                              "@db5.chicago.kbase.us/groups?readPreference=secondary")
     db_orgs = client_orgs.groups
     orgs_query = db_orgs.groups.find({},{"name":1,"memb.user":1,"_id":0})
     for record in orgs_query:
@@ -74,8 +86,13 @@ def get_user_orgs_count(user_stats_dict):
     client_orgs.close()  
     return user_stats_dict  
 
-def get_user_narrative_stats(user_stats_dict):  
-    client_workspace = MongoClient("mongodb://kbasemetrics:"+metrics_password+"@db5.chicago.kbase.us/workspace?readPreference=secondary")
+def get_user_narrative_stats(user_stats_dict):
+    """
+    gets narrative summary stats (number of naratives, 
+    number of shares, number of narratives shared for each user
+    """
+    client_workspace = MongoClient("mongodb://kbasemetrics:"+metrics_password+
+                                   "@db5.chicago.kbase.us/workspace?readPreference=secondary")
     db_workspace = client_workspace.workspace
     ws_user_dict = {}
     #Get all the legitimate narratives and and their respective user (not del, saved(not_temp))
@@ -187,9 +204,11 @@ def upload_user_data(user_stats_dict):
 
     #get all existing users    
     existing_user_info = dict()
-    query = "select username, display_name, email, orcid, kb_internal_user, institution, country, signup_date, last_signin_date from user_info"
+    query = "select username, display_name, email, orcid, kb_internal_user, institution, " \
+            "country, signup_date, last_signin_date from user_info"
     cursor.execute(query)
-    for (username, display_name, email, orcid, kb_internal_user, institution, country, signup_date, last_signin_date) in cursor:
+    for (username, display_name, email, orcid, kb_internal_user, institution, 
+         country, signup_date, last_signin_date) in cursor:
         existing_user_info[username]={"name":display_name,
                                        "email":email, 
                                        "orcid":orcid,
@@ -210,8 +229,10 @@ def upload_user_data(user_stats_dict):
 
     update_prep_cursor = db_connection.cursor(prepared=True)
     user_info_update_statement = "update user_info " \
-                                 "set display_name = %s, email = %s, orcid = %s, kb_internal_user = %s, " \
-                                 "institution = %s, country = %s, signup_date = %s, last_signin_date = %s " \
+                                 "set display_name = %s, email = %s, " \
+                                 "orcid = %s, kb_internal_user = %s, " \
+                                 "institution = %s, country = %s, " \
+                                 "signup_date = %s, last_signin_date = %s " \
                                  "where username = %s;"
 
     new_user_info_count = 0
@@ -230,18 +251,22 @@ def upload_user_data(user_stats_dict):
         else:
             #Check if anything has changed in the user_info, if so update the record
             if not ((user_stats_dict[username]["last_signin_date"] is None or 
-                     user_stats_dict[username]["last_signin_date"].strftime("%Y-%m-%d %H:%M:%S") == str(existing_user_info[username]["last_signin_date"])) and
+                     user_stats_dict[username]["last_signin_date"].strftime("%Y-%m-%d %H:%M:%S") == 
+                     str(existing_user_info[username]["last_signin_date"])) and
                     user_stats_dict[username]["country"] == existing_user_info[username]["country"] and
-                    user_stats_dict[username]["institution"] == existing_user_info[username]["institution"] and
-                    user_stats_dict[username]["kbase_internal_user"] == existing_user_info[username]["kb_internal_user"] and
+                    user_stats_dict[username]["institution"] == 
+                    existing_user_info[username]["institution"] and
+                    user_stats_dict[username]["kbase_internal_user"] == 
+                    existing_user_info[username]["kb_internal_user"] and
                     user_stats_dict[username]["orcid"] == existing_user_info[username]["orcid"] and
                     user_stats_dict[username]["email"] == existing_user_info[username]["email"] and
                     user_stats_dict[username]["name"] == existing_user_info[username]["name"]):
                 input = (user_stats_dict[username]["name"],user_stats_dict[username]["email"],
-                         user_stats_dict[username]["orcid"],user_stats_dict[username]["kbase_internal_user"],
+                         user_stats_dict[username]["orcid"],
+                         user_stats_dict[username]["kbase_internal_user"],
                          user_stats_dict[username]["institution"],user_stats_dict[username]["country"],
-                         user_stats_dict[username]["signup_date"],user_stats_dict[username]["last_signin_date"],
-                         username)
+                         user_stats_dict[username]["signup_date"],
+                         user_stats_dict[username]["last_signin_date"],username)
                 update_prep_cursor.execute(user_info_update_statement,input)
                 users_info_updated_count += 1                    
     db_connection.commit()
@@ -251,11 +276,13 @@ def upload_user_data(user_stats_dict):
 
     #NOW DO USER SUMMARY STATS
     user_summary_stats_insert_statement = "insert into user_system_summary_stats " \
-                                 "(username,num_orgs, narrative_count, shared_count, narratives_shared) " \
+                                 "(username,num_orgs, narrative_count, " \
+                                 "shared_count, narratives_shared) " \
                                  "values(%s,%s,%s,%s,%s);"
 
     existing_user_summary_stats = dict()
-    query = "select username, num_orgs, narrative_count, shared_count, narratives_shared from user_system_summary_stats_current"
+    query = "select username, num_orgs, narrative_count, shared_count, narratives_shared " \
+            "from user_system_summary_stats_current"
     cursor.execute(query)
     for (username, num_orgs, narrative_count, shared_count, narratives_shared) in cursor:
         existing_user_summary_stats[username]={"num_orgs":num_orgs,
@@ -276,10 +303,14 @@ def upload_user_data(user_stats_dict):
             new_user_summary_count+= 1
         else:
             #else see if the new data differs from the most recent snapshot. If it does differ, do an insert
-            if not (user_stats_dict[username]["num_orgs"] == existing_user_summary_stats[username]["num_orgs"] and 
-                    user_stats_dict[username]["narrative_count"] == existing_user_summary_stats[username]["narrative_count"] and 
-                    user_stats_dict[username]["shared_count"] == existing_user_summary_stats[username]["shared_count"] and 
-                    user_stats_dict[username]["narratives_shared"] == existing_user_summary_stats[username]["narratives_shared"]):
+            if not (user_stats_dict[username]["num_orgs"] == 
+                    existing_user_summary_stats[username]["num_orgs"] and 
+                    user_stats_dict[username]["narrative_count"] == 
+                    existing_user_summary_stats[username]["narrative_count"] and 
+                    user_stats_dict[username]["shared_count"] == 
+                    existing_user_summary_stats[username]["shared_count"] and 
+                    user_stats_dict[username]["narratives_shared"] == 
+                    existing_user_summary_stats[username]["narratives_shared"]):
                 input = (username,user_stats_dict[username]["num_orgs"],
                          user_stats_dict[username]["narrative_count"],user_stats_dict[username]["shared_count"],
                          user_stats_dict[username]["narratives_shared"])
@@ -293,73 +324,6 @@ def upload_user_data(user_stats_dict):
 
     return 1
 
-
-def upload_user_app_stats(user_stats_dict, start_date=None, end_date=None):
-    import mysql.connector as mysql
-    import userappstats
-
-
-    start_date = '2018-07-01'
-#    end_date = None
-    end_date = '2019-07-04'
-    if start_date is not None or end_date is not None:
-        if start_date is not None and  end_date is not None:
-#            app_usage_list = userappstats.user_app_stats(['jkbaumohl','cnelson'],start_date,end_date)
-            app_usage_list = userappstats.user_app_stats(user_stats_dict.keys(),start_date,end_date)
-        else:
-            raise ValueError("If start_date or end_date is set, then both must be set.")
-    else:
-        app_usage_list = userappstats.user_app_stats(['jkbaumohl','cnelson'])
-#        app_usage_list = userappstats.user_app_stats(user_stats_dict.keys())
-
-#    print("APP_USAGE_LIST:"+str(app_usage_list))
-#    raise ValueError("PLANNED STOP")
-
-    #connect to mysql
-    db_connection = mysql.connect(
-        host = "10.58.0.98",
-        user = "metrics",
-        passwd = metrics_mysql_password,
-        database = "metrics"
-    )
-
-    cursor = db_connection.cursor()
-    query = "use metrics"
-    cursor.execute(query)
-
-    prep_cursor = db_connection.cursor(prepared=True)
-    user_app_insert_statement = "insert into user_app_usage " \
-                                "(job_id, username, app_name, start_date, finish_date, run_time, is_error, git_commit_hash) " \
-                                "values(%s,%s,%s,%s,%s,%s,%s,%s);"
-    num_rows_inserted = 0;
-    num_rows_failed_duplicates = 0;
-
-    num_bad_records
-
-    for record in app_usage_list:
-        is_error = False
-#        print("Record:"+str(record))
-        try:
-            if record['is_error'] == 1:
-                is_error = True
-        except Exception as e:
-            num_bad_records += 1
-
-
-        input = (record['job_ID'],record['user_name'], record['app_name'], record['start_date'], record['finish_date'], record['run_time'], is_error, record['git_commit_hash'])   
-        #Error handling from https://www.programcreek.com/python/example/93043/mysql.connector.Error
-        try:
-            prep_cursor.execute(user_app_insert_statement,input)
-            num_rows_inserted += 1
-        except mysql.Error as err:
-            num_rows_failed_duplicates += 1
-
-    db_connection.commit()
-    print("Number of app records inserted : " + str(num_rows_inserted))
-    print("Number of app records duplicate : " + str(num_rows_failed_duplicates))
-    return 1;
-
-
 import time
 start_time = time.time()
 user_stats_dict = get_user_info_from_auth2()
@@ -367,18 +331,9 @@ user_stats_dict = get_internal_users(user_stats_dict)
 user_stats_dict = get_user_orgs_count(user_stats_dict)
 user_stats_dict = get_user_narrative_stats(user_stats_dict)
 user_stats_dict = get_institution_and_country(user_stats_dict)
-#print(str(user_stats_dict[u'jkbaumohl']))
-#print(str(user_stats_dict[u'zcrockett']))
-#print(str(user_stats_dict))
 print("--- gather data %s seconds ---" % (time.time() - start_time))
 upload_user_data(user_stats_dict)
 print("--- including user info and user_stats upload %s seconds ---" % (time.time() - start_time))
-start_date = '2019-06-01'
-#end_date = None
-end_date = '2019-06-03'
-#DO NOT USE APP STATS RIGHT NOW
-    #upload_user_app_stats(user_stats_dict,start_date,end_date)
-    #upload_user_app_stats(user_stats_dict)
-print("--- including app_stats upload %s seconds ---" % (time.time() - start_time))
+
 
 

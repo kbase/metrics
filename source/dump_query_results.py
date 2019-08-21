@@ -5,6 +5,13 @@ metrics_mysql_password = os.environ['METRICS_MYSQL_PWD']
 
 
 def dump_query_results():
+    """ 
+    This is a simple SQL table dump of a given query so we can supply users with custom tables.
+    Note that the SQL query itself and column headers portion need to be changed if you want to change 
+    the query/results. Otherwise it is good to go. 
+    It can be called simply with the bin shell script. 
+    Read the README at the top level for an example.
+    """
     import mysql.connector as mysql    
 
     #connect to mysql

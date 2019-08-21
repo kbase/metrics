@@ -14,9 +14,15 @@ import datetime, time
 #Insures all finish times within last day.
 yesterday = (datetime.date.today() - datetime.timedelta(days=1))
 
-def get_user_app_stats(start_date=datetime.datetime.combine(yesterday, datetime.datetime.min.time()), end_date=datetime.datetime.combine(yesterday, datetime.datetime.max.time()) ):
-    
-    # From str to datetime:
+def get_user_app_stats(start_date=datetime.datetime.combine(yesterday, datetime.datetime.min.time()), 
+                       end_date=datetime.datetime.combine(yesterday, datetime.datetime.max.time()) ):
+    """ 
+    Gets a data dump from the app cataloge for a certain date window.   
+    If no statt and end date are entered it will default to the last 15 calendar days (UTC TIME).
+    It is 15 days because it uses an underlying method that 
+    filters by creation_time and not finish_time
+    """
+    # From str to datetime, defaults to zero time.
     if type(start_date) == str:
         start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
         end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
@@ -26,12 +32,15 @@ def get_user_app_stats(start_date=datetime.datetime.combine(yesterday, datetime.
     # finish_time within the time window specified. (14 days, 24 hours, 60 mins, 60 secs)
     begin = int(start_date.strftime('%s')) - (14 * 24 * 60 * 60) 
     end = int(end_date.strftime('%s'))
+    #print("BEGIN: " + str(begin))
+    #print("END: " + str(end))
         
     time_interval = {'begin': begin , 'end': end}
     stats = catalog.get_exec_raw_stats(time_interval)
     return stats
 
 def helper_concatenation(var_pre, var_post):
+    """ Simple helper method for concatenationg fields (Module and app/func name) """
     return_val = None
     if var_pre is None:
         var_pre = "Not Specified"
@@ -42,6 +51,10 @@ def helper_concatenation(var_pre, var_post):
     return return_val
 
 def upload_user_app_stats(start_date=None, end_date=None):
+    """ 
+    Uploads the catalog app records into the MySQL back end.
+    Uses the other functions 
+    """
     import mysql.connector as mysql
     import userappstats
 
@@ -76,13 +89,12 @@ def upload_user_app_stats(start_date=None, end_date=None):
     num_rows_inserted = 0;
     num_rows_failed_duplicates = 0;
     num_no_job_id = 0;
-
+    #insert each record.
     for record in app_usage_list:
         is_error = False
         if record['is_error'] == 1:
             is_error = True
         if 'job_id' not in record:
-#            print("NO Job ID Records: " + str(record))
             num_no_job_id += 1
 
         input = (record.get('job_id'),record['user_id'], 
@@ -90,13 +102,10 @@ def upload_user_app_stats(start_date=None, end_date=None):
                  record['exec_start_time'], record['finish_time'], (record['finish_time'] - record['exec_start_time']),
                  is_error, record['git_commit_hash'], helper_concatenation(record["func_module_name"], record["func_name"]))
         #Error handling from https://www.programcreek.com/python/example/93043/mysql.connector.Error
-
         try:
             prep_cursor.execute(user_app_insert_statement,input)
             num_rows_inserted += 1
         except mysql.Error as err:
-            print("Error: "+ str(err))
-            print("Duplicate record: " + str(record))
             num_rows_failed_duplicates += 1
 
     db_connection.commit()
