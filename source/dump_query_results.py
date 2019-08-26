@@ -13,17 +13,17 @@ def dump_query_results():
     Read the README at the top level for an example.
     """
     import mysql.connector as mysql    
-
+    sql_host = os.environ['SQL_HOST']
     #connect to mysql
     db_connection = mysql.connect(
-        host = "10.58.0.98",#"mysql1", #"localhost",
+        host = sql_host,#"mysql1", #"localhost",
         user = "metrics", #"root",
         passwd = metrics_mysql_password,
         database = "metrics" #"datacamp"
     )
 
     cursor = db_connection.cursor()
-    query = "use metrics"
+    query = "use"+os.environ['QUERY_ON']
     cursor.execute(query)
 
     #CHANGE QUERY HERE
