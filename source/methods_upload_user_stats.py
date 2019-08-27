@@ -9,15 +9,23 @@ requests.packages.urllib3.disable_warnings()
 # So get_user_info_from_auth2 must be called before get_internal_users and get_user_orgs_count
 
 import os
-metrics_password = os.environ['MONGO_PWD']
-metrics_mysql_password = os.environ['METRICS_MYSQL_PWD']
 
+metrics_mysql_password = os.environ['METRICS_MYSQL_PWD']
+mongoDB_metrics_connection = os.environ['MONGO_PATH']
+
+profile_url = os.environ['PROFILE_URL']
+sql_host = os.environ['SQL_HOST']
+query_on = os.environ['QUERY_ON']
+
+to_auth2 = os.environ['AUTH2_SUFFIX']
+to_metrics = os.environ['METS_SUFFIX']
+to_groups =  os.environ['GRP_SUFFIX']
+to_workspace =  os.environ['WRK_SUFFIX']
 
 def get_user_info_from_auth2():
     """ get auth2 info and kbase_internal_users. Creates initial dict for the data. """
 
-    client_auth2 = MongoClient("mongodb://kbasemetrics:"+metrics_password+
-                               "@db5.chicago.kbase.us/auth2?readPreference=secondary")
+    client_auth2 = MongoClient(mongoDB_metrics_connection+to_auth2)
     db_auth2 = client_auth2.auth2
     
     user_stats_dict = {} #dict that will have userid as the key,
@@ -62,8 +70,7 @@ def get_internal_users(user_stats_dict):
     Gets the internal users from the old metrics data storage.  Populates the ongoing data structure. 
     This will be replaced down the line 
     """
-    client_metrics = MongoClient("mongodb://kbasemetrics:"+metrics_password+
-                                 "@db5.chicago.kbase.us/metrics?readPreference=secondary")
+    client_metrics = MongoClient(mongoDB_metrics_connection+to_metrics)
     db_metrics = client_metrics.metrics
     kb_internal_user_query = db_metrics.users.find({"kbase_staff":True},
                                                    {"_id":0,"username":1,"kbase_staff":1})
@@ -76,8 +83,7 @@ def get_internal_users(user_stats_dict):
 def get_user_orgs_count(user_stats_dict):
     """ Gets the count of the orgs that users belong to and populates the onging data structure"""
 
-    client_orgs = MongoClient("mongodb://kbasemetrics:"+metrics_password+
-                              "@db5.chicago.kbase.us/groups?readPreference=secondary")
+    client_orgs = MongoClient(mongoDB_metrics_connection+to_groups)
     db_orgs = client_orgs.groups
     orgs_query = db_orgs.groups.find({},{"name":1,"memb.user":1,"_id":0})
     for record in orgs_query:
@@ -92,8 +98,7 @@ def get_user_narrative_stats(user_stats_dict):
     gets narrative summary stats (number of naratives, 
     number of shares, number of narratives shared for each user
     """
-    client_workspace = MongoClient("mongodb://kbasemetrics:"+metrics_password+
-                                   "@db5.chicago.kbase.us/workspace?readPreference=secondary")
+    client_workspace = MongoClient(mongoDB_metrics_connection+to_workspace)
     db_workspace = client_workspace.workspace
     ws_user_dict = {}
     #Get all the legitimate narratives and and their respective user (not del, saved(not_temp))
@@ -128,7 +133,7 @@ def get_institution_and_country(user_stats_dict):
     """
     Gets the institution and country information for the user from the profile information
     """
-    url = "https://kbase.us/services/user_profile/rpc"
+    url = profile_url
     headers = dict()
     arg_hash = {'method': "UserProfile.get_user_profile",
                 'params': [list(user_stats_dict.keys())],
@@ -201,14 +206,14 @@ def upload_user_data(user_stats_dict):
     rows_stats_inserted = 0;
     #connect to mysql
     db_connection = mysql.connect(
-        host = "10.58.0.98",
+        host = sql_host,
         user = "metrics",
         passwd = metrics_mysql_password,
         database = "metrics" 
     )
 
     cursor = db_connection.cursor()
-    query = "use metrics"
+    query = "use "+query_on
     cursor.execute(query)
 
     #get all existing users    

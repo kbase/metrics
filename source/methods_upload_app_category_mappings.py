@@ -19,6 +19,7 @@ def data_configure(app_df):
 
     return modDF
 
+import os 
 
 def create_app_dictionary():
     #Create App Dictionary: Main function
@@ -26,8 +27,8 @@ def create_app_dictionary():
     requests.packages.urllib3.disable_warnings()
     from biokbase.catalog.Client import Catalog
     from biokbase.narrative_method_store.client import NarrativeMethodStore
-    catalog = Catalog(url = "https://kbase.us/services/catalog")
-    nms = NarrativeMethodStore(url = "https://kbase.us/services/narrative_method_store/rpc")
+    catalog = Catalog(url=os.environ['CATALOG_URL'])
+    nms = NarrativeMethodStore(url=os.environ['NARRATIVE_METHOD_STORE'] )
     import pandas as pd
 
     apps = nms.list_methods({"tag": "release"})
