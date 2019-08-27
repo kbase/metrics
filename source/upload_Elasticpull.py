@@ -2,6 +2,9 @@
 import requests
 import json
 import pprint
+import os 
+
+elasticsearch_url = os.environ['ELASTICSEARCH_URL']
 
 def elasticsearch_pull():
 
@@ -118,7 +121,7 @@ def elasticsearch_pull():
 
     })
 
-    response = requests.get("http://elasticsearch1.chicago.kbase.us:9200/logstash-narrativecontainers-*/_search", data=narrative_container_query)
+    response = requests.get(elasticsearch_url, data=narrative_container_query)
     results = json.loads(response.text)
     data = [doc for doc in results['hits']['hits']]
     entries_1 = ('type', 'instance', '@version', 'index', 'geoip')
