@@ -6,8 +6,11 @@ import os
 requests.packages.urllib3.disable_warnings()
 from biokbase.catalog.Client import Catalog
 from biokbase.narrative_method_store.client import NarrativeMethodStore
-catalog = Catalog(url = "https://kbase.us/services/catalog", token = os.environ['METRICS_USER_TOKEN'])
-nms = NarrativeMethodStore(url = "https://kbase.us/services/narrative_method_store/rpc")
+
+catalog = Catalog(url = os.environ['CATALOG_URL'], token = os.environ['METRICS_USER_TOKEN'])
+nms = NarrativeMethodStore(url = os.environ['NARRATIVE_METHOD_STORE'])
+sql_host = os.environ['SQL_HOST']
+query_on = os.environ['QUERY_ON']
 
 import datetime, time
 
@@ -68,14 +71,14 @@ def upload_user_app_stats(start_date=None, end_date=None):
     metrics_mysql_password = os.environ['METRICS_MYSQL_PWD']
     #connect to mysql
     db_connection = mysql.connect(
-        host = "10.58.0.98",
+        host = sql_host,
         user = "metrics",
         passwd = metrics_mysql_password,
         database = "metrics"
     )
 
     cursor = db_connection.cursor()
-    query = "use metrics"
+    query = "use "+query_on
     cursor.execute(query)
 
     prep_cursor = db_connection.cursor(prepared=True)
