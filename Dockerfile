@@ -4,9 +4,8 @@ FROM python:3.7-slim
 
 # Build arguments passed into the docker command for image metadata
 ARG BUILD_DATE
-ARG VCS_REF
+ARG COMMIT
 ARG BRANCH
-ARG TAG
 
 RUN pip install mysql-connector-python-rf pymongo
 
@@ -27,6 +26,7 @@ WORKDIR /root/source
 # python interpreter
 RUN sed 's/^\./\/kb\/runtime\/lib\/python3.7\/site-packages/' /kb/runtime/lib/python3.7/site-packages/easy-install.pth >/usr/local/lib/python3.7/site-packages/kbase.pth
 ENV PYTHONPATH=/kb/runtime/lib/python3.7/site-packages/:/kb/runtime/lib/python3.6/site-packages/
+ENV PATH="/root/bin:/root/source:${PATH}"
 
 LABEL org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.vcs-url="https://github.com/kbase/metrics.git" \
