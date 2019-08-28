@@ -7,7 +7,7 @@ ARG BUILD_DATE
 ARG COMMIT
 ARG BRANCH
 
-RUN pip install mysql-connector-python-rf pymongo
+RUN pip install mysql-connector-python-rf pymongo numpy pandas
 
 RUN mkdir -p /kb/runtime
 
