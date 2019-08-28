@@ -14,7 +14,8 @@ RUN mkdir -p /kb/runtime
 # Copy over all of the libraries in the Narrative runtime. This is overkill
 # but kind of guarantees that anything that runs in a narrative python setup
 # will run here as well
-COPY --from=narrative /kb/runtime/lib /kb/runtime/lib
+COPY --from=narrative /kb/runtime/lib/python3.7/site-packages/ /root/lib/python3.7/site-packages/
+COPY --from=narrative /kb/runtime/lib/python3.6/site-packages/ /root/lib/python3.6/site-packages/
 COPY bin /root/bin
 COPY source /root/source
 WORKDIR /root/source
