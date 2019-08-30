@@ -1,6 +1,8 @@
 #!/usr/local/bin/python
 
 import os
+import mysql.connector as mysql    
+
 metrics_mysql_password = os.environ['METRICS_MYSQL_PWD']
 sql_host = os.environ['SQL_HOST']
 metrics = os.environ['QUERY_ON']
@@ -13,7 +15,6 @@ def dump_query_results():
     It can be called simply with the bin shell script. 
     Read the README at the top level for an example.
     """
-    import mysql.connector as mysql    
     #connect to mysql
     db_connection = mysql.connect(
         host = sql_host,#"mysql1", #"localhost",

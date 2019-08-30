@@ -1,14 +1,14 @@
 from pymongo import MongoClient
 from pymongo import ReadPreference
 import json as _json
+import os
+import mysql.connector as mysql
 import requests
 requests.packages.urllib3.disable_warnings()
 
 # NOTE get_user_info_from_auth2 sets up the initial dict. 
 #The following functions update certain fields in the dict.
 # So get_user_info_from_auth2 must be called before get_internal_users and get_user_orgs_count
-
-import os
 
 metrics_mysql_password = os.environ['METRICS_MYSQL_PWD']
 mongoDB_metrics_connection = os.environ['MONGO_PATH']
@@ -198,8 +198,6 @@ def upload_user_data(user_stats_dict):
     then populates the user_info and user_system_summary_stats tables
     in the metrics MySQL DB.
     """
-    import mysql.connector as mysql
-
     total_users = len(user_stats_dict.keys())
     rows_info_inserted = 0;
     rows_info_updated = 0;

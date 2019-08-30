@@ -1,18 +1,19 @@
 # GetAppStats
 #
-
 import requests
 import os
-requests.packages.urllib3.disable_warnings()
+import datetime, time
+import mysql.connector as mysql
 from biokbase.catalog.Client import Catalog
 from biokbase.narrative_method_store.client import NarrativeMethodStore
+
+requests.packages.urllib3.disable_warnings()
+
 
 catalog = Catalog(url = os.environ['CATALOG_URL'], token = os.environ['METRICS_USER_TOKEN'])
 nms = NarrativeMethodStore(url = os.environ['NARRATIVE_METHOD_STORE'])
 sql_host = os.environ['SQL_HOST']
 query_on = os.environ['QUERY_ON']
-
-import datetime, time
 
 #Insures all finish times within last day.
 yesterday = (datetime.date.today() - datetime.timedelta(days=1))
@@ -58,8 +59,6 @@ def upload_user_app_stats(start_date=None, end_date=None):
     Uploads the catalog app records into the MySQL back end.
     Uses the other functions 
     """
-    import mysql.connector as mysql
-
     if start_date is not None or end_date is not None:
         if start_date is not None and  end_date is not None:
             app_usage_list = get_user_app_stats(start_date,end_date)

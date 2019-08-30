@@ -1,3 +1,10 @@
+import os 
+import requests
+import pandas as pd
+import mysql.connector as mysql
+from biokbase.catalog.Client import Catalog
+from biokbase.narrative_method_store.client import NarrativeMethodStore
+
 # Configure App Data: Function
 def data_configure(app_df):
     category_mess = list(app_df.categories)
@@ -16,20 +23,13 @@ def data_configure(app_df):
 
     modDF = app_df.drop(my_idx_list)
     modDF.categories = categories
-
     return modDF
-
-import os 
 
 def create_app_dictionary():
     #Create App Dictionary: Main function
-    import requests
     requests.packages.urllib3.disable_warnings()
-    from biokbase.catalog.Client import Catalog
-    from biokbase.narrative_method_store.client import NarrativeMethodStore
     catalog = Catalog(url=os.environ['CATALOG_URL'])
     nms = NarrativeMethodStore(url=os.environ['NARRATIVE_METHOD_STORE'] )
-    import pandas as pd
 
     apps = nms.list_methods({"tag": "release"})
     apps_datastruc = pd.DataFrame.from_dict(apps)
@@ -48,16 +48,10 @@ def create_app_dictionary():
                 app_dict[category] = list(set(app_dict[category]))
             else:
                 raise KeyError("{} not a KBase app category".format(category))
-
     return app_dict
 
-
-
 def update_app_category_mappings():
-    import mysql.connector as mysql
-    import os
     metrics_mysql_password = os.environ['METRICS_MYSQL_PWD']
-
     #connect to mysql
     db_connection = mysql.connect(
         host = "10.58.0.98",
@@ -65,7 +59,6 @@ def update_app_category_mappings():
         passwd = metrics_mysql_password,
         database = "metrics"
     )
-
     cursor = db_connection.cursor()
     query = "use metrics"
     cursor.execute(query)
