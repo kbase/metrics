@@ -5,6 +5,10 @@ import mysql.connector as mysql
 from biokbase.catalog.Client import Catalog
 from biokbase.narrative_method_store.client import NarrativeMethodStore
 
+metrics_mysql_password = os.environ['METRICS_MYSQL_PWD']
+sql_host = os.environ['SQL_HOST']
+query_on = os.environ['QUERY_ON']
+
 # Configure App Data: Function
 def data_configure(app_df):
     category_mess = list(app_df.categories)
@@ -51,40 +55,59 @@ def create_app_dictionary():
     return app_dict
 
 def update_app_category_mappings():
-    metrics_mysql_password = os.environ['METRICS_MYSQL_PWD']
     #connect to mysql
     db_connection = mysql.connect(
-        host = "10.58.0.98",
+        host = sql_host,
         user = "metrics",
         passwd = metrics_mysql_password,
         database = "metrics"
     )
     cursor = db_connection.cursor()
-    query = "use metrics"
-    cursor.execute(query)
-    query = "select count(*) from app_name_category_map"
-    cursor.execute(query)
-    prev_results = list()
-    for (prev_results) in cursor:
-        print("Previous Number of App Category Mappings: " + str(prev_results[0]))
-
-    del_cursor = db_connection.cursor(buffered=True,dictionary=True)
-    query = "delete from app_name_category_map"
+    query = "use "+query_on
     cursor.execute(query)
 
-    mapping_count = 0;
+    #get existing mappings
+    existing_records_list = list()
+    query = "select concat(app_name, '::', app_category) "\
+            "from app_name_category_map";
+    cursor.execute(query)
+    for row in cursor:
+        existing_records_list.append(row[0])
+
+    #update all existing records to be inactive
+    update_query = "update app_name_category_map set is_active = False";
+    cursor.execute(update_query)
+    db_connection.commit()
+
     cat_app_dict = create_app_dictionary()
-
-    prep_cursor = db_connection.cursor(prepared=True)
+    #update active records if they exist or insert new row if did not exist
+    #update statement 
+    update_prep_cursor = db_connection.cursor(prepared=True)
+    update_statement = "update app_name_category_map " \
+                       "set is_active = True "\
+                       "where app_name = %s and "\
+                       "app_category = %s "
+    #insert statement
+    insert_prep_cursor = db_connection.cursor(prepared=True)
+    existing_count = len(existing_records_list);
     insert_statement =  "insert into app_name_category_map " \
-                        "(app_name, app_category) "\
-                        "values(%s, %s);"
-
+                        "(app_name, app_category, is_active) "\
+                        "values(%s, %s, True);"
+    insert_count = 0;
+    update_count = 0;
     for category_name in cat_app_dict:
         for app_name in cat_app_dict[category_name]:    
             input =  (app_name, category_name)       
-            prep_cursor.execute(insert_statement,input)
-            mapping_count+= 1
+            if app_name + "::" + category_name in existing_records_list:
+                #do update
+                update_prep_cursor.execute(update_statement, input)
+                update_count += 1
+            else:
+                #do insert
+                insert_prep_cursor.execute(insert_statement, input)
+                insert_count += 1
     
     db_connection.commit()
-    print("Post input mapping_count : " + str(mapping_count))
+    print("Existing_count : " + str(existing_count))
+    print("Insert_count : " + str(insert_count))
+    print("Update_count : " + str(update_count))

@@ -90,7 +90,9 @@ ON user_app_usage(job_id);
 
 CREATE TABLE app_name_category_map (
 	app_name VARCHAR(255) NOT NULL,
-	app_category VARCHAR(255) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8; 
+	app_category VARCHAR(255) NOT NULL,
+	is_active BOOLEAN NOT NULL DEFAULT 0 
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8; 
 
 CREATE UNIQUE INDEX uk_app_name_category
 ON app_name_category_map(app_name, app_category);
@@ -98,7 +100,6 @@ ON app_name_category_map(app_name, app_category);
 CREATE INDEX idx_app_name_category_map_app_name ON app_name_category_map (app_name);
 
 CREATE INDEX idx_app_name_category_map_app_category ON app_name_category_map (app_category);
-
 
 
 
