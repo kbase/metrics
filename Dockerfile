@@ -7,7 +7,10 @@ ARG BUILD_DATE
 ARG COMMIT
 ARG BRANCH
 
-RUN pip install mysql-connector-python-rf pymongo
+RUN apt-get update -y && \
+    apt-get install -y wget && \
+    rm -rf /var/lib/apt/lists/* && \
+    pip install mysql-connector-python-rf pymongo
 
 RUN mkdir -p /kb/runtime
 
@@ -15,7 +18,13 @@ RUN mkdir -p /kb/runtime
 # but kind of guarantees that anything that runs in a narrative python setup
 # will run here as well
 COPY --from=narrative /kb/runtime/lib /kb/runtime/lib
+
 COPY bin /root/bin
+RUN cd /root/bin && \
+    wget https://github.com/kbase/dockerize/raw/master/dockerize-linux-amd64-v0.6.1.tar.gz && \
+    tar xzf dockerize-linux-amd64-v0.6.1.tar.gz && \
+    rm dockerize-linux-amd64-v0.6.1.tar.gz
+
 COPY source /root/source
 WORKDIR /root/source
 
