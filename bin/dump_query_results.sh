@@ -1,3 +1,3 @@
-#!bin/bash
+#!/bin/bash
 
 python dump_query_results.py
