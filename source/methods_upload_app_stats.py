@@ -87,21 +87,70 @@ def upload_user_app_stats(start_date=None, end_date=None):
                                 "run_time, is_error, git_commit_hash, func_name) " \
                                 "values(%s,%s,%s,FROM_UNIXTIME(%s),FROM_UNIXTIME(%s),%s,%s,%s,%s);"
 
+    check_if_first_run = "select count(*) from user_app_usage"
+    cursor.execute(check_if_first_run)
+    num_previous_records = 0
+    for row in cursor:
+        num_previous_records = row[0]
+
+    check_no_job_id_duplicate_record_cursor = db_connection.cursor(prepared=True)
+    check_dup_no_job_id_statement = "select count(*) from user_app_usage " \
+                                    "where job_id is NULL " \
+                                    "and username = %s " \
+                                    "and app_name = %s " \
+                                    "and start_date = FROM_UNIXTIME(%s) " \
+                                    "and finish_date = FROM_UNIXTIME(%s) " \
+                                    "and run_time = %s " \
+                                    "and is_error = %s " \
+                                    "and git_commit_hash = %s " \
+                                    "and func_name = %s " 
+
+    check_dup_no_job_id_no_app_name_statement = "select count(*) from user_app_usage " \
+                                                "where job_id is NULL " \
+                                                "and username = %s " \
+                                                "and app_name is NULL " \
+                                                "and start_date = FROM_UNIXTIME(%s) " \
+                                                "and finish_date = FROM_UNIXTIME(%s) " \
+                                                "and run_time = %s " \
+                                                "and is_error = %s " \
+                                                "and git_commit_hash = %s " \
+                                                "and func_name = %s "
+
+
     num_rows_inserted = 0;
     num_rows_failed_duplicates = 0;
     num_no_job_id = 0;
+    num_no_job_id_duplicate = 0;
     #insert each record.
     for record in app_usage_list:
         is_error = False
+        input = [record.get('job_id'),record['user_id'], 
+                 helper_concatenation(record["app_module_name"], record["app_id"]),
+                 round(record['exec_start_time']), round(record['finish_time']), round((record['finish_time'] - record['exec_start_time'])),
+                 is_error, record['git_commit_hash'], helper_concatenation(record["func_module_name"], record["func_name"])]
         if record['is_error'] == 1:
             is_error = True
+
+        #if not doing clean wiped insert, check for duplicates with job_id is null (some with app_name is Null)
         if 'job_id' not in record:
             num_no_job_id += 1
+            if num_previous_records > 0 :
+                check_input = input[1:]
+                if helper_concatenation(record["app_module_name"], record["app_id"]) is None:
+                    #Don't need app_name
+                    del check_input[1:2]
+                    check_no_job_id_duplicate_record_cursor.execute(check_dup_no_job_id_no_app_name_statement, check_input)
+                else:
+                    check_no_job_id_duplicate_record_cursor.execute(check_dup_no_job_id_statement, check_input)
 
-        input = (record.get('job_id'),record['user_id'], 
-                 helper_concatenation(record["app_module_name"], record["app_id"]),
-                 record['exec_start_time'], record['finish_time'], (record['finish_time'] - record['exec_start_time']),
-                 is_error, record['git_commit_hash'], helper_concatenation(record["func_module_name"], record["func_name"]))
+                dup_count = 0
+                for row in check_no_job_id_duplicate_record_cursor:
+                    dup_count = row[0] 
+                if int(dup_count) > 0:
+                    num_no_job_id_duplicate += 1;
+                    #IT IS A DUPLICATE NO JOB ID RECORD. DO NOT DO AN INSERT
+                    continue
+
         #Error handling from https://www.programcreek.com/python/example/93043/mysql.connector.Error
         try:
             prep_cursor.execute(user_app_insert_statement,input)
@@ -113,6 +162,7 @@ def upload_user_app_stats(start_date=None, end_date=None):
     print("Number of app records inserted : " + str(num_rows_inserted))
     print("Number of app records duplicate : " + str(num_rows_failed_duplicates))
     print("Number of no job id records : " + str(num_no_job_id))
+    print("Number of no job id records skipped: " + str(num_no_job_id_duplicate))
     print("App Usage Record_count: " + str(len(app_usage_list)))
     return 1;
 
