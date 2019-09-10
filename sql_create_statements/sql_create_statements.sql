@@ -78,9 +78,6 @@ CREATE TABLE user_app_usage (
         ON UPDATE CASCADE
         ON DELETE RESTRICT) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE UNIQUE INDEX uk_total_job_user_app_usage
-ON user_app_usage(job_id,username, app_name,
-start_date,finish_date,run_time,is_error);
 
 CREATE UNIQUE INDEX uk_jobid_user_app_usage
 ON user_app_usage(job_id);

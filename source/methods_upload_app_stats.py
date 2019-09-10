@@ -124,13 +124,12 @@ def upload_user_app_stats(start_date=None, end_date=None):
     #insert each record.
     for record in app_usage_list:
         is_error = False
+        if record['is_error'] == 1:
+            is_error = True
         input = [record.get('job_id'),record['user_id'], 
                  helper_concatenation(record["app_module_name"], record["app_id"]),
                  round(record['exec_start_time']), round(record['finish_time']), round((record['finish_time'] - record['exec_start_time'])),
                  is_error, record['git_commit_hash'], helper_concatenation(record["func_module_name"], record["func_name"])]
-        if record['is_error'] == 1:
-            is_error = True
-
         #if not doing clean wiped insert, check for duplicates with job_id is null (some with app_name is Null)
         if 'job_id' not in record:
             num_no_job_id += 1
@@ -156,6 +155,8 @@ def upload_user_app_stats(start_date=None, end_date=None):
             prep_cursor.execute(user_app_insert_statement,input)
             num_rows_inserted += 1
         except mysql.Error as err:
+            #print("ERROR: " + str(err))
+            #print("Duplicate Input: " + str(input))
             num_rows_failed_duplicates += 1
 
     db_connection.commit()
