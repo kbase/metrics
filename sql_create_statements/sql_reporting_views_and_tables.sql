@@ -390,3 +390,163 @@ on apm.finish_month = nkaepm.finish_month;
 
 ------------------------------
 
+#Bens Reports 1a
+#Total number of users per institution;
+
+#IN METRICS
+create or replace view metrics.hv_users_per_institution as 
+select count(*) as user_cnt, IFNULL(institution,'not specified') as institution
+from metrics.user_info 
+group by institution;
+
+
+#IN METRICS
+create or replace view metrics.hv_non_kb_users_per_institution as 
+select count(*) as user_cnt,  IFNULL(institution,'not specified') as institution
+from metrics.user_info 
+where kb_internal_user = False 
+group by institution;
+
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.users_per_institution as
+select upi.institution as institution, 
+nkpi.user_cnt as non_kb_internal_users_cnt , 
+upi.user_cnt as total_users_cnt
+from metrics.hv_users_per_institution upi left outer join
+metrics.hv_non_kb_users_per_institution nkpi on
+upi.institution = nkpi.institution;
+
+----------------------------------
+#Bens Reports 1b
+#Total number of users per institution over time.
+
+#IN METRICS
+create or replace view metrics.hv_users_per_institution_by_signup_month as 
+select count(*) as user_cnt, 
+DATE_FORMAT(`signup_date`,'%Y-%m') as signup_month,
+IFNULL(institution,'not specified') as institution
+from metrics.user_info 
+group by institution, signup_month;
+
+#IN METRICS
+create or replace view metrics.hv_non_kb_users_per_institution_by_signup_month as 
+select count(*) as user_cnt, 
+DATE_FORMAT(`signup_date`,'%Y-%m') as signup_month,
+IFNULL(institution,'not specified') as institution
+from metrics.user_info 
+where kb_internal_user = False 
+group by institution, signup_month;
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.users_per_institution_by_signup_month as
+select upi.institution as institution, 
+upi.signup_month,
+nkpi.user_cnt as non_kb_internal_users_cnt , 
+upi.user_cnt as total_users_cnt
+from metrics.hv_users_per_institution_by_signup_month upi left outer join
+metrics.hv_non_kb_users_per_institution_by_signup_month nkpi on
+upi.institution = nkpi.institution and
+upi.signup_month = nkpi.signup_month;
+
+--------------------------------------------
+
+#Bens Reports 2a
+#Total number of app runs by category.
+
+#IN METRICS
+create or replace view metrics.hv_all_app_category_run_counts as
+select count(*) as total_app_run_cnt, 
+IFNULL(acm.app_category,'unable to determine') as app_category
+from metrics.user_app_usage uau
+left outer join
+metrics.app_name_category_map acm
+on IFNULL(uau.app_name,'not specified') = acm.app_name
+group by app_category;
+
+#IN METRICS
+create or replace view metrics.hv_non_kb_internal_app_category_run_counts as
+select count(*) as non_kb_internal_app_run_cnt, 
+IFNULL(acm.app_category,'unable to determine') as app_category
+from metrics.user_info ui 
+inner join 
+metrics.user_app_usage uau 
+on ui.username = uau.username
+left outer join 
+metrics.app_name_category_map acm
+on IFNULL(uau.app_name,'not specified') = acm.app_name
+where ui.kb_internal_user = False
+group by app_category;
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.app_category_run_counts as
+select aac.app_category, aac.total_app_run_cnt, nkbc.non_kb_internal_app_run_cnt
+from metrics.hv_all_app_category_run_counts aac
+left outer join
+metrics.hv_non_kb_internal_app_category_run_counts nkbc
+on aac.app_category = nkbc.app_category;
+
+----------------------------------------------------
+#Bens Reports 2b
+#Total number of app runs by category and username
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.app_category_run_counts_by_user as
+select count(*) as total_app_run_cnt, 
+IFNULL(acm.app_category,'unable to determine') as app_category,
+uau.username, ui.kb_internal_user
+from metrics.user_info ui 
+inner join metrics.user_app_usage uau
+on ui.username = uau.username
+left outer join
+metrics.app_name_category_map acm
+on IFNULL(uau.app_name,'not specified') = acm.app_name
+group by app_category, uau.username, ui.kb_internal_user
+order by app_category, total_app_run_cnt desc;
+
+--------------------------------------------------
+
+#Bens Reports 3a
+#Total number of app runs by app_name.
+
+#IN METRICS
+create or replace view metrics.hv_all_app_name_run_counts as
+select count(*) as total_app_run_cnt, 
+IFNULL(app_name,'not specified') as app_name, func_name
+from metrics.user_app_usage uau
+group by app_name, func_name;
+
+#IN METRICS
+create or replace view metrics.hv_non_kb_internal_app_name_run_counts as
+select count(*) as non_kb_internal_app_run_cnt, 
+IFNULL(app_name,'not specified') as app_name, func_name
+from metrics.user_app_usage uau
+inner join metrics.user_info ui
+on uau.username = ui.username
+where ui.kb_internal_user = FALSE
+group by app_name, func_name;
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.app_name_run_counts as
+select aac.app_name, aac.func_name, 
+aac.total_app_run_cnt, IFNULL(non_kb_internal_app_run_cnt,0)
+from metrics.hv_all_app_name_run_counts aac
+left outer join metrics.hv_non_kb_internal_app_name_run_counts nkac
+on aac.app_name = nkac.app_name
+and aac.func_name = nkac.func_name;
+
+-------------------------------------------
+#Bens Reports 3b
+#Total number of app runs by app_name and user.
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.app_name_run_counts_by_user as
+select count(*) as total_app_run_cnt, 
+IFNULL(uau.app_name,'not specified') as app_name,
+uau.func_name,
+uau.username, ui.kb_internal_user
+from metrics.user_info ui 
+inner join metrics.user_app_usage uau
+on ui.username = uau.username
+group by uau.app_name, uau.func_name, uau.username, ui.kb_internal_user
+order by uau.app_name, uau.func_name, total_app_run_cnt desc;
