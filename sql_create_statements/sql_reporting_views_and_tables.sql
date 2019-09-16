@@ -56,16 +56,16 @@ on ui.username = uc.username;
 ------------------------------
 # USER SIGNUPS AND RETENTIONS.
 
-#IN METRICS_REPORTING
-create or replace view metrics_reporting.user_monthly_signups as
+#IN METRICS
+create or replace view metrics.hv_user_monthly_signups as
 select 
 DATE_FORMAT(`signup_date`,'%Y-%m') as signup_month,
 count(*) as total_signups 
 from metrics.user_info where kb_internal_user = False 
 group by signup_month;
 
-#IN METRICS_REPORTING
-create or replace view metrics_reporting.user_monthly_signups_still_active as
+#IN METRICS
+create or replace view metrics.hv_user_monthly_signups_still_active as
 select 
 DATE_FORMAT(`signup_date`,'%Y-%m') as signup_month,
 count(*) as active_in_last_90_days_count 
@@ -73,8 +73,8 @@ from metrics_reporting.user_info_plus where kb_internal_user = False
 and days_since_last_signin < 90
 group by signup_month;
 
-#IN METRICS_REPORTING
-create or replace view metrics_reporting.user_monthly_signups_that_returned as
+#IN METRICS
+create or replace view metrics.hv_user_monthly_signups_that_returned as
 select 
 DATE_FORMAT(`signup_date`,'%Y-%m') as signup_month,
 count(*) as users_returned_since_signin_count 
@@ -89,10 +89,10 @@ ua.active_in_last_90_days_count,
 (ua.active_in_last_90_days_count/us.total_signups) * 100 as pct_active_last_90_days,
 ur.users_returned_since_signin_count,
 (ur.users_returned_since_signin_count/us.total_signups) * 100 as pct_returned_since_signin
-from metrics_reporting.user_monthly_signups us left outer join 
-metrics_reporting.user_monthly_signups_still_active ua 
+from metrics.hv_user_monthly_signups us left outer join 
+metrics.hv_user_monthly_signups_still_active ua 
 on us.signup_month = ua.signup_month left outer join
-metrics_reporting.user_monthly_signups_that_returned ur
+metrics.hv_user_monthly_signups_that_returned ur
 on us.signup_month = ur.signup_month;
 
 ------------------------------
