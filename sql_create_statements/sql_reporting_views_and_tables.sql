@@ -550,3 +550,23 @@ inner join metrics.user_app_usage uau
 on ui.username = uau.username
 group by uau.app_name, uau.func_name, uau.username, ui.kb_internal_user
 order by uau.app_name, uau.func_name, total_app_run_cnt desc;
+
+-----------------------------------------------
+#Bens report 4
+#Total app runs for each app category per institution over time
+
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.institution_app_cat_run_counts as
+select ui.institution, 
+IFNULL(acm.app_category,'unable to determine') as app_category,
+DATE_FORMAT(`finish_date`,'%Y-%m') as app_run_month,
+count(*) as app_category_run_cnt
+from metrics.user_info ui 
+inner join 
+metrics.user_app_usage uau 
+on ui.username = uau.username
+left outer join 
+metrics.app_name_category_map acm
+on IFNULL(uau.app_name,'not specified') = acm.app_name
+group by ui.institution, app_category, app_run_month;
