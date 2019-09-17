@@ -2,7 +2,9 @@
 
 import requests
 import json
+import os
 
+elasticsearch_url = os.environ['ELASTICSEARCH_URL'] 
 
 # Query Elastic for Narrative Data
 
@@ -127,7 +129,7 @@ def retrieve_elastic_response(epoch_intial, epoch_final, search_after_timestamp=
 
     if not search_after_timestamp:
         narrative_container_query_intial = json.dumps(elastic_query)
-        response = requests.get("http://elasticsearch1.chicago.kbase.us:9200/logstash-narrativecontainers-*/_search", data=narrative_container_query_intial)
+        response = requests.get(elasticsearch_url, data=narrative_container_query_intial)
         results_initial = json.loads(response.text)
 
         return results_initial
@@ -135,7 +137,7 @@ def retrieve_elastic_response(epoch_intial, epoch_final, search_after_timestamp=
     if search_after_timestamp:
         elastic_query["search_after"] = search_after_timestamp
         narrative_container_query_after = json.dumps(elastic_query)
-        response = requests.get("http://elasticsearch1.chicago.kbase.us:9200/logstash-narrativecontainers-*/_search", data=narrative_container_query_after)
+        response = requests.get(elasticsearch_url, data=narrative_container_query_after)
         results_after = json.loads(response.text)
 
         return results_after

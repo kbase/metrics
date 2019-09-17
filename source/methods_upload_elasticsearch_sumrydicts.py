@@ -1,6 +1,8 @@
 
 
 from methods_elasticquery import retrieve_elastic_response
+import warnings
+warnings.simplefilter(action='ignore', category=Warning)
 import pandas as pd
 import datetime
 yesterday = (datetime.date.today() - datetime.timedelta(days=1))
@@ -20,7 +22,7 @@ def results_to_formatted_dicts(query_results):
     for doc in data:
         source_dictionary = doc['_source']
         # Check that geoip information is valid and uncorrupted
-        if 'geoip' in source_dictionary:
+        if 'geoip'in source_dictionary and source_dictionary['geoip']:
             # Delete duplicate country code and rename country_code2 -> country_code
             del source_dictionary['geoip']["country_code3"]
             source_dictionary['geoip']["country_code"] = source_dictionary['geoip'].pop("country_code2")
