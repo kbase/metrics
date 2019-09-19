@@ -130,7 +130,7 @@ def make_user_activity_dict(data, ip, user):
     date = datetime.datetime.strptime(str(earliest_seen), '%Y-%m-%d %H:%M:%S').replace(minute=0, hour=0, second=0)
     # Get date and ip error tag as string 
     date = str(date)[0:10]
-    # If an Ip error tag appears in the data, we need to seperate the dictionaries to data without ip errors and those with
+    # If an Ip error tag appears in the data, we need to separate the dictionaries to data without ip errors and those with
     if "tags" in data.columns:
         
         tag = str(list(data.tags)[0])
