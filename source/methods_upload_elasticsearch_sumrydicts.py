@@ -7,6 +7,7 @@ import pandas as pd
 import datetime
 yesterday = (datetime.date.today() - datetime.timedelta(days=1))
 
+
 # Json dictionaries to data dictionaries
 def results_to_formatted_dicts(query_results):
     """results_to_formatted_dicts takes raw elasticsearch json dictionaries and
@@ -22,30 +23,49 @@ def results_to_formatted_dicts(query_results):
     for doc in data:
         source_dictionary = doc['_source']
         # Check that geoip information is valid and uncorrupted
-        if 'geoip'in source_dictionary and source_dictionary['geoip']:
-            # Delete duplicate country code and rename country_code2 -> country_code
-            del source_dictionary['geoip']["country_code3"]
-            source_dictionary['geoip']["country_code"] = source_dictionary['geoip'].pop("country_code2")
-            # Collect all items in geoip dictionary
-            geoip_items = source_dictionary['geoip']
+        if 'geoip'in source_dictionary:
+            # Check if geoip key is present but empty
+            if not source_dictionary['geoip']:
+                for key in entries_1:
+                    if key in source_dictionary:
+                        del source_dictionary[key]
+                # Collect epoch timestamp and update dictionary with geoip items
+                epoch_timestamp = doc['fields']['@timestamp'][0]
+                doc.update(source_dictionary)
+            
+                # Delete second level keys for final flattened dictionary
+                for key in entries_2:
+                    if key in doc:
+                        del doc[key]
+                # Add epoch timestamp and collect ip error tag
+                doc['epoch_timestamp'] = epoch_timestamp
+                doc['tags'] = doc['tags'][0]
+                data_formatted.append(doc)
+            
+            else:
+               # Delete duplicate country code and rename country_code2 -> country_code
+               del source_dictionary['geoip']["country_code3"]
+               source_dictionary['geoip']["country_code"] = source_dictionary['geoip'].pop("country_code2")
+               # Collect all items in geoip dictionary
+               geoip_items = source_dictionary['geoip']
 
-            # Delete first level keys entries
-            for key in entries_1:
-                if key in source_dictionary:
-                    del source_dictionary[key]
-            # Collect epoch timestamp and update dictionary with geoip items
-            epoch_timestamp = doc['fields']['@timestamp'][0]
-            doc.update(geoip_items)
-            doc.update(source_dictionary)
+               # Delete first level keys entries
+               for key in entries_1:
+                   if key in source_dictionary:
+                       del source_dictionary[key]
+                    
+               # Collect epoch timestamp and update dictionary with geoip items
+               epoch_timestamp = doc['fields']['@timestamp'][0]
+               doc.update(geoip_items)
+               doc.update(source_dictionary)
 
-            # Delete second level keys for final flattened dictionary
-            for key in entries_2:
-                if key in doc:
-                    del doc[key]
-            # Add epoch timestamp and append dictionary
-            doc['epoch_timestamp'] = epoch_timestamp
-            data_formatted.append(doc)
-
+               # Delete second level keys for final flattened dictionary
+               for key in entries_2:
+                   if key in doc:
+                       del doc[key]
+                    # Add epoch timestamp and append dictionary
+               doc['epoch_timestamp'] = epoch_timestamp
+               data_formatted.append(doc)
         else:
             continue
 
@@ -106,19 +126,32 @@ def make_user_activity_dict(data, ip, user):
     earliest_seen = list(data.last_seen)[-1]
     latest_seen = list(data.last_seen)[0]
     time_delta = (latest_seen - earliest_seen)
-
+    # Convert date to datetime format Y-m-d
     date = datetime.datetime.strptime(str(earliest_seen), '%Y-%m-%d %H:%M:%S').replace(minute=0, hour=0, second=0)
+    # Get date and ip error tag as string 
     date = str(date)[0:10]
-    user_activity_dictionary = {"username": user, "date": date,"duration_active": str(time_delta), "last_seen": latest_seen,
-                                "first_seen": earliest_seen,"ip_address": ip, "country_name": list(data["country_name"])[0],
-                                "country_code": list(data["country_code"])[0],
-                                "region_name": list(data["region_name"])[0],
-                                "region_code": list(data["region_code"])[0],
-                                "city": list(data["city_name"])[0], "postal_code": list(data["postal_code"])[0],
-                                "timezone": list(data["timezone"])[0],
-                                "latitude": list(data["latitude"])[0], "longitude": list(data["longitude"])[0],
-                                "host_ip": list(data["host"])[0], "proxy_target": list(data["proxy_target"])[0]}
-
+    # If an Ip error tag appears in the data, we need to seperate the dictionaries to data without ip errors and those with
+    if "tags" in data.columns:
+        
+        tag = str(list(data.tags)[0])
+        if tag == "nan":
+            user_activity_dictionary = {"username": user, "date": date,"duration_active": str(time_delta), "last_seen": latest_seen, "first_seen" : earliest_seen,
+                                        "ip_address": ip,"country_name": list(data["country_name"])[0], "country_code":  list(data["country_code"])[0],
+                                        "region_name": list(data["region_name"])[0], "region_code": list(data["region_code"])[0],
+                                        "city": list(data["city_name"])[0], "postal_code": list(data["postal_code"])[0], "timezone": list(data["timezone"])[0],
+                                        "latitude": list(data["latitude"])[0], "longitude": list(data["longitude"])[0],
+                                        "host_ip": list(data["host"])[0], "proxy_target": list(data["proxy_target"])[0]}
+        else:
+            user_activity_dictionary = {"username": user, "date": date,"duration_active": str(time_delta), "last_seen": latest_seen, "first_seen" : earliest_seen,
+                                        "ip_address": tag[7:],"host_ip": list(data["host"])[0], "proxy_target": list(data["proxy_target"])[0]}
+    else:
+        user_activity_dictionary = {"username": user, "date": date,"duration_active": str(time_delta), "last_seen": latest_seen, "first_seen" : earliest_seen,
+                                        "ip_address": ip,"country_name": list(data["country_name"])[0], "country_code":  list(data["country_code"])[0],
+                                        "region_name": list(data["region_name"])[0], "region_code": list(data["region_code"])[0],
+                                        "city": list(data["city_name"])[0], "postal_code": list(data["postal_code"])[0], "timezone": list(data["timezone"])[0],
+                                        "latitude": list(data["latitude"])[0], "longitude": list(data["longitude"])[0],
+                                        "host_ip": list(data["host"])[0], "proxy_target": list(data["proxy_target"])[0]}
+        
     return user_activity_dictionary
 
 
