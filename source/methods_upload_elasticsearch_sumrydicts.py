@@ -134,6 +134,7 @@ def make_user_activity_dict(data, ip, user):
     if "tags" in data.columns:
         
         tag = str(list(data.tags)[0])
+
         if tag == "nan":
             user_activity_dictionary = {"username": user, "date": date,"duration_active": str(time_delta), "last_seen": latest_seen, "first_seen" : earliest_seen,
                                         "ip_address": ip,"country_name": list(data["country_name"])[0], "country_code":  list(data["country_code"])[0],
@@ -141,9 +142,14 @@ def make_user_activity_dict(data, ip, user):
                                         "city": list(data["city_name"])[0], "postal_code": list(data["postal_code"])[0], "timezone": list(data["timezone"])[0],
                                         "latitude": list(data["latitude"])[0], "longitude": list(data["longitude"])[0],
                                         "host_ip": list(data["host"])[0], "proxy_target": list(data["proxy_target"])[0]}
+
         else:
             user_activity_dictionary = {"username": user, "date": date,"duration_active": str(time_delta), "last_seen": latest_seen, "first_seen" : earliest_seen,
-                                        "ip_address": tag[7:],"host_ip": list(data["host"])[0], "proxy_target": list(data["proxy_target"])[0]}
+                                        "ip_address": tag,"host_ip": list(data["host"])[0], "proxy_target": list(data["proxy_target"])[0],
+                                        "country_name": tag, "country_code":  tag, "region_name": tag, "region_code": tag,
+                                        "city": tag, "postal_code": tag, "timezone": tag,
+                                        "latitude": None, "longitude": None}
+                                       
     else:
         user_activity_dictionary = {"username": user, "date": date,"duration_active": str(time_delta), "last_seen": latest_seen, "first_seen" : earliest_seen,
                                         "ip_address": ip,"country_name": list(data["country_name"])[0], "country_code":  list(data["country_code"])[0],
