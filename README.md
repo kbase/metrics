@@ -18,7 +18,7 @@ It fulls in import metadata about the docker image, and is used by the dockerhub
 After the image is built, you can use the docker-compose command to run the image using the environment variables defined in the .env file mentioned above:
 
 ~~~
-docker-compose run metrics
+docker-compose run --rm metrics
 ~~~
 
 That will take you into t150ca6f61fb2411e607f15fb91407a83305daaf6he docker environment (source folder of the metrics repo).
