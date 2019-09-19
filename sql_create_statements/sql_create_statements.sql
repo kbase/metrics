@@ -26,6 +26,7 @@ CREATE INDEX idx_user_info_last_signin_date ON user_info (last_signin_date);
 
 CREATE INDEX idx_user_info_institution ON user_info (institution);
 
+CREATE INDEX idx_user_info_country ON metrics.user_info (country);
 
 ######################
 # user_system_summary_stats table create, indices, unique constraint, and trigger
@@ -48,7 +49,6 @@ CREATE UNIQUE INDEX uk_user_system_summary_stats_record_date
 ON user_system_summary_stats(username,record_date);
 
 CREATE INDEX idx_user_system_summary_stats_record_date ON user_system_summary_stats (record_date);
-
 
 #PROBABLY DONT NEED THIS SWITCHING RECORD DATE TO TIMESTAMP I THINK
 # Trigger that will put in current date for record date for any insert without a record_date (should be default insert behavior).
@@ -81,6 +81,22 @@ CREATE TABLE user_app_usage (
 
 CREATE UNIQUE INDEX uk_jobid_user_app_usage
 ON user_app_usage(job_id);
+
+CREATE INDEX idx_user_app_usage_job_id ON metrics.user_app_usage (job_id);
+
+CREATE INDEX idx_user_app_usage_username ON metrics.user_app_usage (username);
+
+CREATE INDEX idx_user_app_usage_app_name ON metrics.user_app_usage (app_name);
+
+CREATE INDEX idx_user_app_usage_start_date ON metrics.user_app_usage (start_date);
+
+CREATE INDEX idx_user_app_usage_finish_date ON metrics.user_app_usage (finish_date);
+
+CREATE INDEX idx_user_app_usage_is_error ON metrics.user_app_usage (is_error);
+
+CREATE INDEX idx_user_app_usage_git_commit_hash ON metrics.user_app_usage (git_commit_hash);
+
+CREATE INDEX idx_user_app_usage_func_name ON metrics.user_app_usage (func_name);
 
 ######################
 #app_name_category_map
