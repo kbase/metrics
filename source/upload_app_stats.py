@@ -3,6 +3,7 @@
 import methods_upload_app_stats
 import time
 import datetime
+print("############################################")
 print("App Stats Upload (UTC): " + str(datetime.datetime.utcnow()))
 start_time = time.time()
 #start_date = "2012-02-01"

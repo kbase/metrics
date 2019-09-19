@@ -115,6 +115,15 @@ CREATE INDEX idx_app_name_category_map_app_name ON app_name_category_map (app_na
 CREATE INDEX idx_app_name_category_map_app_category ON app_name_category_map (app_category);
 
 
+#########################
+#public_narrative_count
 
+CREATE TABLE public_narrative_count (
+       public_narrative_count INTEGER NOT NULL,
+       record_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE UNIQUE INDEX uk_public_narrative_count_pnc_record_date
+ON public_narrative_count(public_narrative_count,record_date);
 
 

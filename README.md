@@ -37,6 +37,7 @@ The cron jobs should run the following:
 docker-compose run --rm metrics ../bin/upload_user_stats.sh
 docker-compose run --rm metrics ../bin/upload_app_stats.sh
 docker-compose run --rm metrics ../bin/upload_app_category_mappings.sh
+docker-compose run --rm metrics ../bin/upload_public_narratives_count.sh
 
 
 
