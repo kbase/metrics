@@ -14,11 +14,11 @@ metrics_mysql_password = os.environ['METRICS_MYSQL_PWD']
 mongoDB_metrics_connection = os.environ['MONGO_PATH']
 
 profile_url = os.environ['PROFILE_URL']
+kb_internal_user_url = os.environ['KB_INTERNAL_USER_URL']
 sql_host = os.environ['SQL_HOST']
 query_on = os.environ['QUERY_ON']
 
 to_auth2 = os.environ['AUTH2_SUFFIX']
-to_metrics = os.environ['METS_SUFFIX']
 to_groups =  os.environ['GRP_SUFFIX']
 to_workspace =  os.environ['WRK_SUFFIX']
 
@@ -65,20 +65,35 @@ def get_user_info_from_auth2():
     client_auth2.close()
     return user_stats_dict
 
+
 def get_internal_users(user_stats_dict):
-    """ 
-    Gets the internal users from the old metrics data storage.  Populates the ongoing data structure. 
-    This will be replaced down the line 
     """
-    client_metrics = MongoClient(mongoDB_metrics_connection+to_metrics)
-    db_metrics = client_metrics.metrics
-    kb_internal_user_query = db_metrics.users.find({"kbase_staff":True},
-                                                   {"_id":0,"username":1,"kbase_staff":1})
-    for record in kb_internal_user_query:
-        if record["username"] in user_stats_dict:
-            user_stats_dict[record["username"]]["kbase_internal_user"] = True
-    client_metrics.close()  
+    Gets the internal users from the kb_internal_staff google sheet that Roy maintains.
+    """
+    params = (
+        ('tqx', 'out:csv'),
+        ('sheet', 'KBaseStaffAssociatedUsernamesPastPresent'),
+    )
+    response = requests.get(kb_internal_user_url, params=params)
+    if (response.status_code != 200):
+        print("ERROR - KB INTERNAL USER GOOGLE SHEET RESPONSE STATUS CODE : " + str(response.status_code))
+        print("KB INTERNAL USER will not get updated until this is fixed. Rest of the uuser upload should work.")
+        return user_stats_dict
+    lines = response.text.split("\n")
+    if len(lines) < 390:
+        print("SOMETHING IS WRONG WITH KBASE INTERNAL USERS LIST: " + str(response.status_code))
+    users_not_found_count = 0
+    for line in lines:
+        elements = line.split(",")
+        user = elements[0][1:-1]
+        if user in user_stats_dict:
+            user_stats_dict[user]["kbase_internal_user"] = True
+        else:
+            users_not_found_count += 1
+    if users_not_found_count > 0:
+        print("NUMBER OF USERS FOUND IN KB_INTERNAL GOOGLE SHEET THAT WERE NOT FOUND IN THE AUTH2 RECORDS : " + str(users_not_found_count))
     return user_stats_dict
+
             
 def get_user_orgs_count(user_stats_dict):
     """ Gets the count of the orgs that users belong to and populates the onging data structure"""
@@ -329,6 +344,13 @@ def upload_user_data(user_stats_dict):
                 prep_cursor.execute(user_summary_stats_insert_statement,input)
                 existing_user_summary_count+= 1
 
+    db_connection.commit()
+
+    # THIS CODE is to update any of the 434 excluded users that had accounts made for them
+    # but never logged in. In case any of them ever do log in, they will be removed from
+    # the excluded list
+    query = "UPDATE metrics.user_info set exclude = False where last_signin_date is not NULL"
+    cursor.execute(query)
     db_connection.commit()
 
     print("Number of new users summary inserted:" + str(new_user_summary_count))    
