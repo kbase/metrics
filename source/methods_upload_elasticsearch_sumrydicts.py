@@ -76,7 +76,7 @@ def results_to_formatted_dicts(query_results):
 def elasticsearch_pull(start_date, end_date):
     """ Elasticsearch_pull takes a string value, or default datetime, for start_date and end_date and generates an elasticsearch query that
     pulls user-narrative information for that date range and formats the data to flattened user dictionaries."""
-    start_time = time.time()
+    #start_time = time.time()
     if type(start_date) == str:
         # Format date strings to datetime objects
         start_date = datetime.datetime.strptime(start_date, '%m-%d-%Y')
@@ -118,19 +118,20 @@ def elasticsearch_pull(start_date, end_date):
             pass
         data_array.extend(data_additional)
 
-    print("Elasticsearch data took from {}-{} took {} seconds to retrieve".format(start_date, end_date, time.time() - start_time))
+    #print("Elasticsearch data took from {}-{} took {} seconds to retrieve".format(start_date, end_date, time.time() - start_time))
     return data_array
 
 
 def make_user_activity_dict(data, ip, user):
     """make_user_activity_dict makes a summary dictionary for a given user based on their elasticsearch data
      and narrative usage. """
-    start_time = time.time()
+    #start_time = time.time()
     # Get last_seen and earliest_seen on the narrative for a given user
     data.sort_values(by=["last_seen"], ascending=False, inplace=True)
     earliest_seen = list(data.last_seen)[-1]
     latest_seen = list(data.last_seen)[0]
     time_delta = (latest_seen - earliest_seen)
+    hours = (time_delta.total_seconds())/3600
     # Convert date to datetime format Y-m-d
     date = datetime.datetime.strptime(str(earliest_seen), '%Y-%m-%d %H:%M:%S').replace(minute=0, hour=0, second=0)
     # Get date and ip error tag as string 
@@ -141,7 +142,7 @@ def make_user_activity_dict(data, ip, user):
         tag = str(list(data.tags)[0])
 
         if tag == "nan":
-            user_activity_dictionary = {"username": user, "date": date,"duration_active": str(time_delta), "last_seen": latest_seen, "first_seen" : earliest_seen,
+            user_activity_dictionary = {"username": user, "date": date,"hours_on_system": hours, "last_seen": latest_seen, "first_seen" : earliest_seen,
                                         "ip_address": ip,"country_name": list(data["country_name"])[0], "country_code":  list(data["country_code"])[0],
                                         "region_name": list(data["region_name"])[0], "region_code": list(data["region_code"])[0],
                                         "city": list(data["city_name"])[0], "postal_code": list(data["postal_code"])[0], "timezone": list(data["timezone"])[0],
@@ -149,21 +150,21 @@ def make_user_activity_dict(data, ip, user):
                                         "host_ip": list(data["host"])[0], "proxy_target": list(data["proxy_target"])[0]}
 
         else:
-            user_activity_dictionary = {"username": user, "date": date,"duration_active": str(time_delta), "last_seen": latest_seen, "first_seen" : earliest_seen,
+            user_activity_dictionary = {"username": user, "date": date,"hours_on_system": hours, "last_seen": latest_seen, "first_seen" : earliest_seen,
                                         "ip_address": tag,"host_ip": list(data["host"])[0], "proxy_target": list(data["proxy_target"])[0],
                                         "country_name": tag, "country_code":  tag, "region_name": tag, "region_code": tag,
                                         "city": tag, "postal_code": tag, "timezone": tag,
                                         "latitude": None, "longitude": None}
                                        
     else:
-        user_activity_dictionary = {"username": user, "date": date,"duration_active": str(time_delta), "last_seen": latest_seen, "first_seen" : earliest_seen,
+        user_activity_dictionary = {"username": user, "date": date,"hours_on_system": hours, "last_seen": latest_seen, "first_seen" : earliest_seen,
                                         "ip_address": ip,"country_name": list(data["country_name"])[0], "country_code":  list(data["country_code"])[0],
                                         "region_name": list(data["region_name"])[0], "region_code": list(data["region_code"])[0],
                                         "city": list(data["city_name"])[0], "postal_code": list(data["postal_code"])[0], "timezone": list(data["timezone"])[0],
                                         "latitude": list(data["latitude"])[0], "longitude": list(data["longitude"])[0],
                                         "host_ip": list(data["host"])[0], "proxy_target": list(data["proxy_target"])[0]}
 
-    print("Elasticsearch dictionaries took ", time.time() - start_time, " seconds to create")
+    #print("Elasticsearch dictionaries took ", time.time() - start_time, " seconds to create")
     return user_activity_dictionary
 
 
@@ -172,7 +173,7 @@ def elastic_summary_dictionaries(str_date=datetime.datetime.combine(yesterday, d
     """Elastic_summary_dictionaries provides summmary dictionaries of user activity and location information from elatic search.
     Given results that are pulled from elastic it iterates through users and then through a user's IP addresses. For each IP address a users 'last_seen' on the system and 
     'first_seen' on the system are found and the time delta between them taken. Dictionaries are then made record a user's location information, 'last_seen', 'first_seen' and duration active."""
-    start_time = time.time()
+    #start_time = time.time()
 
     # Pull elastic results, drop duplicates from backtracking timestamps in elastic queries, 
     # and format timestamp to readable datetime format 
@@ -217,5 +218,5 @@ def elastic_summary_dictionaries(str_date=datetime.datetime.combine(yesterday, d
                     user_activity_array.append(user_dict)
                 else:
                     continue
-    print("Elasticsearch summary dictionaries took ", time.time() - start_time, " seconds to run")
+    #print("Elasticsearch summary dictionaries took ", time.time() - start_time, " seconds to run")
     return user_activity_array
