@@ -11,8 +11,8 @@ CREATE TABLE user_info (
 	country VARCHAR(255), 
 	signup_date TIMESTAMP NOT NULL,
 	last_signin_date TIMESTAMP NULL default NULL,
+	exclude boolean NOT NULL default 0, 
 	PRIMARY KEY ( username )) ENGINE=InnoDB  DEFAULT CHARSET=utf8; 
-
 
 CREATE INDEX idx_user_info_email ON user_info (email);
 
@@ -27,6 +27,10 @@ CREATE INDEX idx_user_info_last_signin_date ON user_info (last_signin_date);
 CREATE INDEX idx_user_info_institution ON user_info (institution);
 
 CREATE INDEX idx_user_info_country ON metrics.user_info (country);
+
+CREATE INDEX idx_user_info_exclude ON metrics.user_info (exclude);
+
+
 
 ######################
 # user_system_summary_stats table create, indices, unique constraint, and trigger

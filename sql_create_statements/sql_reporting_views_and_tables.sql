@@ -38,6 +38,7 @@ select * ,
 round((UNIX_TIMESTAMP(ui.last_signin_date) - UNIX_TIMESTAMP(ui.signup_date))/86400,2) as days_signin_minus_signup,
 ceil((UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(last_signin_date))/86400) as days_since_last_signin
 from metrics.user_info ui
+where exclude = False
 order by signup_date;
 
 #IN METRICS_REPORTING
@@ -51,7 +52,8 @@ uc.num_orgs, uc.narrative_count, uc.shared_count,
 uc.narratives_shared, uc.record_date
 from metrics.user_info ui inner join 
 metrics.user_system_summary_stats_current uc
-on ui.username = uc.username;
+on ui.username = uc.username
+where exclude = False;
 
 ------------------------------
 # USER SIGNUPS AND RETENTIONS.
@@ -61,7 +63,9 @@ create or replace view metrics.hv_user_monthly_signups as
 select 
 DATE_FORMAT(`signup_date`,'%Y-%m') as signup_month,
 count(*) as total_signups 
-from metrics.user_info where kb_internal_user = False 
+from metrics.user_info 
+where kb_internal_user = False 
+and exclude = False
 group by signup_month;
 
 #IN METRICS
@@ -69,8 +73,10 @@ create or replace view metrics.hv_user_monthly_signups_still_active as
 select 
 DATE_FORMAT(`signup_date`,'%Y-%m') as signup_month,
 count(*) as active_in_last_90_days_count 
-from metrics_reporting.user_info_plus where kb_internal_user = False 
+from metrics_reporting.user_info_plus 
+where kb_internal_user = False 
 and days_since_last_signin < 90
+and exclude = False
 group by signup_month;
 
 #IN METRICS
@@ -115,7 +121,8 @@ select distinct ui.username, app_name, func_name, git_commit_hash
 from metrics.user_app_usage ua 
 inner join metrics.user_info ui on
 ua.username = ui.username 
-where ui.kb_internal_user = False;
+where ui.kb_internal_user = False
+and ui.exclude = False;
 
 #IN METRICS
 create or replace view metrics.hv_number_nonKB_users_using_app_function_git_combo as
@@ -202,7 +209,8 @@ select distinct ui.username, func_name, git_commit_hash
 from metrics.user_app_usage ua 
 inner join metrics.user_info ui on
 ua.username = ui.username 
-where ui.kb_internal_user = False;
+where ui.kb_internal_user = False
+and ui.exclude = False;
 
 #IN METRICS
 create or replace view metrics.hv_number_nonKB_users_using_function_git_combo as
@@ -283,7 +291,8 @@ select distinct ui.username, func_name
 from metrics.user_app_usage ua 
 inner join metrics.user_info ui on
 ua.username = ui.username 
-where ui.kb_internal_user = False;
+where ui.kb_internal_user = False
+and ui.exclude = False;
 
 #IN METRICS
 create or replace view metrics.hv_number_nonKB_users_using_function as
@@ -353,6 +362,7 @@ count(*) as number_app_runs
 from metrics.user_app_usage ua inner join metrics.user_info ui
 on ua.username = ui.username
 where ui.kb_internal_user = False
+and ui.exclude = False
 group by finish_month;
 
 #IN METRICS
@@ -370,6 +380,7 @@ count(*) as number_app_runs
 from metrics.user_app_usage ua inner join metrics.user_info ui
 on ua.username = ui.username
 where ui.kb_internal_user = False
+and ui.exclude = False
 and is_error = True
 group by finish_month;
 
@@ -396,7 +407,8 @@ on apm.finish_month = nkaepm.finish_month;
 #IN METRICS
 create or replace view metrics.hv_users_per_institution as 
 select count(*) as user_cnt, IFNULL(institution,'not specified') as institution
-from metrics.user_info 
+from metrics.user_info
+where exclude = False 
 group by institution;
 
 
@@ -404,7 +416,8 @@ group by institution;
 create or replace view metrics.hv_non_kb_users_per_institution as 
 select count(*) as user_cnt,  IFNULL(institution,'not specified') as institution
 from metrics.user_info 
-where kb_internal_user = False 
+where kb_internal_user = False
+and exclude = False  
 group by institution;
 
 
@@ -427,6 +440,7 @@ select count(*) as user_cnt,
 DATE_FORMAT(`signup_date`,'%Y-%m') as signup_month,
 IFNULL(institution,'not specified') as institution
 from metrics.user_info 
+where exclude = False 
 group by institution, signup_month;
 
 #IN METRICS
@@ -435,7 +449,8 @@ select count(*) as user_cnt,
 DATE_FORMAT(`signup_date`,'%Y-%m') as signup_month,
 IFNULL(institution,'not specified') as institution
 from metrics.user_info 
-where kb_internal_user = False 
+where kb_internal_user = False
+and exclude = False  
 group by institution, signup_month;
 
 #IN METRICS_REPORTING
@@ -476,6 +491,7 @@ left outer join
 metrics.app_name_category_map acm
 on IFNULL(uau.app_name,'not specified') = acm.app_name
 where ui.kb_internal_user = False
+and ui.exclude = False
 group by app_category;
 
 #IN METRICS_REPORTING
@@ -501,6 +517,7 @@ on ui.username = uau.username
 left outer join
 metrics.app_name_category_map acm
 on IFNULL(uau.app_name,'not specified') = acm.app_name
+where ui.exclude = False
 group by app_category, uau.username, ui.kb_internal_user
 order by app_category, total_app_run_cnt desc;
 
@@ -524,6 +541,7 @@ from metrics.user_app_usage uau
 inner join metrics.user_info ui
 on uau.username = ui.username
 where ui.kb_internal_user = FALSE
+and ui.exclude = False
 group by app_name, func_name;
 
 #IN METRICS_REPORTING
@@ -548,6 +566,7 @@ uau.username, ui.kb_internal_user
 from metrics.user_info ui 
 inner join metrics.user_app_usage uau
 on ui.username = uau.username
+where ui.exclude = False
 group by uau.app_name, uau.func_name, uau.username, ui.kb_internal_user
 order by uau.app_name, uau.func_name, total_app_run_cnt desc;
 
@@ -569,4 +588,5 @@ on ui.username = uau.username
 left outer join 
 metrics.app_name_category_map acm
 on IFNULL(uau.app_name,'not specified') = acm.app_name
+where ui.exclude = False
 group by ui.institution, app_category, app_run_month;
