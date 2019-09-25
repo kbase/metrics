@@ -111,8 +111,11 @@ def elasticsearch_pull(start_date, end_date):
         # Increment data counts
         size_results_pulled += len(results_sequential['hits']['hits'])
         # Start array from older timestamp for an overlap of 10 values
-        new_start = data_additional[-10]
-        timestamp = [new_start['epoch_timestamp']]
+        try:
+            new_start = data_additional[-10]
+            timestamp = [new_start['epoch_timestamp']]
+        except:
+            pass
         data_array.extend(data_additional)
 
     print("Elasticsearch data took from {}-{} took {} seconds to retrieve".format(start_date, end_date, time.time() - start_time))
