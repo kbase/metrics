@@ -52,6 +52,8 @@ CREATE TABLE user_system_summary_stats (
 CREATE UNIQUE INDEX uk_user_system_summary_stats_record_date
 ON user_system_summary_stats(username,record_date);
 
+CREATE INDEX idx_user_system_summary_stats_username ON user_system_summary_stats (username);
+
 CREATE INDEX idx_user_system_summary_stats_record_date ON user_system_summary_stats (record_date);
 
 #PROBABLY DONT NEED THIS SWITCHING RECORD DATE TO TIMESTAMP I THINK
@@ -131,3 +133,53 @@ CREATE UNIQUE INDEX uk_public_narrative_count_pnc_record_date
 ON public_narrative_count(public_narrative_count,record_date);
 
 
+
+#########################
+#session_info
+
+CREATE TABLE metrics.session_info (
+        username VARCHAR(255) NOT NULL,
+        record_date DATE NOT NULL,
+        ip_address VARCHAR(15) NOT NULL,
+        host_ip VARCHAR(15) NOT NULL,
+        country_name VARCHAR(255) NOT NULL,
+        country_code VARCHAR(3) NOT NULL,
+        city VARCHAR(255) NOT NULL,
+        latitude DECIMAL(6,4) DEFAULT NULL,
+        longitude DECIMAL(7,4) DEFAULT NULL,
+        region_name VARCHAR(255) NOT NULL,
+        region_code VARCHAR(255) NOT NULL,
+        postal_code VARCHAR(255) NOT NULL,
+        timezone VARCHAR(255) NOT NULL,
+        estimated_hrs_active DECIMAL(6,4) NOT NULL,
+        first_seen TIMESTAMP NOT NULL,
+        last_seen TIMESTAMP NOT NULL,
+        proxy_target VARCHAR(30) NOT NULL,
+        FOREIGN KEY fk_session_user_info_username(username)
+        REFERENCES metrics.user_info(username)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+        
+        
+CREATE UNIQUE INDEX uk_session_user_date_ip
+ON metrics.session_info(username,record_date,ip_address); 
+
+CREATE INDEX idx_session_info_username ON metrics.session_info(username);
+
+CREATE INDEX idx_session_info_record_date ON metrics.session_info(record_date);
+
+CREATE INDEX idx_session_info_ip_address ON metrics.session_info(ip_address);
+
+CREATE INDEX idx_session_info_county_name ON metrics.session_info(country_name);
+
+CREATE INDEX idx_session_info_county_code ON metrics.session_info(country_code);
+
+CREATE INDEX idx_session_info_city ON metrics.session_info(city);
+
+CREATE INDEX idx_session_info_region_name ON metrics.session_info(region_name);
+
+CREATE INDEX idx_session_info_region_code ON metrics.session_info(region_code);
+
+CREATE INDEX idx_session_info_timezone ON metrics.session_info(timezone);
+
+CREATE INDEX idx_session_info_estimated_hrs_active ON metrics.session_info(estimated_hrs_active);
