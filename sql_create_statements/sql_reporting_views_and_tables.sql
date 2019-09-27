@@ -84,8 +84,10 @@ create or replace view metrics.hv_user_monthly_signups_that_returned as
 select 
 DATE_FORMAT(`signup_date`,'%Y-%m') as signup_month,
 count(*) as users_returned_since_signin_count 
-from metrics_reporting.user_info_plus where kb_internal_user = False 
+from metrics_reporting.user_info_plus 
+where kb_internal_user = False 
 and days_signin_minus_signup > 10
+and exclude = False
 group by signup_month;
 
 #IN METRICS_REPORTING

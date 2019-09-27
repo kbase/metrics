@@ -280,6 +280,8 @@ def upload_user_data(user_stats_dict):
             if not ((user_stats_dict[username]["last_signin_date"] is None or 
                      user_stats_dict[username]["last_signin_date"].strftime("%Y-%m-%d %H:%M:%S") == 
                      str(existing_user_info[username]["last_signin_date"])) and
+                    (user_stats_dict[username]["signup_date"].strftime("%Y-%m-%d %H:%M:%S") ==
+                     str(existing_user_info[username]["signup_date"])) and
                     user_stats_dict[username]["country"] == existing_user_info[username]["country"] and
                     user_stats_dict[username]["institution"] == 
                     existing_user_info[username]["institution"] and

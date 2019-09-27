@@ -9,7 +9,7 @@ CREATE TABLE user_info (
 	kb_internal_user BOOLEAN NOT NULL DEFAULT 0,
 	institution VARCHAR(255),
 	country VARCHAR(255), 
-	signup_date TIMESTAMP NOT NULL,
+	signup_date TIMESTAMP NOT NULL default 0,
 	last_signin_date TIMESTAMP NULL default NULL,
 	exclude boolean NOT NULL default 0, 
 	PRIMARY KEY ( username )) ENGINE=InnoDB  DEFAULT CHARSET=utf8; 
@@ -73,8 +73,8 @@ CREATE TABLE user_app_usage (
         job_id VARCHAR(255),
         username VARCHAR(255) NOT NULL,
         app_name VARCHAR(255),
-        start_date      TIMESTAMP NOT NULL,
-        finish_date     TIMESTAMP NOT NULL,
+        start_date      TIMESTAMP NOT NULL default 0,
+        finish_date     TIMESTAMP NOT NULL default 0,
         run_time INTEGER NOT NULL,
         is_error BOOLEAN NOT NULL DEFAULT 0,
 	git_commit_hash VARCHAR(255) NOT NULL,
@@ -137,7 +137,7 @@ ON public_narrative_count(public_narrative_count,record_date);
 #########################
 #session_info
 
-CREATE TABLE metrics.session_info (
+CREATE or replace TABLE metrics.session_info (
         username VARCHAR(255) NOT NULL,
         record_date DATE NOT NULL,
         ip_address VARCHAR(15) NOT NULL,
@@ -152,8 +152,8 @@ CREATE TABLE metrics.session_info (
         postal_code VARCHAR(255) NOT NULL,
         timezone VARCHAR(255) NOT NULL,
         estimated_hrs_active DECIMAL(6,4) NOT NULL,
-        first_seen TIMESTAMP NOT NULL,
-        last_seen TIMESTAMP NOT NULL,
+        first_seen TIMESTAMP NOT NULL default 0,
+        last_seen TIMESTAMP NOT NULL default 0,
         proxy_target VARCHAR(30) NOT NULL,
         FOREIGN KEY fk_session_user_info_username(username)
         REFERENCES metrics.user_info(username)
