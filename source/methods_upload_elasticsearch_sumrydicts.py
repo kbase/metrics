@@ -132,6 +132,7 @@ def make_user_activity_dict(data, ip, user):
     latest_seen = list(data.last_seen)[0]
     time_delta = (latest_seen - earliest_seen)
     hours = (time_delta.total_seconds())/3600
+    hours = round(hours, 4)
     # Convert date to datetime format Y-m-d
     date = datetime.datetime.strptime(str(earliest_seen), '%Y-%m-%d %H:%M:%S').replace(minute=0, hour=0, second=0)
     # Get date and ip error tag as string 
