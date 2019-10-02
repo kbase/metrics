@@ -166,8 +166,8 @@ from metrics.user_app_usage
 where is_error = False group by app_name, func_name, git_commit_hash;
 
 
-#IN METRICS_REPORTING (NEEDS A TABLE PROBABLY)
-create or replace view metrics_reporting.stats_app_function_git_combo as
+#IN METRICS_REPORTING - THIS IS A TABLE THAT GETS MADE ONCE A DAY BY CRON JOB: source/make_reporting_tables.py
+create or replace table metrics_reporting.stats_app_function_git_combo as
 select art.func_name, art.app_name, art.git_commit_hash, 
 art.app_count as success_app_count,
 art.avg_run_time, art.stdev_run_time, 
@@ -250,7 +250,7 @@ func_name, git_commit_hash
 from metrics.user_app_usage 
 where is_error = False group by func_name, git_commit_hash;
 
-#IN METRICS  (NEEDS A TABLE PROBABLY)
+#IN METRICS_REPORTING - THIS IS A TABLE THAT GETS MADE ONCE A DAY BY CRON JOB: source/make_reporting_tables.py
 create or replace table metrics_reporting.stats_function_git_combo as
 select art.func_name, art.git_commit_hash, 
 art.app_count as success_app_count,
@@ -331,8 +331,8 @@ func_name
 from metrics.user_app_usage 
 where is_error = False group by func_name;
 
-#IN METRICS_REPORTING (Maybe needs a table 33 secs currently for query)
-create or replace view metrics_reporting.stats_function as
+#IN METRICS_REPORTING - THIS IS A TABLE THAT GETS MADE ONCE A DAY BY CRON JOB: source/make_reporting_tables.py
+create or replace table metrics_reporting.stats_function as
 select art.func_name, 
 art.app_count as success_app_count,
 art.avg_run_time, art.stdev_run_time, 
@@ -496,8 +496,8 @@ where ui.kb_internal_user = False
 and ui.exclude = False
 group by app_category;
 
-#IN METRICS_REPORTING
-create or replace view metrics_reporting.app_category_run_counts as
+#IN METRICS_REPORTING - THIS IS A TABLE THAT GETS MADE ONCE A DAY BY CRON JOB: source/make_reporting_tables.py
+create or replace table metrics_reporting.app_category_run_counts as
 select aac.app_category, aac.total_app_run_cnt, nkbc.non_kb_internal_app_run_cnt
 from metrics.hv_all_app_category_run_counts aac
 left outer join
@@ -577,8 +577,8 @@ order by uau.app_name, uau.func_name, total_app_run_cnt desc;
 #Total app runs for each app category per institution over time
 
 
-#IN METRICS_REPORTING
-create or replace view metrics_reporting.institution_app_cat_run_counts as
+#IN METRICS_REPORTING - THIS IS A TABLE THAT GETS MADE ONCE A DAY BY CRON JOB: source/make_reporting_tables.py
+create or replace table metrics_reporting.institution_app_cat_run_counts as
 select ui.institution, 
 IFNULL(acm.app_category,'unable to determine') as app_category,
 DATE_FORMAT(`finish_date`,'%Y-%m') as app_run_month,
