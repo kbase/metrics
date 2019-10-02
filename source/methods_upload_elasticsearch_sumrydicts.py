@@ -94,15 +94,23 @@ def elasticsearch_pull(start_date, end_date):
 
     # Return results of elastic query and format data to dictionary structures
     results = retrieve_elastic_response(epoch_start, epoch_end)
+#    import pprint
+#    pp = pprint.PrettyPrinter(indent=4)
+#    pp.pprint(results)
     data_array = results_to_formatted_dicts(results)
 
     # Get relative sizes of data
     total_results = results['hits']['total']
     size_results_pulled = len(results['hits']['hits'])
 
-    # Start array from older timestamp for an overlap of 10 values
-    new_start = data_array[-10]
-    timestamp = [new_start['epoch_timestamp']]
+    # Start array from first index with a different timestamp than the last element
+    check_timestamp = [data_array[-1]['epoch_timestamp']]
+    attempt_index = -2
+    attempt_timestamp = [data_array[attempt_index]['epoch_timestamp']]
+    while check_timestamp == attempt_timestamp and ((total_results + attempt_index) > 0):
+        attempt_index -= 1
+        attempt_timestamp = [data_array[attempt_index]['epoch_timestamp']]
+    timestamp = attempt_timestamp
 
     while size_results_pulled < total_results:
         results_sequential = retrieve_elastic_response(epoch_start, epoch_end, timestamp)
@@ -110,15 +118,21 @@ def elasticsearch_pull(start_date, end_date):
 
         # Increment data counts
         size_results_pulled += len(results_sequential['hits']['hits'])
-        # Start array from older timestamp for an overlap of 10 values
+        # Start array from first index with a different timestamp than the last element
         try:
-            new_start = data_additional[-10]
-            timestamp = [new_start['epoch_timestamp']]
+            check_timestamp = [data_additional[-1]['epoch_timestamp']]
+            attempt_index = -2
+            attempt_timestamp = [data_additional[attempt_index]['epoch_timestamp']]
+            while check_timestamp == attempt_timestamp:
+                attempt_index -= 1
+                attempt_timestamp = [data_additional[attempt_index]['epoch_timestamp']]
+            timestamp = attempt_timestamp
         except:
             pass
         data_array.extend(data_additional)
 
-    #print("Elasticsearch data took from {}-{} took {} seconds to retrieve".format(start_date, end_date, time.time() - start_time))
+#    print("Elasticsearch data took from {}-{} took {} seconds to retrieve".format(start_date, end_date, time.time() - start_time))
+    print("Total number of records : " + str(len(data_array)))
     return data_array
 
 
