@@ -33,12 +33,14 @@ docker-compose > user_info_dump.txt run metrics ../bin/dump_query_results.sh
 
 Put executables in the bin directory we will call scripts this way for the CRON jobs
 The cron jobs should run the following:
+docker-compose run --rm metrics ../bin/master_cron_shell.sh
 
-docker-compose run --rm metrics ../bin/upload_user_stats.sh
-docker-compose run --rm metrics ../bin/upload_app_stats.sh
-docker-compose run --rm metrics ../bin/upload_app_category_mappings.sh
-docker-compose run --rm metrics ../bin/upload_public_narratives_count.sh
-docker-compose run --rm metrics ../bin/make_reporting_tables.sh
+this under the hood calls
+source/upload_user_stats.py
+source/upload_app_stats.py
+source//upload_app_category_mappings.py
+source/upload_public_narratives_count.py
+source/make_reporting_tables.py
 
 
 
