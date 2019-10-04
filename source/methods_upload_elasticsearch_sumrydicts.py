@@ -1,11 +1,11 @@
-
-
 from methods_elasticquery import retrieve_elastic_response
 import warnings
 import time
 warnings.simplefilter(action='ignore', category=Warning)
 import pandas as pd
 import datetime
+import os
+import mysql.connector as mysql
 yesterday = (datetime.date.today() - datetime.timedelta(days=1))
 
 
@@ -184,10 +184,16 @@ def make_user_activity_dict(data, ip, user):
 
 
 # Summary dictionary from Elasticsearch data
-def elastic_summary_dictionaries(str_date=datetime.datetime.combine(yesterday, datetime.datetime.min.time()), end_date=datetime.datetime.combine(yesterday, datetime.datetime.max.time())):
-    """Elastic_summary_dictionaries provides summmary dictionaries of user activity and location information from elatic search.
-    Given results that are pulled from elastic it iterates through users and then through a user's IP addresses. For each IP address a users 'last_seen' on the system and 
-    'first_seen' on the system are found and the time delta between them taken. Dictionaries are then made record a user's location information, 'last_seen', 'first_seen' and duration active."""
+def elastic_summary_dictionaries(str_date=datetime.datetime.combine(yesterday, datetime.datetime.min.time()), 
+                                 end_date=datetime.datetime.combine(yesterday, datetime.datetime.max.time())):
+    """
+    Elastic_summary_dictionaries provides summmary dictionaries of user activity and 
+    location information from elatic search.Given results that are pulled from elastic 
+    it iterates through users and then through a user's IP addresses. For each IP 
+    address a users 'last_seen' on the system and 'first_seen' on the system are 
+    found and the time delta between them taken. Dictionaries are then made record a 
+    user's location information, 'last_seen', 'first_seen' and duration active.
+    """
     #start_time = time.time()
 
     # Pull elastic results, drop duplicates from backtracking timestamps in elastic queries, 
@@ -235,3 +241,63 @@ def elastic_summary_dictionaries(str_date=datetime.datetime.combine(yesterday, d
                     continue
     #print("Elasticsearch summary dictionaries took ", time.time() - start_time, " seconds to run")
     return user_activity_array
+
+    
+def upload_elastic_search_session_info(elastic_data):
+    """ 
+    Uploads the elastic search session info
+    """
+    metrics_mysql_password = os.environ['METRICS_MYSQL_PWD']
+    sql_host = os.environ['SQL_HOST']
+    query_on = os.environ['QUERY_ON']
+    #connect to mysql
+    db_connection = mysql.connect(
+        host = sql_host,
+        user = "metrics",
+        passwd = metrics_mysql_password,
+        database = "metrics"
+    )
+
+    cursor = db_connection.cursor()
+    query = "use "+query_on
+    cursor.execute(query)
+
+    prep_cursor = db_connection.cursor(prepared=True)
+
+    session_info_insert_statement = "insert into metrics.session_info " \
+                                    "(username, record_date, ip_address, "\
+                                    "country_name, country_code, "\
+                                    "city, latitude, longitude, "\
+                                    "region_name, region_code, postal_code, "\
+                                    "timezone, estimated_hrs_active, "\
+                                    "first_seen, last_seen, proxy_target) "\
+                                    "values(%s, %s, %s, %s, %s, "\
+                                    "%s, %s, %s, %s, %s, %s, "\
+                                    "%s, %s, %s, %s, %s);"
+
+    num_rows_inserted = 0;
+    num_rows_failed_duplicates = 0;
+    #insert each record.
+    for record in elastic_data:
+        if record['country_code'] == '_geoip_lookup_failure':
+            record['country_code'] = " "
+            record['ip_address'] = " "
+        input = [record['username'], record['date'], record['ip_address'],
+                 record['country_name'], record['country_code'],
+                 record['city'], record['latitude'], record['longitude'],
+                 record['region_name'], record['region_code'], record['postal_code'],
+                 record['timezone'], record['hours_on_system'],
+                 record['first_seen'], record['last_seen'], record['proxy_target']]
+        #Error handling from https://www.programcreek.com/python/example/93043/mysql.connector.Error
+        try:
+            prep_cursor.execute(session_info_insert_statement,input)
+            num_rows_inserted += 1
+        except mysql.Error as err:
+            #print("ERROR: " + str(err))
+            #print("Duplicate Input: " + str(input))
+            num_rows_failed_duplicates += 1
+
+    db_connection.commit()
+    print("Number of app records inserted : " + str(num_rows_inserted))
+    print("Number of app records duplicate : " + str(num_rows_failed_duplicates))
+    return 1;

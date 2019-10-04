@@ -141,7 +141,6 @@ CREATE or replace TABLE metrics.session_info (
         username VARCHAR(255) NOT NULL,
         record_date DATE NOT NULL,
         ip_address VARCHAR(15) NOT NULL,
-        host_ip VARCHAR(15) NOT NULL,
         country_name VARCHAR(255) NOT NULL,
         country_code VARCHAR(3) NOT NULL,
         city VARCHAR(255) NOT NULL,
