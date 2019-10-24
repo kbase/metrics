@@ -32,14 +32,34 @@ and usss.record_date = usmd.mindate;
 ------------------------------------
 # VIEWS OF REGULAR TABLES 
 
+#IN METRICS
+create or replace view metrics.hv_user_app_error_count as
+select count(*) as total_app_err_count, username 
+from metrics.user_app_usage 
+where is_error = True
+group by username;
+
+#IN METRICS
+create or replace view metrics.hv_user_app_count as
+select count(*) as total_app_count, username 
+from metrics.user_app_usage 
+group by username;
+
 #IN METRICS_REPORTING
 create or replace view metrics_reporting.user_info_plus as
-select * , 
+select ui.* ,
 round((UNIX_TIMESTAMP(ui.last_signin_date) - UNIX_TIMESTAMP(ui.signup_date))/86400,2) as days_signin_minus_signup,
-ceil((UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(last_signin_date))/86400) as days_since_last_signin
-from metrics.user_info ui
+ceil((UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(last_signin_date))/86400) as days_since_last_signin,
+IFNULL(uac.total_app_count,0) as total_app_count,
+IFNULL(uec.total_app_err_count,0) as total_app_err_count
+from metrics.user_info ui 
+left outer join 
+metrics.hv_user_app_count uac on ui.username = uac.username
+left outer join   
+metrics.hv_user_app_error_count uec on ui.username = uec.username
 where exclude = False
 order by signup_date;
+
 
 #IN METRICS_REPORTING
 create or replace view metrics_reporting.user_info_summary_stats as
