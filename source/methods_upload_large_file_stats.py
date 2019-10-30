@@ -34,24 +34,31 @@ def get_nodes_data(db_shock,uuid_user_mapping_dict,start_date,end_date):
     '''
     Get the Nodes data : uuid(map later to username), creation_date, size
     '''
-    nodes_dict = dict()
-#    nodes_query = db_shock.Nodes.find({"created_on": {"$gt":"new ISODate("+str(start_date)+")","$lt":"new ISODate("+str(end_date)+")"}},
-#                                       {"_id":0,"acl.owner":1,"created_on":1,"file.size":1}))
+    #Dict {username->{date => {count => number, total_size => number}}}
+    users_date_summary_dict = dict()
     nodes_query = db_shock.Nodes.find({"created_on": {"$gt":start_date,"$lt":end_date}},{"_id":0,"acl.owner":1,"created_on":1,"file.size":1})
-    count = 0
+    total_nodes_count = 0
     for record in nodes_query:
         created_on = record["created_on"]
+        record_date = created_on.date()
         username = uuid_user_mapping_dict[record["acl"]["owner"]]
         size = record["file"]["size"]
-        print("created on: " + str(created_on))
+        if username not in users_date_summary_dict:
+            users_date_summary_dict[username] = dict()
+        if record_date not in users_date_summary_dict[username]:
+            users_date_summary_dict[username][record_date] = {"total_size":size,"count":1}
+        else:
+            users_date_summary_dict[username][record_date]["total_size"] += size
+            users_date_summary_dict[username][record_date]["count"] += 1
+        print("record_date: " + str(record_date))
         print("username: " + str(username))
         print("size: " + str(size))
-        count += 1
-    print("COUNT:" + str(count))
-    return 1
+        total_nodes_count += 1
+    print("TOTAL NODES COUNT:" + str(total_nodes_count))
+    return users_date_summary_dict
 
 
-def get_large_file_data(start_date=datetime.datetime.combine(yesterday, datetime.datetime.min.time()),
+def process_large_file_data(start_date=datetime.datetime.combine(yesterday, datetime.datetime.min.time()),
                        end_date=datetime.datetime.combine(yesterday, datetime.datetime.max.time()) ):
     '''
     Get the large file stats (historically SHOCK)
@@ -74,28 +81,14 @@ def get_large_file_data(start_date=datetime.datetime.combine(yesterday, datetime
     print("Start Date: " + str(start_date))
     print("End Date: " + str(end_date))
 
-    nodes_dict = dict()
     uuid_user_mapping_dict = get_uuid_user_mappings(db_shock)
-    users_day_summary_dict = dict()
+    users_date_summary_dict = get_nodes_data(db_shock,uuid_user_mapping_dict,start_date,end_date)
 
-    get_nodes_data(db_shock,uuid_user_mapping_dict,start_date,end_date)
-
-    return users_day_summary_dict
-
+    print("users date dict:" + str(users_date_summary_dict))
+    return users_date_summary_dict
 
 
 
-    
-
-
-def get_public_narrative_count():
-    """
-    Gets the number of pu;ic_narratives
-    """
-    client_workspace = MongoClient(mongoDB_metrics_connection+to_workspace)
-    db_workspace = client_workspace.workspace
-    public_narrative_count = db_workspace.workspaceACLs.find({"user" : "*"}).count()
-    return public_narrative_count;
 
 
 def upload_public_narratives_count():
@@ -124,7 +117,7 @@ def upload_public_narratives_count():
     return
 
 
-get_large_file_data()
-#start_date = "2019-08-15"
-#end_date = "2020-10-30"
-#get_large_file_data(start_date,end_date)
+#get_large_file_data()
+start_date = "2019-10-28"
+end_date = "2019-10-31"
+process_large_file_data(start_date,end_date)
