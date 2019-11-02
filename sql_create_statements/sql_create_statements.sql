@@ -182,3 +182,26 @@ CREATE INDEX idx_session_info_region_code ON metrics.session_info(region_code);
 CREATE INDEX idx_session_info_timezone ON metrics.session_info(timezone);
 
 CREATE INDEX idx_session_info_estimated_hrs_active ON metrics.session_info(estimated_hrs_active);
+
+
+
+################################################
+# file_storage_stats
+
+CREATE TABLE file_storage_stats (
+    username VARCHAR(255) NOT NULL,
+    record_date DATE NOT NULL,
+    total_size BIGINT NOT NULL,
+    file_count INT NOT NULL,
+    FOREIGN KEY fk_sys_large_file_storage_stats_username(username)
+    REFERENCES user_info(username)
+        ON UPDATE CASCADE
+    ON DELETE RESTRICT) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    
+CREATE UNIQUE INDEX uk_file_storage_stats_user_date
+ON metrics.file_storage_stats(username,record_date);
+
+CREATE INDEX idx_file_storage_stats_username ON metrics.file_storage_stats(username);
+
+CREATE INDEX idx_file_storage_stats_record_date ON metrics.file_storage_stats(record_date);
+
