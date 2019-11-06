@@ -114,7 +114,7 @@ def upload_file_stats_data(users_date_summary_dict):
                 insert_count += 1
             except mysql.Error as err:
                 #There can be two types of errors : 
-                # 1) duplicate ysername/record_date combo - 
+                # 1) duplicate username/record_date combo - 
                 #      May need to update the record
                 # 2) missing username in userinfo if update user_stats have not been run recently
                 try:

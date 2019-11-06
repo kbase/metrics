@@ -262,9 +262,9 @@ def upload_elastic_search_session_info(elastic_data):
     query = "use "+query_on
     cursor.execute(query)
 
-    prep_cursor = db_connection.cursor(prepared=True)
-
-    session_info_insert_statement = "insert into metrics.session_info " \
+    insert_cursor = db_connection.cursor(prepared=True)
+    
+    session_info_insert_statement = "insert into metrics.session_info "\
                                     "(username, record_date, ip_address, "\
                                     "country_name, country_code, "\
                                     "city, latitude, longitude, "\
@@ -274,9 +274,27 @@ def upload_elastic_search_session_info(elastic_data):
                                     "values(%s, %s, %s, %s, %s, "\
                                     "%s, %s, %s, %s, %s, %s, "\
                                     "%s, %s, %s, %s, %s);"
+    
+    check_record_cursor = db_connection.cursor(buffered=True)
+    check_record_statement = "select estimated_hrs_active, first_seen, last_seen "\
+                             "from metrics.session_info "\
+                             "where username = %s "\
+                             "and record_date = %s "\
+                             "and ip_address = %s "
+
+    update_cursor = db_connection.cursor(prepared=True)
+    session_info_update_statement = "update metrics.session_info "\
+                                    "set country_name = %s, country_code = %s, "\
+                                    "city = %s, latitude = %s, longitude = %s, "\
+                                    "region_name = %s, region_code = %s, postal_code = %s, "\
+                                    "timezone = %s, estimated_hrs_active = %s, "\
+                                    "first_seen = %s, last_seen = %s, proxy_target = %s "\
+                                    "where username = %s and record_date = %s and ip_address = %s;"
 
     num_rows_inserted = 0;
-    num_rows_failed_duplicates = 0;
+    duplicates_updated_count = 0
+    duplicates_skipped_count = 0
+    fail_inserts_count = 0
     #insert each record.
     for record in elastic_data:
         if record['country_code'] == '_geoip_lookup_failure':
@@ -290,14 +308,50 @@ def upload_elastic_search_session_info(elastic_data):
                  record['first_seen'], record['last_seen'], record['proxy_target']]
         #Error handling from https://www.programcreek.com/python/example/93043/mysql.connector.Error
         try:
-            prep_cursor.execute(session_info_insert_statement,input)
+            insert_cursor.execute(session_info_insert_statement,input)
             num_rows_inserted += 1
         except mysql.Error as err:
-            #print("ERROR: " + str(err))
-            #print("Duplicate Input: " + str(input))
-            num_rows_failed_duplicates += 1
+            #There can be two types of errors :
+            # 1) duplicate username/record_date/ip_address combo -
+            #      May need to update the record
+            # 2) missing username in userinfo if update user_stats have not been run recently
+            try:
+                check_vals = (record['username'], record['date'], record['ip_address'])
+                check_record_cursor.execute(check_record_statement,check_vals)
+            except mysql.Error as err2:
+                print("ERROR2: " + str(err2))
+                print("ERROR2 Input: " + str(check_vals))
+                exit
+            if check_record_cursor.rowcount > 0:
+                # means the record exists
+                for (t_estimated_hrs_active, t_first_seen, t_last_seen) in check_record_cursor:
+                        # see if it needs to be update
+                        if (t_estimated_hrs_active == record['hours_on_system'] and
+                            t_first_seen == record['first_seen'] and 
+                            t_last_seen == record['last_seen']):
+                            # Means the record does not need to updated and can be skipped
+                            duplicates_skipped_count+=1
+                        else:
+                            # Means this was run with a partial day before and the record needs to be updated
+                            update_vals = [record['country_name'], record['country_code'],
+                                           record['city'], record['latitude'], record['longitude'],
+                                           record['region_name'], record['region_code'], record['postal_code'],
+                                           record['timezone'], record['hours_on_system'],
+                                           record['first_seen'], record['last_seen'], record['proxy_target'],
+                                           record['username'], record['date'], record['ip_address']]
+                            update_cursor.execute(session_info_update_statement,update_vals)
+                            duplicates_updated_count+=1
+            else:
+                # The record did not exist - MOST LIKELY DUE TO
+                # missing username in userinfo if update user_stats have not been run recently
+                print("ERROR: " + str(err))
+                print("ERROR Input: " + str(input))
+                print("ERROR Likely due to new user missing from user_info foreign key failure")
+                fail_inserts_count += 1
 
     db_connection.commit()
-    print("Number of app records inserted : " + str(num_rows_inserted))
-    print("Number of app records duplicate : " + str(num_rows_failed_duplicates))
+    print("duplicates_updated_count : " + str(duplicates_updated_count))
+    print("duplicates_skipped_count : " + str(duplicates_skipped_count))
+    print("fail_inserts_count : " + str(fail_inserts_count))
+    print("Total insert_count : " + str(num_rows_inserted))
     return 1;
