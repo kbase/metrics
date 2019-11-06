@@ -6,6 +6,8 @@ python upload_elasticsearch_usersmry_stats.py
 
 python upload_app_stats.py
 
+python upload_file_stats.py
+
 python upload_app_category_mappings.py
 
 python upload_public_narratives_count.py
