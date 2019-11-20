@@ -61,6 +61,40 @@ def get_public_workspaces(db, workspaces_dict):
             workspaces_dict[record["id"]]["is_public"] = 1
     return workspaces_dict
 
+def get_objects(db, workspaces_dict):
+    """
+    get object counts 
+    as well as hidden del, size, is_narrative informationf for the workspace.
+    """
+    #OBJECT COUNTS ACROSS ALL WORKSPACES.
+    object_counts_dict = dict()
+    #    {object_type_full : { "object_type" : ...,
+    #                          "object_spec_version" : ...,  
+    #                          "last_mod_date" : max_date ,
+    #                          "top_lvl_object_count" : # ,
+    #                          "total_object_count" : # ,
+    #                          "public_object_count" : # ,
+    #                          "private_object_count" : # ,
+    #                          "hidden_object_count" : # ,
+    #                          "deleted_object_count" : # ,
+    #                          "copy_count" : # ,
+    #                          "total_size" : # }}
+
+    ws_limit = 20 #For debugging purposes, if ws_limit is None then it does all workspaces.
+    ws_counter = 0
+    for ws_id in workspaces_dict:
+        #few debugging lines to do a smaller set of workspaces.
+        if ws_limit is not None:
+            if ws_counter > ws_limit:
+                break
+            ws_counter += 1
+        is_narrative = False
+        top_level_lookup_dict = dict()
+        # object_id : {ver:#, del:bool, hide:bool}
+        is_public_flag = workspaces_dict[ws_id]["is_public"] 
+        ws_obj_cursor = db.workspaceObjects.find({"ws":ws_id},{"id":1,"numver":1,"del":1,"hide":1,"_id":0})
+        
+        
 def upload_workspace_stats():
     """
     Is the "main" function to get and upload both workspace data as well as workspace object summary stats
