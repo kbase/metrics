@@ -92,8 +92,14 @@ def get_objects(db, workspaces_dict):
         top_level_lookup_dict = dict()
         # object_id : {ver:#, del:bool, hide:bool}
         is_public_flag = workspaces_dict[ws_id]["is_public"] 
-        ws_obj_cursor = db.workspaceObjects.find({"ws":ws_id},{"id":1,"numver":1,"del":1,"hide":1,"_id":0})
+        tl_ws_obj_cursor = db.workspaceObjects.find({"ws":ws_id},{"id":1,"numver":1,"del":1,"hide":1,"_id":0})
+        for tl_object in tl_ws_obj_cursor:
+            top_level_lookup_dict[tl_ws_obj_cursor["id"]] = {"numver" : tl_ws_obj_cursor["numver"],
+                                                          "del" : tl_ws_obj_cursor["del"],
+                                                          "hide" : tl_ws_obj_cursor["hide"]}
+
         
+
         
 def upload_workspace_stats():
     """
