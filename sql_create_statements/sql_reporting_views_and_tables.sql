@@ -106,7 +106,7 @@ DATE_FORMAT(`signup_date`,'%Y-%m') as signup_month,
 count(*) as users_returned_since_signin_count 
 from metrics_reporting.user_info_plus 
 where kb_internal_user = False 
-and days_signin_minus_signup > 10
+and days_signin_minus_signup > 1
 and exclude = False
 group by signup_month;
 
