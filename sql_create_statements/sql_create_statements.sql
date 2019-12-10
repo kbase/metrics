@@ -224,6 +224,7 @@ CREATE OR REPLACE TABLE `workspaces` (
   `hidden_object_count` int(11) NOT NULL DEFAULT '0',
   `deleted_object_count` int(11) NOT NULL DEFAULT '0',
   `total_size` bigint(20) NOT NULL,
+  `top_lvl_size` bigint(20) NOT NULL,
   `is_public` tinyint(1) NOT NULL DEFAULT '0',
   `is_temporary` tinyint(1) DEFAULT NULL,
   `number_of_shares` int(11) NOT NULL DEFAULT '0',
@@ -257,6 +258,7 @@ CREATE OR REPLACE TABLE metrics.workspace_object_counts (
     deleted_object_count INTEGER NOT NULL DEFAULT 0,
     copy_count INTEGER NOT NULL,
     total_size BIGINT NOT NULL,
+    top_lvl_size BIGINT NOT NULL,
     max_object_size BIGINT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8;
         
 CREATE UNIQUE INDEX uk_type_ver_rd_workspace_object_counts

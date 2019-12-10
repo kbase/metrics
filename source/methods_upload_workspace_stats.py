@@ -22,9 +22,8 @@ sql_host = os.environ['SQL_HOST']
 query_on = os.environ['QUERY_ON']
 
 ws_url = os.environ['WS_URL']
-
+ws_user_token = os.environ["METRICS_WS_USER_TOKEN"]
 to_workspace =  os.environ['WRK_SUFFIX']
-user_token = os.environ["METRICS_WS_USER_TOKEN"]
 
 def get_workspaces(db):
     """
@@ -36,20 +35,22 @@ def get_workspaces(db):
 #                                            "meta" : {"k" : "is_temporary", "v" : "false"} },
                                            {"owner":1,"ws":1,"moddate":1,"_id":0})
     for record in workspaces_cursor:
-        workspaces_dict[record["ws"]] = {"ws_id" : record["ws"],
-                                         "username" : record["owner"],
-                                         "mod_date" : record["moddate"],
-                                         "top_lvl_object_count" : 0,
-                                         "total_object_count" : 0,
-                                         "visible_app_cells_count" : 0,
-                                         "narrative_version" : 0,
-                                         "hidden_object_count" : 0,
-                                         "deleted_object_count" : 0,
-                                         "total_size" : 0,
-                                         "is_public" : 0,
-                                         "is_temporary" : None,
-                                         "number_of_shares" : 0
-        }
+        if record["ws"] != 615:
+            workspaces_dict[record["ws"]] = {"ws_id" : record["ws"],
+                                             "username" : record["owner"],
+                                             "mod_date" : record["moddate"],
+                                             "top_lvl_object_count" : 0,
+                                             "total_object_count" : 0,
+                                             "visible_app_cells_count" : 0,
+                                             "narrative_version" : 0,
+                                             "hidden_object_count" : 0,
+                                             "deleted_object_count" : 0,
+                                             "total_size" : 0,
+                                             'top_lvl_size' : 0,
+                                             "is_public" : 0,
+                                             "is_temporary" : None,
+                                             "number_of_shares" : 0
+            }
 
     workspace_is_temporary_cursor = db.workspaces.find({"del" : False, "moddate": {"$exists":True},
                                                         "meta" : {"k" : "is_temporary", "v" : "true"} },
@@ -83,25 +84,27 @@ def get_public_workspaces(db, workspaces_dict):
     """
     Gets IDs of public workspaces
     """
-    public_workspaces_cursor = db.workspaceACLs.find({"user" : "*"},
-                                                     {"id":1,"_id":0})
+    public_workspaces_cursor = db.workspaceACLs.find({"user" : "*"},{"id":1,"_id":0})
     for record in public_workspaces_cursor:
         if record["id"] in workspaces_dict:
             workspaces_dict[record["id"]]["is_public"] = 1
     return workspaces_dict
 
-def get_app_cell_count(narrative_ref):
+def get_app_cell_count(wsadmin, narrative_ref):
     """
     Gets the number of App Cells in the narrative
+    See documentation for WS administer here 
+    https://github.com/kbase/workspace_deluxe/blob/02217e4d63da8442d9eed6611aaa790f173de58e/docsource/administrationinterface.rst
     """
-    ws = Workspace(ws_url, token=user_token)
-
-    info = ws.get_object_info3({"objects": [{"ref": narrative_ref}], "includeMetadata": 1})["infos"][0]
+    info = wsadmin.administer({'command': "getObjectInfo",
+                               'params':  {"objects": [{"ref": narrative_ref}], "includeMetadata": 1}
+                              })["infos"][0]
     meta = info[10]
     total_app_cells = 0
     for key in meta:
         if key.startswith("method"):
-            total_app_cells += int(meta[key])
+            if(isinstance(meta[key], int)):
+                total_app_cells += int(meta[key])
     return total_app_cells
 
 def get_objects(db, workspaces_dict):
@@ -109,6 +112,8 @@ def get_objects(db, workspaces_dict):
     get object counts 
     as well as hidden del, size, is_narrative informationf for the workspace.
     """
+
+    wsadmin = Workspace(ws_url, token=ws_user_token)
     #OBJECT COUNTS ACROSS ALL WORKSPACES.
     object_counts_dict = dict()
     #    {object_type_full : { "object_type" : ...,
@@ -121,23 +126,28 @@ def get_objects(db, workspaces_dict):
     #                          "hidden_object_count" : # ,
     #                          "deleted_object_count" : # ,
     #                          "copy_count" : # ,
-    #                          "total_size" : # }}
+    #                          "total_size" : # ,
+    #                          "top_lvl_size" : #}}
 
-    ws_limit = 20 #For debugging purposes, if ws_limit is None then it does all workspaces.
-    ws_counter = 0
-    temp_dict = dict()
-    temp_dict[49114] = workspaces_dict[49114]
-    temp_dict[3] = workspaces_dict[3]
+    ###########################
+    #few debugging lines to do a smaller set of workspaces.
+    ###########################
+#    ws_limit = 1 #For debugging purposes, if ws_limit is None then it does all workspaces.
+#    ws_counter = 0
+#    for ws_id in sorted(workspaces_dict.keys()):
+#        ws_counter += 1
+#        if ws_counter > ws_limit :
+#            del workspaces_dict[ws_id]
+    ###########################
+    #debugging lines to minimal Workspaces
+#    temp_dict = dict()
+#    temp_dict[49114] = workspaces_dict[49114]
+#    temp_dict[3] = workspaces_dict[3]
 #    temp_dict[1000] = workspaces_dict[1000]
-    workspaces_dict.clear()
-    workspaces_dict = temp_dict
+#    workspaces_dict.clear()
+#    workspaces_dict = temp_dict
     for ws_id in sorted(workspaces_dict.keys()):
         print("PROCESSING WS : " + str(ws_id))
-        #few debugging lines to do a smaller set of workspaces.
-        if ws_limit is not None:
-            if ws_counter > ws_limit:
-                break
-            ws_counter += 1
         is_narrative = False
         top_level_lookup_dict = dict()
         is_public_flag = workspaces_dict[ws_id]["is_public"] 
@@ -154,6 +164,7 @@ def get_objects(db, workspaces_dict):
             obj_id = ws_obj_ver["id"]
             obj_ver = ws_obj_ver["ver"]
             obj_size = ws_obj_ver["size"]
+            top_obj_size = 0
             obj_save_date = ws_obj_ver["savedate"]
             obj_copied = 0
             if ws_obj_ver["copied"] is not None:
@@ -168,10 +179,15 @@ def get_objects(db, workspaces_dict):
             if obj_ver == top_level_lookup_dict[obj_id]["numver"]:
                 #means have maxed version of the object top_level
                 is_top_level = 1
+                top_obj_size = obj_size
+                workspaces_dict[ws_id]["top_lvl_size"] += obj_size
                 #IF A NARRATIVE OBJECT, UPDATE THE WS dict
                 if object_type == "KBaseNarrative.Narrative":
                     workspaces_dict[ws_id]["narrative_version"] = obj_ver
-                    workspaces_dict[ws_id]["visible_app_cells_count"] = get_app_cell_count(str(ws_id) + "/" + str(obj_id))
+                    if top_level_lookup_dict[obj_id]["del"]:
+                        workspaces_dict[ws_id]["visible_app_cells_count"] = 0
+                    else:
+                        workspaces_dict[ws_id]["visible_app_cells_count"] = get_app_cell_count(wsadmin,str(ws_id) + "/" + str(obj_id))
                 #Get Workspace numbers
                 workspaces_dict[ws_id]["top_lvl_object_count"] += 1
                 if top_level_lookup_dict[obj_id]["hide"]:
@@ -183,7 +199,7 @@ def get_objects(db, workspaces_dict):
                 is_hidden = 1
             if top_level_lookup_dict[obj_id]["del"]:
                 is_deleted = 1
-
+                
             if object_type_full not in object_counts_dict:
                 #First time seeing this object full type. Initialize in the dict
                 object_counts_dict[object_type_full] = dict()
@@ -191,6 +207,7 @@ def get_objects(db, workspaces_dict):
                 object_counts_dict[object_type_full]["object_spec_version"] = object_spec_version
                 object_counts_dict[object_type_full]["last_mod_date"] = obj_save_date
                 object_counts_dict[object_type_full]["total_size"] = obj_size
+                object_counts_dict[object_type_full]["top_lvl_size"] = top_obj_size
                 object_counts_dict[object_type_full]["total_object_count"] = 1
                 object_counts_dict[object_type_full]["copy_count"] = obj_copied
                 object_counts_dict[object_type_full]["top_lvl_object_count"] = is_top_level
@@ -214,6 +231,7 @@ def get_objects(db, workspaces_dict):
                     object_counts_dict[object_type_full]["max_object_size"] = obj_size
 
                 object_counts_dict[object_type_full]["total_size"] += obj_size
+                object_counts_dict[object_type_full]["top_lvl_size"] += top_obj_size
                 object_counts_dict[object_type_full]["total_object_count"] += 1
                 object_counts_dict[object_type_full]["copy_count"] += obj_copied
                 object_counts_dict[object_type_full]["top_lvl_object_count"] += is_top_level
@@ -256,7 +274,7 @@ def upload_workspace_stats():
     cursor = db_connection.cursor()
     query = "use "+query_on
     cursor.execute(query)
-
+    
     #WORKSPACES UPLOADING
     prep_cursor = db_connection.cursor(prepared=True)
     workspaces_insert_statement = "insert into metrics.workspaces "\
@@ -264,18 +282,23 @@ def upload_workspace_stats():
                                   "top_lvl_object_count, total_object_count, "\
                                   "visible_app_cells_count, narrative_version, "\
                                   "hidden_object_count, deleted_object_count, "\
-                                  "total_size, is_public, is_temporary, number_of_shares) "\
-                                  "values(%s,%s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+                                  "total_size, top_lvl_size, is_public, "\
+                                  "is_temporary, number_of_shares) "\
+                                  "values(%s,%s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
 
     for ws_id in sorted(workspaces_dict.keys()):
+        print("PROCESSING WS: " + str(ws_id) + "  USERNAME: " + workspaces_dict[ws_id]['username'])
         input = (ws_id, workspaces_dict[ws_id]['username'], workspaces_dict[ws_id]['mod_date'],
                  workspaces_dict[ws_id]['top_lvl_object_count'], workspaces_dict[ws_id]['total_object_count'],
                  workspaces_dict[ws_id]['visible_app_cells_count'], workspaces_dict[ws_id]['narrative_version'],
                  workspaces_dict[ws_id]['hidden_object_count'], workspaces_dict[ws_id]['deleted_object_count'],
-                 workspaces_dict[ws_id]['total_size'], workspaces_dict[ws_id]['is_public'],
+                 workspaces_dict[ws_id]['total_size'], workspaces_dict[ws_id]['top_lvl_size'], workspaces_dict[ws_id]['is_public'],
                  workspaces_dict[ws_id]['is_temporary'], workspaces_dict[ws_id]['number_of_shares'])
         prep_cursor.execute(workspaces_insert_statement,input)
 
+    print("TOTAL WS Number : " + str(len(workspaces_dict)))
+    print("--- gather data %s seconds ---" % (gather_time))
+        
     workspace_time = time.time() - (gather_time + start_time)
     print("--- workspaces uploading  %s seconds ---" % (workspace_time))
 
@@ -286,8 +309,8 @@ def upload_workspace_stats():
                                   "record_date, last_mod_date, top_lvl_object_count, "\
                                   "total_object_count, public_object_count, private_object_count, "\
                                   "hidden_object_count, deleted_object_count, copy_count, "\
-                                  "total_size, max_object_size) "\
-                                  "values(%s,%s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+                                  "total_size, top_lvl_size, max_object_size) "\
+                                  "values(%s,%s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
     for obj_full in sorted(object_counts_dict):
         obj_input = (object_counts_dict[obj_full]["object_type"],object_counts_dict[obj_full]["object_spec_version"],
                      obj_full, object_counts_dict[obj_full]["last_mod_date"], 
@@ -295,7 +318,7 @@ def upload_workspace_stats():
                      object_counts_dict[obj_full]["public_object_count"], object_counts_dict[obj_full]["private_object_count"],
                      object_counts_dict[obj_full]["hidden_object_count"], object_counts_dict[obj_full]["deleted_object_count"],
                      object_counts_dict[obj_full]["copy_count"], object_counts_dict[obj_full]["total_size"],
-                     object_counts_dict[obj_full]["max_object_size"])
+                     object_counts_dict[obj_full]["top_lvl_size"], object_counts_dict[obj_full]["max_object_size"])
         prep_cursor.execute(obj_counts_insert_statement,obj_input)
 
     object_time = time.time() - (workspace_time + gather_time + start_time)
