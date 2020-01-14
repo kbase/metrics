@@ -650,4 +650,36 @@ from metrics.hv_kbuser_monthly_file_stats kufs
 left outer join metrics.hv_non_kbuser_monthly_file_stats nkfs
 on kufs.month = nkfs.month;
 
+--------------------------------------------
+#NEW APPS BEING RUN THE FIRST TIME (monthly counts)
+# IDEA OF NEW APPS BEING RELEASED/USED
+
+#IN METRICS
+create or replace view metrics.hv_new_apps_first_run as
+(select func_name, min(finish_date) as first_run
+from metrics.user_app_usage
+group by func_name);
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.new_apps_first_run_month as
+(select DATE_FORMAT(`first_run`,'%Y-%m') as first_run_month, count(*)
+from metrics.hv_new_apps_first_run
+group by first_run_month);
+
+--------------------------------------------
+#NEW APPS GIT COMMIT HASH BEING RUN THE FIRST TIME (monthly counts)
+# IDES OF NEW APPS GIT COMMITS BEING RELEASED/USED
+
+#IN METRICS
+create or replace view metrics.hv_new_apps_git_commit_first_run as
+(select func_name, git_commit_hash, min(finish_date) as first_run
+from metrics.user_app_usage
+group by func_name, git_commit_hash);
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.new_apps_git_commit_first_run_month as
+select DATE_FORMAT(`first_run`,'%Y-%m') as first_run_month, count(*)
+from metrics.hv_new_apps_git_commit_first_run
+group by first_run_month;
+
 
