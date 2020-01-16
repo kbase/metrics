@@ -205,17 +205,14 @@ CREATE INDEX idx_file_storage_stats_username ON metrics.file_storage_stats(usern
 
 CREATE INDEX idx_file_storage_stats_record_date ON metrics.file_storage_stats(record_date);
 
-
-
 ##################################################
 # workspaces
-
-
 
 CREATE OR REPLACE TABLE `workspaces` (
   `ws_id` int(11) NOT NULL,
   `username` varchar(255) NOT NULL,
   `mod_date` date NOT NULL,
+  `initial_save_date` date default NULL,
   `record_date` date NOT NULL,
   `top_lvl_object_count` int(11) NOT NULL,
   `total_object_count` int(11) NOT NULL,
@@ -227,16 +224,19 @@ CREATE OR REPLACE TABLE `workspaces` (
   `top_lvl_size` bigint(20) NOT NULL,
   `is_public` tinyint(1) NOT NULL DEFAULT '0',
   `is_temporary` tinyint(1) DEFAULT NULL,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT '0',	
   `number_of_shares` int(11) NOT NULL DEFAULT '0',
   UNIQUE KEY `uk_ws_user_rd_workspaces` (`ws_id`,`username`,`record_date`),
   KEY `idx_workspaces_ws_id` (`ws_id`),
   KEY `idx_workspaces_user` (`username`),
   KEY `idx_workspaces_rd` (`record_date`),
+  KEY `idx_workspaces_isd` (`initial_save_date`),
   KEY `idx_workspaces_tloc` (`top_lvl_object_count`),
   KEY `idx_workspaces_vac` (`visible_app_cells_count`),
   KEY `idx_workspaces_nv` (`narrative_version`),
   KEY `idx_workspaces_ip` (`is_public`),
   KEY `idx_workspaces_it` (`is_temporary`),
+  KEY `idx_workspaces_id` (`is_deleted`),
   CONSTRAINT `fk_workspace_narratives_username` FOREIGN KEY (`username`) REFERENCES `user_info` (`username`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -280,3 +280,43 @@ CREATE INDEX idx_workspace_object_counts_puoc ON metrics.workspace_object_counts
 
 CREATE INDEX idx_workspace_object_counts_proc ON metrics.workspace_object_counts (private_object_count);
 
+
+
+############################################
+# users_workspace_object_types
+
+CREATE OR REPLACE TABLE metrics.users_workspace_object_counts (
+    object_type VARCHAR(255) NOT NULL,
+    object_spec_version VARCHAR(255) NOT NULL,
+    object_type_full VARCHAR(255) NOT NULL,
+    record_date DATE NOT NULL,
+    last_mod_date DATE NOT NULL,
+    top_lvl_object_count INTEGER NOT NULL,
+    total_object_count INTEGER NOT NULL,
+    public_object_count INTEGER NOT NULL,
+    private_object_count INTEGER NOT NULL,
+    hidden_object_count INTEGER NOT NULL DEFAULT 0,
+    deleted_object_count INTEGER NOT NULL DEFAULT 0,
+    copy_count INTEGER NOT NULL,
+    total_size BIGINT NOT NULL,
+    top_lvl_size BIGINT NOT NULL,
+    max_object_size BIGINT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE UNIQUE INDEX uk_type_ver_rd_uworkspace_object_counts
+ON metrics.users_workspace_object_counts(object_type, object_spec_version, record_date);
+
+CREATE INDEX idx_uworkspace_object_counts_ot ON metrics.users_workspace_object_counts (object_type);
+
+CREATE INDEX idx_uworkspace_object_counts_osv ON metrics.users_workspace_object_counts (object_spec_version);
+
+CREATE INDEX idx_uworkspace_object_counts_otf ON metrics.users_workspace_object_counts (object_type_full);
+
+CREATE INDEX idx_uworkspace_object_counts_rd ON metrics.users_workspace_object_counts (record_date);
+
+CREATE INDEX idx_uworkspace_object_counts_toc ON metrics.users_workspace_object_counts (total_object_count);
+
+CREATE INDEX idx_uworkspace_object_counts_tloc ON metrics.users_workspace_object_counts (top_lvl_object_count);
+
+CREATE INDEX idx_uworkspace_object_counts_puoc ON metrics.users_workspace_object_counts (public_object_count);
+
+CREATE INDEX idx_uworkspace_object_counts_proc ON metrics.users_workspace_object_counts (private_object_count);

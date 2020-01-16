@@ -668,7 +668,7 @@ group by first_run_month);
 
 --------------------------------------------
 #NEW APPS GIT COMMIT HASH BEING RUN THE FIRST TIME (monthly counts)
-# IDES OF NEW APPS GIT COMMITS BEING RELEASED/USED
+# IDEA OF NEW APPS GIT COMMITS BEING RELEASED/USED
 
 #IN METRICS
 create or replace view metrics.hv_new_apps_git_commit_first_run as
