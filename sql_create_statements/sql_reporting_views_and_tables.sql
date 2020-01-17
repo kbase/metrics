@@ -686,11 +686,13 @@ group by first_run_month;
 ---------------------------
 #WORKSPACES MOST RECENT SNAPSHOT
 
+#IN METRICS
 CREATE OR REPLACE VIEW metrics.hv_workspaces_max_date as
 select max(record_date) as record_date, ws_id
 from metrics.workspaces w
 group by ws_id;
 
+#IN METRICS_REPORTING
 CREATE OR REPLACE VIEW metrics_reporting.workspaces_current as
 select ws.*
 from metrics.workspaces ws inner join 
@@ -702,11 +704,13 @@ ws.record_date = wsmd.record_date;
 ---------------------------
 #WORKSPACES OBJECTS MOST RECENT SNAPSHOT
 
+#IN METRICS
 CREATE OR REPLACE VIEW metrics.hv_workspace_object_counts_max_date as
 select max(record_date) as record_date, object_type_full
 from metrics.workspace_object_counts
 group by object_type_full;
 
+#IN METRICS_REPORTING
 CREATE OR REPLACE VIEW metrics_reporting.workspace_object_counts_current as
 select wsoc.*
 from metrics.workspace_object_counts wsoc inner join 
@@ -718,11 +722,13 @@ wsoc.record_date = wsmd.record_date;
 ---------------------------
 #USERS WORKSPACES OBJECTS MOST RECENT SNAPSHOT
 
+#IN METRICS
 CREATE OR REPLACE VIEW metrics.hv_users_workspace_object_counts_max_date as
 select max(record_date) as record_date, object_type_full
 from metrics.users_workspace_object_counts
 group by object_type_full;
 
+#IN METRICS_REPORTING
 CREATE OR REPLACE VIEW metrics_reporting.users_workspace_object_counts_current as
 select wsoc.*
 from metrics.users_workspace_object_counts wsoc inner join 
@@ -734,7 +740,7 @@ wsoc.record_date = wsmd.record_date;
 
 ---------------------------------
 #USERS NARRATIVE COUNTS BY MONTH
-
+#IN METRICS_REPORTING
 CREATE OR REPLACE view metrics_reporting.users_narrative_counts_by_month as
 select DATE_FORMAT(`initial_save_date`,'%Y-%m') as narrative_creation_month,
 count(*) as users_narrative_count
@@ -747,7 +753,7 @@ group by narrative_creation_month;
 
 -----------------------------
 #KBase staff NARRATIVE COUNTS BY MONTH
-
+#IN METRICS_REPORTING
 CREATE OR REPLACE view metrics_reporting.kb_staff_narrative_counts_by_month as
 select DATE_FORMAT(`initial_save_date`,'%Y-%m') as narrative_creation_month,
 count(*) as kb_staff_narrative_count
@@ -761,7 +767,7 @@ group by narrative_creation_month;
 
 -----------------------------
 #ALL NARRATIVE COUNTS BY MONTH
-
+#IN METRICS_REPORTING
 CREATE OR REPLACE view metrics_reporting.all_narrative_counts_by_month as
 select DATE_FORMAT(`initial_save_date`,'%Y-%m') as narrative_creation_month,
 count(*) as all_narrative_count
@@ -773,7 +779,7 @@ group by narrative_creation_month;
 
 ---------------------------
 #narrative_count_breakdowns_by_month
-
+#IN METRICS_REPORTING
 CREATE OR REPLACE view metrics_reporting.narrative_count_breakdowns_by_month as
 select anc.narrative_creation_month,
 anc.all_narrative_count, 
@@ -792,6 +798,7 @@ RUN TIME STATS OF ALL APPS SUCCESSFUL RUNS
 -----------------------------
 -------------------------------
 #FUNCTION GIT RUN TIME STATS OF SUCCESSFUL RUNS
+#IN METRICS_REPORTING
 create or replace view metrics_reporting.function_git_combo_success_stats as
 select func_name, git_commit_hash, 
 count(run_time) as count, avg(run_time) as avg_run_time, 
@@ -807,6 +814,7 @@ group by func_name, git_commit_hash;
 
 -------------------------------
 #FUNCTION RUN TIME STATS OF SUCCESSFUL RUNS
+#IN METRICS_REPORTING
 create or replace view metrics_reporting.function_success_stats as
 select func_name,
 count(run_time) as count, avg(run_time) as avg_run_time, 
