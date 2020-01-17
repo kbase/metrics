@@ -683,3 +683,137 @@ from metrics.hv_new_apps_git_commit_first_run
 group by first_run_month;
 
 
+---------------------------
+#WORKSPACES MOST RECENT SNAPSHOT
+
+CREATE OR REPLACE VIEW metrics.hv_workspaces_max_date as
+select max(record_date) as record_date, ws_id
+from metrics.workspaces w
+group by ws_id;
+
+CREATE OR REPLACE VIEW metrics_reporting.workspaces_current as
+select ws.*
+from metrics.workspaces ws inner join 
+metrics.hv_workspaces_max_date wsmd
+on ws.ws_id = wsmd.ws_id and 
+ws.record_date = wsmd.record_date;
+
+
+---------------------------
+#WORKSPACES OBJECTS MOST RECENT SNAPSHOT
+
+CREATE OR REPLACE VIEW metrics.hv_workspace_object_counts_max_date as
+select max(record_date) as record_date, object_type_full
+from metrics.workspace_object_counts
+group by object_type_full;
+
+CREATE OR REPLACE VIEW metrics_reporting.workspace_object_counts_current as
+select wsoc.*
+from metrics.workspace_object_counts wsoc inner join 
+metrics.hv_workspace_object_counts_max_date wsmd
+on wsoc.object_type_full = wsmd.object_type_full and 
+wsoc.record_date = wsmd.record_date;
+
+
+---------------------------
+#USERS WORKSPACES OBJECTS MOST RECENT SNAPSHOT
+
+CREATE OR REPLACE VIEW metrics.hv_users_workspace_object_counts_max_date as
+select max(record_date) as record_date, object_type_full
+from metrics.users_workspace_object_counts
+group by object_type_full;
+
+CREATE OR REPLACE VIEW metrics_reporting.users_workspace_object_counts_current as
+select wsoc.*
+from metrics.users_workspace_object_counts wsoc inner join 
+metrics.hv_users_workspace_object_counts_max_date wsmd
+on wsoc.object_type_full = wsmd.object_type_full and 
+wsoc.record_date = wsmd.record_date;
+
+
+
+---------------------------------
+#USERS NARRATIVE COUNTS BY MONTH
+
+CREATE OR REPLACE view metrics_reporting.users_narrative_counts_by_month as
+select DATE_FORMAT(`initial_save_date`,'%Y-%m') as narrative_creation_month,
+count(*) as users_narrative_count
+from metrics_reporting.workspaces_current ws inner join 
+metrics.user_info ui on ws.username = ui.username
+where ui.kb_internal_user = 0
+and ws.is_temporary = 0
+and is_deleted = 0
+group by narrative_creation_month;
+
+-----------------------------
+#KBase staff NARRATIVE COUNTS BY MONTH
+
+CREATE OR REPLACE view metrics_reporting.kb_staff_narrative_counts_by_month as
+select DATE_FORMAT(`initial_save_date`,'%Y-%m') as narrative_creation_month,
+count(*) as kb_staff_narrative_count
+from metrics_reporting.workspaces_current ws inner join 
+metrics.user_info ui on ws.username = ui.username
+where ui.kb_internal_user = 1
+and ws.is_temporary = 0
+and is_deleted = 0
+group by narrative_creation_month;
+
+
+-----------------------------
+#ALL NARRATIVE COUNTS BY MONTH
+
+CREATE OR REPLACE view metrics_reporting.all_narrative_counts_by_month as
+select DATE_FORMAT(`initial_save_date`,'%Y-%m') as narrative_creation_month,
+count(*) as all_narrative_count
+from metrics_reporting.workspaces_current ws 
+where ws.is_temporary = 0
+and is_deleted = 0
+group by narrative_creation_month;
+
+
+---------------------------
+#narrative_count_breakdowns_by_month
+
+CREATE OR REPLACE view metrics_reporting.narrative_count_breakdowns_by_month as
+select anc.narrative_creation_month,
+anc.all_narrative_count, 
+IFNULL(unc.users_narrative_count, 0) as users_narrative_count,
+IFNULL(kbnc.kb_staff_narrative_count, 0) as kb_staff_narrative_count,
+(IFNULL(unc.users_narrative_count, 0)/anc.all_narrative_count) * 100 as pct_users_narrative_counts
+from metrics_reporting.all_narrative_counts_by_month anc 
+left outer join metrics_reporting.users_narrative_counts_by_month unc on
+anc.narrative_creation_month = unc.narrative_creation_month
+left outer join metrics_reporting.kb_staff_narrative_counts_by_month kbnc on
+anc.narrative_creation_month = kbnc.narrative_creation_month;
+
+
+
+RUN TIME STATS OF ALL APPS SUCCESSFUL RUNS
+-----------------------------
+-------------------------------
+#FUNCTION GIT RUN TIME STATS OF SUCCESSFUL RUNS
+create or replace view metrics_reporting.function_git_combo_success_stats as
+select func_name, git_commit_hash, 
+count(run_time) as count, avg(run_time) as avg_run_time, 
+max(run_time) as max_run_time, min(run_time) as min_run_time, 
+stddev(run_time) as run_time_std_dev, 
+max(finish_date) as max_finish_date,
+min(finish_date) as min_finish_date
+from metrics.user_app_usage 
+where is_error = 0 
+group by func_name, git_commit_hash;
+
+
+
+-------------------------------
+#FUNCTION RUN TIME STATS OF SUCCESSFUL RUNS
+create or replace view metrics_reporting.function_success_stats as
+select func_name,
+count(run_time) as count, avg(run_time) as avg_run_time, 
+max(run_time) as max_run_time, min(run_time) as min_run_time, 
+stddev(run_time) as run_time_std_dev, 
+max(finish_date) as max_finish_date,
+min(finish_date) as min_finish_date
+from metrics.user_app_usage 
+where is_error = 0 
+group by func_name;
