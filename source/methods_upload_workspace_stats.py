@@ -99,7 +99,7 @@ def get_public_workspaces(db, workspaces_dict):
             workspaces_dict[record["id"]]["is_public"] = 1
     return workspaces_dict
 
-def get_app_cell_count(wsadmin, narrative_ref):
+def get_app_cell_count(wsadmin, narrative_ref, workspaces_with_app_cell_oddities):
     """
     Gets the number of App Cells in the narrative
     See documentation for WS administer here 
@@ -110,11 +110,16 @@ def get_app_cell_count(wsadmin, narrative_ref):
                               })["infos"][0]
     meta = info[10]
     total_app_cells = 0
+#    print("META: " + str(meta))
     for key in meta:
-        if key.startswith("method"):
-            if(isinstance(meta[key], int)):
+        if key.startswith("method."):
+#            if(isinstance(meta[key], int)):
+            try:
                 total_app_cells += int(meta[key])
-    return total_app_cells
+            except ValueError:
+                workspaces_with_app_cell_oddities.add(narrative_ref)
+                print("META: " + str(meta))
+    return (total_app_cells, workspaces_with_app_cell_oddities)
 
 def get_kbase_staff(db_connection):
     """
@@ -158,6 +163,8 @@ def get_objects(db, workspaces_dict, db_connection):
     #                          "top_lvl_size" : #}}
 
     kbase_staff = get_kbase_staff(db_connection)
+    workspaces_with_app_cell_oddities = set() #keeping track of workspaces with odd metadata where app cell counting fails
+
     
     ###########################
     #few debugging lines to do a smaller set of workspaces.
@@ -221,7 +228,9 @@ def get_objects(db, workspaces_dict, db_connection):
                     if top_level_lookup_dict[obj_id]["del"]:
                         workspaces_dict[ws_id]["visible_app_cells_count"] = 0
                     else:
-                        workspaces_dict[ws_id]["visible_app_cells_count"] = get_app_cell_count(wsadmin,str(ws_id) + "/" + str(obj_id))
+                        (workspaces_dict[ws_id]["visible_app_cells_count"],workspaces_with_app_cell_oddities) = get_app_cell_count(wsadmin,
+                                                                                                                                   str(ws_id) + "/" + str(obj_id),
+                                                                                                                                   workspaces_with_app_cell_oddities)
                 #Get Workspace numbers
                 workspaces_dict[ws_id]["top_lvl_object_count"] += 1
                 if top_level_lookup_dict[obj_id]["hide"]:
@@ -320,6 +329,7 @@ def get_objects(db, workspaces_dict, db_connection):
                     users_object_counts_dict[object_type_full]["public_object_count"] += is_public_flag
                     if is_public_flag == 0:
                         users_object_counts_dict[object_type_full]["private_object_count"] += 1
+    print("WORKSPACES WITH APP CELL COUNT ISSUES : " + str(workspaces_with_app_cell_oddities))
     return (workspaces_dict, object_counts_dict, users_object_counts_dict)
 
         

@@ -825,3 +825,154 @@ min(finish_date) as min_finish_date
 from metrics.user_app_usage 
 where is_error = 0 
 group by func_name;
+
+
+----------------------------------
+# Workspaces monthly sums
+create or replace view metrics_reporting.workspaces_monthly_sums as
+select DATE_FORMAT(`record_date`,'%Y-%m') as record_month,
+count(*) as total_workspaces_count,
+sum(top_lvl_object_count) as top_lvl_object_count,
+sum(total_object_count) as total_object_count,
+sum(visible_app_cells_count) as visible_app_cells_count,
+sum(hidden_object_count) as hidden_object_count,
+sum(deleted_object_count) as deleted_object_count,
+sum(top_lvl_size) as top_lvl_size,
+sum(total_size) as total_size,
+sum(is_public) as public_workspace_count,
+sum(is_temporary) as temporary_workspace_count,
+sum(is_deleted) as deleted_workspace_count,
+sum(number_of_shares) as total_number_of_shares
+from metrics.workspaces
+group by record_month;
+
+
+----------------------------------
+# USERS Narratives monthly sums
+create or replace view metrics_reporting.users_narratives_monthly_sums as
+select DATE_FORMAT(`record_date`,'%Y-%m') as record_month,
+count(*) as total_narratives_count,
+sum(top_lvl_object_count) as top_lvl_object_count,
+sum(total_object_count) as total_object_count,
+sum(visible_app_cells_count) as visible_app_cells_count,
+sum(if(visible_app_cells_count > 0, 1, 0)) as narratives_with_visible_app_cells,
+sum(hidden_object_count) as hidden_object_count,
+sum(deleted_object_count) as deleted_object_count,
+sum(top_lvl_size) as top_lvl_size,
+sum(total_size) as total_size,
+sum(is_public) as public_narratives_count,
+sum(number_of_shares) as total_number_of_shares
+from metrics.workspaces ws inner join
+metrics.user_info ui on ws.username = ui.username
+where is_temporary = 0
+and is_deleted = 0
+and ui.kb_internal_user = 0
+group by record_month;
+
+
+-----------------------------------------
+KBStaff Narratives Monthly Sums
+
+create or replace view metrics_reporting.kbstaff_narratives_monthly_sums as
+select DATE_FORMAT(`record_date`,'%Y-%m') as record_month,
+count(*) as total_narratives_count,
+sum(top_lvl_object_count) as top_lvl_object_count,
+sum(total_object_count) as total_object_count,
+sum(visible_app_cells_count) as visible_app_cells_count,
+sum(if(visible_app_cells_count > 0, 1, 0)) as narratives_with_visible_app_cells,
+sum(hidden_object_count) as hidden_object_count,
+sum(deleted_object_count) as deleted_object_count,
+sum(top_lvl_size) as top_lvl_size,
+sum(total_size) as total_size,
+sum(is_public) as public_narratives_count,
+sum(number_of_shares) as total_number_of_shares
+from metrics.workspaces ws inner join
+metrics.user_info ui on ws.username = ui.username
+where is_temporary = 0
+and is_deleted = 0
+and ui.kb_internal_user = 1
+group by record_month;
+
+
+-----------------------------------
+# Object_counts over time
+
+create or replace view metrics_reporting.workspace_object_counts as
+select DATE_FORMAT(`record_date`,'%Y-%m') as record_month,
+object_type, object_type_full, max(last_mod_date) as last_mod_date, 
+sum(top_lvl_object_count) as top_lvl_object_count,
+sum(total_object_count) as total_object_count,
+sum(public_object_count) as public_object_count,
+sum(private_object_count) as private_object_count,
+sum(hidden_object_count) as hidden_object_count,
+sum(deleted_object_count) as deleted_object_count,
+sum(copy_count) as copy_count,
+sum(top_lvl_size) as top_lvl_size,
+sum(total_size) as total_size,
+max(max_object_size) as max_object_size,
+sum(total_size/total_object_count) as avg_object_size
+from metrics.workspace_object_counts
+group by record_month, object_type, object_type_full;
+
+
+-----------------------------------
+# Users_object_counts over time.
+
+create or replace view metrics_reporting.users_workspace_object_counts as
+select DATE_FORMAT(`record_date`,'%Y-%m') as record_month,
+object_type, object_type_full, max(last_mod_date) as last_mod_date, 
+sum(top_lvl_object_count) as top_lvl_object_count,
+sum(total_object_count) as total_object_count,
+sum(public_object_count) as public_object_count,
+sum(private_object_count) as private_object_count,
+sum(hidden_object_count) as hidden_object_count,
+sum(deleted_object_count) as deleted_object_count,
+sum(copy_count) as copy_count,
+sum(top_lvl_size) as top_lvl_size,
+sum(total_size) as total_size,
+max(max_object_size) as max_object_size,
+sum(total_size/total_object_count) as avg_object_size
+from metrics.users_workspace_object_counts
+group by record_month, object_type, object_type_full;
+
+
+------------------
+# Object_types over time (group by type)
+
+create or replace view metrics_reporting.workspace_object_type_counts as
+select DATE_FORMAT(`record_date`,'%Y-%m') as record_month,
+object_type, max(last_mod_date) as last_mod_date, 
+sum(top_lvl_object_count) as top_lvl_object_count,
+sum(total_object_count) as total_object_count,
+sum(public_object_count) as public_object_count,
+sum(private_object_count) as private_object_count,
+sum(hidden_object_count) as hidden_object_count,
+sum(deleted_object_count) as deleted_object_count,
+sum(copy_count) as copy_count,
+sum(top_lvl_size) as top_lvl_size,
+sum(total_size) as total_size,
+max(max_object_size) as max_object_size,
+sum(total_size/total_object_count) as avg_object_size
+from metrics.workspace_object_counts
+group by record_month, object_type;
+
+
+-------------------
+# USER Object_types over time (group by type)
+
+create or replace view metrics_reporting.users_workspace_object_type_counts as
+select DATE_FORMAT(`record_date`,'%Y-%m') as record_month,
+object_type, max(last_mod_date) as last_mod_date, 
+sum(top_lvl_object_count) as top_lvl_object_count,
+sum(total_object_count) as total_object_count,
+sum(public_object_count) as public_object_count,
+sum(private_object_count) as private_object_count,
+sum(hidden_object_count) as hidden_object_count,
+sum(deleted_object_count) as deleted_object_count,
+sum(copy_count) as copy_count,
+sum(top_lvl_size) as top_lvl_size,
+sum(total_size) as total_size,
+max(max_object_size) as max_object_size,
+sum(total_size/total_object_count) as avg_object_size
+from metrics.users_workspace_object_counts
+group by record_month, object_type;
