@@ -314,7 +314,7 @@ from metrics.user_app_usage ua
 inner join metrics.user_info ui on
 ua.username = ui.username 
 where ui.kb_internal_user = False
-and ui.exclude = False;
+ßand ui.exclude = False;
 
 #IN METRICS
 create or replace view metrics.hv_number_nonKB_users_using_function as
@@ -843,7 +843,8 @@ sum(total_size) as total_size,
 sum(is_public) as public_workspace_count,
 sum(is_temporary) as temporary_workspace_count,
 sum(is_deleted) as deleted_workspace_count,
-sum(number_of_shares) as total_number_of_shares
+sum(number_of_shares) as total_number_of_shares,
+sum(if(number_of_shares > 0, 1, 0)) as workspaces_with_shares
 from metrics.workspaces
 group by record_month;
 
@@ -868,7 +869,8 @@ sum(deleted_object_count) as deleted_object_count,
 sum(top_lvl_size) as top_lvl_size,
 sum(total_size) as total_size,
 sum(is_public) as public_narratives_count,
-sum(number_of_shares) as total_number_of_shares
+sum(number_of_shares) as total_number_of_shares,
+sum(if(number_of_shares > 0, 1, 0)) as narratives_with_shares
 from metrics.workspaces ws inner join
 metrics.user_info ui on ws.username = ui.username
 where is_temporary = 0
@@ -897,7 +899,8 @@ sum(deleted_object_count) as deleted_object_count,
 sum(top_lvl_size) as top_lvl_size,
 sum(total_size) as total_size,
 sum(is_public) as public_narratives_count,
-sum(number_of_shares) as total_number_of_shares
+sum(number_of_shares) as total_number_of_shares,
+sum(if(number_of_shares > 0, 1, 0)) as narratives_with_shares
 from metrics.workspaces ws inner join
 metrics.user_info ui on ws.username = ui.username
 where is_temporary = 0
