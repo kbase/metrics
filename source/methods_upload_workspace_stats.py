@@ -48,6 +48,7 @@ def get_workspaces(db):
                                              "top_lvl_object_count" : 0,
                                              "total_object_count" : 0,
                                              "visible_app_cells_count" : 0,
+                                             "code_cells_count" : 0,
                                              "narrative_version" : 0,
                                              "hidden_object_count" : 0,
                                              "deleted_object_count" : 0,
@@ -99,12 +100,14 @@ def get_public_workspaces(db, workspaces_dict):
             workspaces_dict[record["id"]]["is_public"] = 1
     return workspaces_dict
 
+
+""" OLD FOR APP CELL COUNTING NOW HANDLED BY NEW FUNCTION
 def get_app_cell_count(wsadmin, narrative_ref, workspaces_with_app_cell_oddities):
-    """
+#
     Gets the number of App Cells in the narrative
     See documentation for WS administer here 
     https://github.com/kbase/workspace_deluxe/blob/02217e4d63da8442d9eed6611aaa790f173de58e/docsource/administrationinterface.rst
-    """
+#
     info = wsadmin.administer({'command': "getObjectInfo",
                                'params':  {"objects": [{"ref": narrative_ref}], "includeMetadata": 1}
                               })["infos"][0]
@@ -120,6 +123,25 @@ def get_app_cell_count(wsadmin, narrative_ref, workspaces_with_app_cell_oddities
                 workspaces_with_app_cell_oddities.add(narrative_ref)
                 print("META: " + str(meta))
     return (total_app_cells, workspaces_with_app_cell_oddities)
+"""
+
+def get_narrative_cell_counts(wsadmin, narrative_ref):
+    """
+    Gets the number of App Cells and Code Cells in the narrative
+    See documentation for WS administer here
+    https://github.com/kbase/workspace_deluxe/blob/02217e4d63da8442d9eed6611aaa790f173de58e/docsource/administrationinterface.rst
+    """
+    nar_obj = wsadmin.administer({'command': "getObjects",
+                                  'params':  {"objects": [{"ref": narrative_ref}]}})["data"][0]["data"]
+    app_count = 0
+    code_count = 0
+    if "cells" in nar_obj:
+        for cell in nar_obj["cells"]:
+            if(cell["metadata"].get("kbase", {}).get("type") == "app"):
+                app_count += 1
+            elif(cell["metadata"].get("kbase", {}).get("type") == "code"):
+                code_count += 1
+    return(app_count, code_count)
 
 def get_kbase_staff(db_connection):
     """
@@ -228,9 +250,12 @@ def get_objects(db, workspaces_dict, db_connection):
                     if top_level_lookup_dict[obj_id]["del"]:
                         workspaces_dict[ws_id]["visible_app_cells_count"] = 0
                     else:
-                        (workspaces_dict[ws_id]["visible_app_cells_count"],workspaces_with_app_cell_oddities) = get_app_cell_count(wsadmin,
-                                                                                                                                   str(ws_id) + "/" + str(obj_id),
-                                                                                                                                   workspaces_with_app_cell_oddities)
+#                        (workspaces_dict[ws_id]["visible_app_cells_count"],workspaces_with_app_cell_oddities) = get_app_cell_count(wsadmin,
+#                                                                                                                                   str(ws_id) + "/" + str(obj_id),
+#                                                                                                                                   workspaces_with_app_cell_oddities)
+                        (workspaces_dict[ws_id]["visible_app_cells_count"],workspaces_dict[ws_id]["code_cells_count"]) = get_narrative_cell_counts(wsadmin,
+                                                                                                                                   str(ws_id) + "/" + str(obj_id))
+
                 #Get Workspace numbers
                 workspaces_dict[ws_id]["top_lvl_object_count"] += 1
                 if top_level_lookup_dict[obj_id]["hide"]:
@@ -387,18 +412,19 @@ def upload_workspace_stats():
     workspaces_insert_statement = "insert into metrics.workspaces "\
                                   "(ws_id, username, mod_date, initial_save_date, record_date, "\
                                   "top_lvl_object_count, total_object_count, "\
-                                  "visible_app_cells_count, narrative_version, "\
+                                  "visible_app_cells_count, code_cells_count, narrative_version, "\
                                   "hidden_object_count, deleted_object_count, "\
                                   "total_size, top_lvl_size, is_public, "\
                                   "is_temporary, is_deleted, number_of_shares) "\
-                                  "values(%s,%s, %s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+                                  "values(%s,%s, %s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
 
     for ws_id in sorted(workspaces_dict.keys()):
         print("PROCESSING WS: " + str(ws_id) + "  USERNAME: " + workspaces_dict[ws_id]['username'])
         input = (ws_id, workspaces_dict[ws_id]['username'], workspaces_dict[ws_id]['mod_date'],
                  workspaces_dict[ws_id]['initial_save_date'],
                  workspaces_dict[ws_id]['top_lvl_object_count'], workspaces_dict[ws_id]['total_object_count'],
-                 workspaces_dict[ws_id]['visible_app_cells_count'], workspaces_dict[ws_id]['narrative_version'],
+                 workspaces_dict[ws_id]['visible_app_cells_count'],workspaces_dict[ws_id]['code_cells_count'],
+                 workspaces_dict[ws_id]['narrative_version'],
                  workspaces_dict[ws_id]['hidden_object_count'], workspaces_dict[ws_id]['deleted_object_count'],
                  workspaces_dict[ws_id]['total_size'], workspaces_dict[ws_id]['top_lvl_size'], workspaces_dict[ws_id]['is_public'],
                  workspaces_dict[ws_id]['is_temporary'], workspaces_dict[ws_id]['is_deleted'], workspaces_dict[ws_id]['number_of_shares'])
