@@ -131,17 +131,31 @@ def get_narrative_cell_counts(wsadmin, narrative_ref):
     See documentation for WS administer here
     https://github.com/kbase/workspace_deluxe/blob/02217e4d63da8442d9eed6611aaa790f173de58e/docsource/administrationinterface.rst
     """
-    nar_obj = wsadmin.administer({'command': "getObjects",
-                                  'params':  {"objects": [{"ref": narrative_ref}]}})["data"][0]["data"]
     app_count = 0
     code_count = 0
-    if "cells" in nar_obj:
-        for cell in nar_obj["cells"]:
-            if(cell["metadata"].get("kbase", {}).get("type") == "app"):
-                app_count += 1
-            elif(cell["metadata"].get("kbase", {}).get("type") == "code"):
-                code_count += 1
-    return(app_count, code_count)
+    is_suspect = 0
+    try:
+        nar_obj = wsadmin.administer({'command': "getObjects",
+                                      'params':  {"objects": [{"ref": narrative_ref}]}})["data"][0]["data"]
+
+        if "cells" in nar_obj:
+            for cell in nar_obj["cells"]:
+                if(cell["metadata"].get("kbase", {}).get("type") == "app"):
+                    app_count += 1
+                elif(cell["metadata"].get("kbase", {}).get("type") == "code"):
+                    code_count += 1
+        return(app_count, code_count, is_suspect)
+    except:
+        # Shock node is suspect
+        is_suspect = 1
+        print("Narrative Ref : " + narrative_ref + " has a shock node issue")
+        #try running on the previous version of the narrative if exists
+        #if previous version does not exist return zeros 
+        (ws_id, obj_id, obj_ver) = narrative_ref.split("/") 
+        if int(obj_ver) > 1:
+            new_ref = ws_id + "/" + obj_id + "/" + str(int(obj_ver) - 1)
+            (app_count, code_count, dummy) = get_narrative_cell_counts(wsadmin, new_ref)
+        return(app_count, code_count, is_suspect)
 
 def get_kbase_staff(db_connection):
     """
@@ -185,8 +199,8 @@ def get_objects(db, workspaces_dict, db_connection):
     #                          "top_lvl_size" : #}}
 
     kbase_staff = get_kbase_staff(db_connection)
-    workspaces_with_app_cell_oddities = set() #keeping track of workspaces with odd metadata where app cell counting fails
-
+#    workspaces_with_app_cell_oddities = set() #keeping track of workspaces with odd metadata where app cell counting fails
+    narrative_refs_with_shock_node_issues = set() #keep track of narrative refs with shocknode issues to keep track of later.
     
     ###########################
     #few debugging lines to do a smaller set of workspaces.
@@ -202,6 +216,7 @@ def get_objects(db, workspaces_dict, db_connection):
 #    temp_dict = dict()
 #    temp_dict[49114] = workspaces_dict[49114]
 #    temp_dict[3] = workspaces_dict[3]
+#    temp_dict[5009] = workspaces_dict[5009]
 #    temp_dict[1000] = workspaces_dict[1000]
 #    temp_dict[53462] = workspaces_dict[53462]
 #    temp_dict[324] = workspaces_dict[324]        
@@ -249,13 +264,17 @@ def get_objects(db, workspaces_dict, db_connection):
                     workspaces_dict[ws_id]["narrative_version"] = obj_ver
                     if top_level_lookup_dict[obj_id]["del"]:
                         workspaces_dict[ws_id]["visible_app_cells_count"] = 0
-                    else:
+                        workspaces_dict[ws_id]["code_cells_count"] = 0
+#                    else:
 #                        (workspaces_dict[ws_id]["visible_app_cells_count"],workspaces_with_app_cell_oddities) = get_app_cell_count(wsadmin,
 #                                                                                                                                   str(ws_id) + "/" + str(obj_id),
 #                                                                                                                                   workspaces_with_app_cell_oddities)
-                        (workspaces_dict[ws_id]["visible_app_cells_count"],workspaces_dict[ws_id]["code_cells_count"]) = get_narrative_cell_counts(wsadmin,
-                                                                                                                                   str(ws_id) + "/" + str(obj_id))
-
+                    else:
+                        (workspaces_dict[ws_id]["visible_app_cells_count"], workspaces_dict[ws_id]["code_cells_count"], is_suspect) = \
+                            get_narrative_cell_counts(wsadmin, str(ws_id) + "/" + str(obj_id) + "/" + str(obj_ver))
+                        if is_suspect == 1:
+                            narrative_refs_with_shock_node_issues.add(str(ws_id) + "/" + str(obj_id) + "/" + str(obj_ver))
+                    
                 #Get Workspace numbers
                 workspaces_dict[ws_id]["top_lvl_object_count"] += 1
                 if top_level_lookup_dict[obj_id]["hide"]:
@@ -354,8 +373,7 @@ def get_objects(db, workspaces_dict, db_connection):
                     users_object_counts_dict[object_type_full]["public_object_count"] += is_public_flag
                     if is_public_flag == 0:
                         users_object_counts_dict[object_type_full]["private_object_count"] += 1
-    print("WORKSPACES WITH APP CELL COUNT ISSUES : " + str(workspaces_with_app_cell_oddities))
-    return (workspaces_dict, object_counts_dict, users_object_counts_dict)
+    return (workspaces_dict, object_counts_dict, users_object_counts_dict, narrative_refs_with_shock_node_issues)
 
         
 def upload_workspace_stats():
@@ -396,9 +414,11 @@ def upload_workspace_stats():
     db = client.workspace
 
     workspaces_dict = get_workspaces(db)
+    get_ws_top_info_time = time.time() - start_time
     workspaces_dict = get_workspace_shares(db, workspaces_dict)
     workspaces_dict = get_public_workspaces(db, workspaces_dict)
-    (workspaces_dict, object_counts_dict, users_object_counts_dict) = get_objects(db, workspaces_dict, db_connection)
+    (workspaces_dict, object_counts_dict, users_object_counts_dict, narrative_refs_with_shock_node_issues) = \
+                                                                    get_objects(db, workspaces_dict, db_connection)
     print("TOTAL WS Number : " + str(len(workspaces_dict)))
     gather_time = time.time() - start_time
     print("--- gather data %s seconds ---" % (gather_time))
@@ -419,7 +439,7 @@ def upload_workspace_stats():
                                   "values(%s,%s, %s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
 
     for ws_id in sorted(workspaces_dict.keys()):
-        print("PROCESSING WS: " + str(ws_id) + "  USERNAME: " + workspaces_dict[ws_id]['username'])
+#        print("PROCESSING WS: " + str(ws_id) + "  USERNAME: " + workspaces_dict[ws_id]['username'])
         input = (ws_id, workspaces_dict[ws_id]['username'], workspaces_dict[ws_id]['mod_date'],
                  workspaces_dict[ws_id]['initial_save_date'],
                  workspaces_dict[ws_id]['top_lvl_object_count'], workspaces_dict[ws_id]['total_object_count'],
@@ -430,7 +450,9 @@ def upload_workspace_stats():
                  workspaces_dict[ws_id]['is_temporary'], workspaces_dict[ws_id]['is_deleted'], workspaces_dict[ws_id]['number_of_shares'])
         prep_cursor.execute(workspaces_insert_statement,input)
 
+        
     print("TOTAL WS Number : " + str(len(workspaces_dict)))
+    print("--- get ws top info time took %s seconds ---" % (get_ws_top_info_time))
     print("--- gather data %s seconds ---" % (gather_time))
         
     workspace_time = time.time() - (gather_time + start_time)
@@ -445,6 +467,7 @@ def upload_workspace_stats():
                                   "hidden_object_count, deleted_object_count, copy_count, "\
                                   "total_size, top_lvl_size, max_object_size) "\
                                   "values(%s,%s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+    #print("OBJECT COUNTS DICT : " + str(object_counts_dict)) 
     for obj_full in sorted(object_counts_dict):
         obj_input = (object_counts_dict[obj_full]["object_type"],object_counts_dict[obj_full]["object_spec_version"],
                      obj_full, object_counts_dict[obj_full]["last_mod_date"], 
@@ -457,7 +480,7 @@ def upload_workspace_stats():
 
     object_time = time.time() - (workspace_time + gather_time + start_time)
     print("--- object counts uploading %s seconds ---" % (object_time))
-
+    
     #USERS_OBJECT COUNTS UPLOADING
     prep_cursor_obj = db_connection.cursor(prepared=True)
     users_obj_counts_insert_statement = "insert into metrics.users_workspace_object_counts "\
@@ -468,18 +491,68 @@ def upload_workspace_stats():
                                         "total_size, top_lvl_size, max_object_size) "\
                                         "values(%s,%s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
     for obj_full in sorted(users_object_counts_dict):
-        users_obj_input = (users_object_counts_dict[obj_full]["object_type"],users_object_counts_dict[obj_full]["object_spec_version"],
+        users_obj_input = (users_object_counts_dict[obj_full]["object_type"],
+                           users_object_counts_dict[obj_full]["object_spec_version"],
                            obj_full, users_object_counts_dict[obj_full]["last_mod_date"],
-                           users_object_counts_dict[obj_full]["top_lvl_object_count"], users_object_counts_dict[obj_full]["total_object_count"],
-                           users_object_counts_dict[obj_full]["public_object_count"], users_object_counts_dict[obj_full]["private_object_count"],
-                           users_object_counts_dict[obj_full]["hidden_object_count"], users_object_counts_dict[obj_full]["deleted_object_count"],
-                           users_object_counts_dict[obj_full]["copy_count"], users_object_counts_dict[obj_full]["total_size"],
-                           users_object_counts_dict[obj_full]["top_lvl_size"], users_object_counts_dict[obj_full]["max_object_size"])
+                           users_object_counts_dict[obj_full]["top_lvl_object_count"],
+                           users_object_counts_dict[obj_full]["total_object_count"],
+                           users_object_counts_dict[obj_full]["public_object_count"],
+                           users_object_counts_dict[obj_full]["private_object_count"],
+                           users_object_counts_dict[obj_full]["hidden_object_count"],
+                           users_object_counts_dict[obj_full]["deleted_object_count"],
+                           users_object_counts_dict[obj_full]["copy_count"],
+                           users_object_counts_dict[obj_full]["total_size"],
+                           users_object_counts_dict[obj_full]["top_lvl_size"],
+                           users_object_counts_dict[obj_full]["max_object_size"])
         prep_cursor.execute(users_obj_counts_insert_statement,users_obj_input)
 
     users_object_time = time.time() - (workspace_time + gather_time + start_time + object_time)
     print("--- users object counts uploading %s seconds ---" % (users_object_time))
-    
+
+    #SUSPECT SHOCK NODE INSERTING/UPDATING
+    #If exists, update the last_seen_date
+    #If does not exist make a new record.
+    # query to see if it exists
+    prep_cursor_ssn_exists = db_connection.cursor(prepared=True)
+    ssn_exists_query = "select count(*) from metrics.suspect_shock_nodes "\
+                       "where ws_obj_reference = %s and shock_node = %s"
+
+    # query_to_update suspect_shock_nodes
+    prep_cursor_ssn_update = db_connection.cursor(prepared=True)
+    suspect_shock_node_update_statement = "update metrics.suspect_shock_nodes "\
+                                          "set last_seen_date = now() "\
+                                          "where ws_obj_reference = %s and shock_node = %s;"
+
+    # query_to_insert suspect_shock_nodes
+    prep_cursor_ssn_insert = db_connection.cursor(prepared=True)
+    suspect_shock_node_insert_statement = "insert into metrics.suspect_shock_nodes "\
+                                          "(ws_obj_reference, shock_node, "\
+                                          "first_seen_date, last_seen_date, ws_id) "\
+                                          "values(%s,%s, now(), now(), %s);"
+
+#    print("narrative_refs_with_shock_node_issues : " + str(narrative_refs_with_shock_node_issues))
+    for nar_ref in narrative_refs_with_shock_node_issues:
+#        print("IN SHOCK NODES ISSUES : " + nar_ref)
+        (ws_id, nar_id, nar_version) = nar_ref.split("/")
+        chksum_cursor = db.workspaceObjVersions.find({"ws":int(ws_id),"id":int(nar_id),"ver":int(nar_version)},{"chksum":1,"_id":0})
+        chksum = None
+        for chksum_arr in chksum_cursor:
+            chksum = chksum_arr["chksum"]
+        node_cursor =db.shock_nodeMap.find({"chksum":chksum},{"node":1,"_id":0})
+        node = None
+        for node_arr in node_cursor:
+            node = node_arr["node"]
+
+        #check if nar_ref_node combo exists:
+        prep_cursor_ssn_exists.execute(ssn_exists_query,(nar_ref, node))
+        exists_count_arr = prep_cursor_ssn_exists.fetchone()
+        if exists_count_arr[0] == 0:
+            #means a new problem narrative/node needs an insert
+            prep_cursor_ssn_insert.execute(suspect_shock_node_insert_statement,(nar_ref, node, int(ws_id)))
+        else:
+            #means the nar_ref node existed . Update the last seen date.
+            prep_cursor_ssn_insert.execute(suspect_shock_node_update_statement,(nar_ref, node))
+         
     db_connection.commit()
 
 #upload_workspace_stats()

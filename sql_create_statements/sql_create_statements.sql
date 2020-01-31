@@ -322,3 +322,19 @@ CREATE INDEX idx_uworkspace_object_counts_tloc ON metrics.users_workspace_object
 CREATE INDEX idx_uworkspace_object_counts_puoc ON metrics.users_workspace_object_counts (public_object_count);
 
 CREATE INDEX idx_uworkspace_object_counts_proc ON metrics.users_workspace_object_counts (private_object_count);
+
+
+##################################################
+# Suspect shock nodes (initially for narratives, may have other objects down the line)
+
+CREATE OR REPLACE TABLE `suspect_shock_nodes` (
+  `ws_obj_reference` varchar(255) NOT NULL,
+  `shock_node` varchar(255) NOT NULL,
+  `first_seen_date` date NOT NULL,
+  `last_seen_date` date NOT NULL,
+  `ws_id` int(11) NOT NULL,  
+  UNIQUE KEY `uk_wsref_node_ssn` (`ws_obj_reference`,`shock_node`),
+  KEY `idx_ssn_fsd` (`first_seen_date`),
+  KEY `idx_ssn_lsd` (`last_seen_date`),
+  KEY `idx_ssn_wsid` (`ws_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
