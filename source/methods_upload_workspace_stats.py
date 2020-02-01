@@ -421,7 +421,7 @@ def upload_workspace_stats():
                                                                     get_objects(db, workspaces_dict, db_connection)
     print("TOTAL WS Number : " + str(len(workspaces_dict)))
     gather_time = time.time() - start_time
-    print("--- gather data %s seconds ---" % (gather_time))
+#    print("--- gather data %s seconds ---" % (gather_time))
 #    print("WORKSPACE DICT : ")
 #    pp.pprint(workspaces_dict)
 #    print("OBJECT COUNTS DICT : ")
