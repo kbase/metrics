@@ -24,7 +24,8 @@ def get_workspaces(db_connection):
             "is_deleted, is_public "\
             "from metrics_reporting.workspaces_current ws "\
             "inner join metrics.user_info ui on ws.username = ui.username "\
-            "where ui.kb_internal_user = 0 and ws.number_of_shares > 0;"
+            "where ui.kb_internal_user = 0 and ws.number_of_shares > 0 "\
+            "and narrative_version > 0;"
     cursor.execute(query)
     for (record) in cursor:
         workspaces_dict[record[0]] = {"username" : record[1],
