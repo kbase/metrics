@@ -105,7 +105,7 @@ def get_workspace_share_details():
     ################
     header_line = "Narrative ID\tOwner\tCreation Date\tLast Modified\tis_deleted\tis_public"
     for i in range(max_shared_count):
-        header_line += "\tShared_person_{}\tShare_Type_{}\tis_KB_Staff_{}".format(str(i),str(i),str(i))
+        header_line += "\tShared_person_{}\tShare_Type_{}\tis_KB_Staff_{}".format(str(i+1),str(i+1),str(i+1))
     print(header_line)
 
     ###############
