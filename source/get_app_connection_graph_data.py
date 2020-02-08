@@ -28,8 +28,8 @@ def get_workspaces(db_connection):
             "is_deleted, is_public "\
             "from metrics_reporting.workspaces_current ws "\
             "inner join metrics.user_info ui on ws.username = ui.username "\
-            "where narrative_version > 0;"
-            #"and ui.kb_internal_user = 0;"
+            "where ws.narrative_version > 0 and ws.is_deleted = 0 "\
+            "and ui.kb_internal_user = 0;"
 
     cursor.execute(query)
     for (record) in cursor:
@@ -39,9 +39,22 @@ def get_workspaces(db_connection):
                                       "is_deleted" : record[4],
                                       "is_public" : record[5],
                                       "apps_list" : list()}
-    return workspaces_dict
 
-def get_app_connection_data(workspaces_dict):
+    # App category mappings
+    app_category_lookup = dict() #key app name, value concatenated categories ";" separated
+    query = "select app_name, app_category from app_name_category_map order by app_name, app_category;"
+    cursor.execute(query)
+    previous_app_name = ""
+    for (record) in cursor:
+        if previous_app_name != record[0]:
+            previous_app_name = record[0]    
+            app_category_lookup[record[0]] = record[1]
+        else:
+            app_category_lookup[record[0]] = app_category_lookup[record[0]] + ";" + record[1]
+    print
+    return (workspaces_dict,app_category_lookup)
+
+def get_app_connection_data(workspaces_dict, app_category_lookup):
     """
     Gets the apps that have been run and their count in the narrative, builds up the app_list.
     See documentation for WS administer here
@@ -50,7 +63,9 @@ def get_app_connection_data(workspaces_dict):
     wsadmin = Workspace(ws_url, token=ws_user_token)
     max_app_count = 0
     for ws_id in workspaces_dict:
-#        ws_info = wsadmin.get_workspace_info({"id": str(ws_id)})
+        if workspaces_dict[ws_id]["is_deleted"] == 1:
+            continue
+            #deleted workspaces do not have these objects to look at
         ws_info = wsadmin.administer({'command': "getWorkspaceInfo",
                                        'params':  {"id": str(ws_id)}})
         ws_info_dict = ws_info[8]
@@ -74,7 +89,11 @@ def get_app_connection_data(workspaces_dict):
             if len(app_dict) > max_app_count:
                max_app_count = len(app_dict)
             for app_name in sorted(app_dict):
+                app_categories = ""
+                if app_name in app_category_lookup:
+                    app_categories = app_category_lookup[app_name]
                 workspaces_dict[ws_id]["apps_list"].append(app_name)
+                workspaces_dict[ws_id]["apps_list"].append(app_categories)
                 workspaces_dict[ws_id]["apps_list"].append(str(app_dict[app_name]))
     return(workspaces_dict,max_app_count)
                     
@@ -96,21 +115,21 @@ def get_app_connection_graph_data():
     query = "use "+query_on
     cursor.execute(query)
     
-    workspaces_dict = get_workspaces(db_connection)
-    temp_dict = dict()
-    temp_dict[49114] = workspaces_dict[49114]
-    temp_dict[51672] = workspaces_dict[51672]
-    workspaces_dict.clear()
-    workspaces_dict = temp_dict
+    (workspaces_dict,app_category_lookup) = get_workspaces(db_connection)
+#    temp_dict = dict()
+#    temp_dict[49114] = workspaces_dict[49114]
+#    temp_dict[51672] = workspaces_dict[51672]
+#    workspaces_dict.clear()
+#    workspaces_dict = temp_dict
     
-    (workspaces_dict,max_app_count) = get_app_connection_data(workspaces_dict)
+    (workspaces_dict,max_app_count) = get_app_connection_data(workspaces_dict,app_category_lookup)
 
     ################
     # Print the header line:
     ################
     header_line = "Narrative ID\tOwner\tCreation Date\tLast Modified\tis_deleted\tis_public"
     for i in range(max_app_count):
-        header_line += "\tApp_Name_{}\tApp_Count_{}".format(str(i+1),str(i+1))
+        header_line += "\tApp_Name_{}\tApp_Categories_{}\tApp_Count_{}".format(str(i+1),str(i+1),str(i+1))
     print(header_line)
 
     ###############
