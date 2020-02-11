@@ -69,6 +69,31 @@ delimiter ;
 ######################
 #user_app_usage
 
+
+CREATE TABLE `user_app_usage` (
+  `job_id` varchar(255) DEFAULT NULL,
+  `username` varchar(255) NOT NULL,
+  `app_name` varchar(255) DEFAULT NULL,
+  `start_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `finish_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `run_time` int(11) NOT NULL,
+  `queue_time` int(11) NOT NULL,
+  `is_error` tinyint(1) NOT NULL DEFAULT '0',
+  `git_commit_hash` varchar(255) NOT NULL,
+  `func_name` varchar(255) DEFAULT NULL,
+  UNIQUE KEY `uk_jobid_user_app_usage` (`job_id`),
+  KEY `idx_user_app_usage_job_id` (`job_id`),
+  KEY `idx_user_app_usage_username` (`username`),
+  KEY `idx_user_app_usage_app_name` (`app_name`),
+  KEY `idx_user_app_usage_start_date` (`start_date`),
+  KEY `idx_user_app_usage_finish_date` (`finish_date`),
+  KEY `idx_user_app_usage_is_error` (`is_error`),
+  KEY `idx_user_app_usage_git_commit_hash` (`git_commit_hash`),
+  KEY `idx_user_app_usage_func_name` (`func_name`),
+  CONSTRAINT `fk_app_usage_username` FOREIGN KEY (`username`) REFERENCES `user_info` (`username`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+
 CREATE TABLE user_app_usage (
         job_id VARCHAR(255),
         username VARCHAR(255) NOT NULL,

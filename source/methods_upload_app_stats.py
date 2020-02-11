@@ -84,8 +84,8 @@ def upload_user_app_stats(start_date=None, end_date=None):
     user_app_insert_statement = "insert into user_app_usage " \
                                 "(job_id, username, app_name, "\
                                 "start_date, finish_date, "\
-                                "run_time, is_error, git_commit_hash, func_name) " \
-                                "values(%s,%s,%s,FROM_UNIXTIME(%s),FROM_UNIXTIME(%s),%s,%s,%s,%s);"
+                                "run_time, queue_time, is_error, git_commit_hash, func_name) " \
+                                "values(%s,%s,%s,FROM_UNIXTIME(%s),FROM_UNIXTIME(%s),%s,%s,%s,%s,%s);"
 
     check_if_first_run = "select count(*) from user_app_usage"
     cursor.execute(check_if_first_run)
@@ -101,6 +101,7 @@ def upload_user_app_stats(start_date=None, end_date=None):
                                     "and start_date = FROM_UNIXTIME(%s) " \
                                     "and finish_date = FROM_UNIXTIME(%s) " \
                                     "and run_time = %s " \
+                                    "and queue_time = %s " \
                                     "and is_error = %s " \
                                     "and git_commit_hash = %s " \
                                     "and func_name = %s " 
@@ -112,6 +113,7 @@ def upload_user_app_stats(start_date=None, end_date=None):
                                                 "and start_date = FROM_UNIXTIME(%s) " \
                                                 "and finish_date = FROM_UNIXTIME(%s) " \
                                                 "and run_time = %s " \
+                                                "and queue_time = %s " \
                                                 "and is_error = %s " \
                                                 "and git_commit_hash = %s " \
                                                 "and func_name = %s "
@@ -128,7 +130,9 @@ def upload_user_app_stats(start_date=None, end_date=None):
             is_error = True
         input = [record.get('job_id'),record['user_id'], 
                  helper_concatenation(record["app_module_name"], record["app_id"]),
-                 round(record['exec_start_time']), round(record['finish_time']), round((record['finish_time'] - record['exec_start_time'])),
+                 round(record['exec_start_time']), round(record['finish_time']),
+                 round((record['finish_time'] - record['exec_start_time'])),
+                 round((record['exec_start_time'] - record['creation_time'])),
                  is_error, record['git_commit_hash'], helper_concatenation(record["func_module_name"], record["func_name"])]
         #if not doing clean wiped insert, check for duplicates with job_id is null (some with app_name is Null)
         if 'job_id' not in record:
