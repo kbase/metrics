@@ -28,7 +28,7 @@ def get_workspaces(db_connection):
             "is_deleted, is_public "\
             "from metrics_reporting.workspaces_current ws "\
             "inner join metrics.user_info ui on ws.username = ui.username "\
-            "where ws.narrative_version > 0 and ws.is_deleted = 0 "\
+            "where ws.narrative_version > 0  "\
             "and ui.kb_internal_user = 0;"
 
     cursor.execute(query)
@@ -66,35 +66,42 @@ def get_app_connection_data(workspaces_dict, app_category_lookup):
         if workspaces_dict[ws_id]["is_deleted"] == 1:
             continue
             #deleted workspaces do not have these objects to look at
-        ws_info = wsadmin.administer({'command': "getWorkspaceInfo",
-                                       'params':  {"id": str(ws_id)}})
-        ws_info_dict = ws_info[8]
-        narr_obj_id = None
-        if "narrative" in ws_info_dict:
-            narr_obj_id = ws_info_dict["narrative"]
-            narrative_ref = str(ws_id) + "/" + str(narr_obj_id)
-            info = wsadmin.administer({'command': "getObjectInfo",
-                                       'params':  {"objects": [{"ref": narrative_ref}], "includeMetadata": 1}
-            })["infos"][0]
-            meta = info[10]
-            app_dict = dict() #keeps track of dicts so we can add apps together with differeny git commit hashes
-            for key in meta:
-                #NEEDS THE period after method. There is anothe key called "method"
-                if key.startswith("method."):
-                    app_name = key[7:]
-                    app_name = app_name.rsplit("/",1)[0]
-                    if app_name not in app_dict:
-                        app_dict[app_name] = 0
-                    app_dict[app_name] +=  int(meta[key])
-            if len(app_dict) > max_app_count:
-               max_app_count = len(app_dict)
-            for app_name in sorted(app_dict):
-                app_categories = ""
-                if app_name in app_category_lookup:
-                    app_categories = app_category_lookup[app_name]
-                workspaces_dict[ws_id]["apps_list"].append(app_name)
-                workspaces_dict[ws_id]["apps_list"].append(app_categories)
-                workspaces_dict[ws_id]["apps_list"].append(str(app_dict[app_name]))
+            #because this is first of the month set field can change.
+        try:
+            ws_info = wsadmin.administer({'command': "getWorkspaceInfo",
+                                          'params':  {"id": str(ws_id)}})
+            ws_info_dict = ws_info[8]
+            narr_obj_id = None
+            if "narrative" in ws_info_dict:
+                narr_obj_id = ws_info_dict["narrative"]
+                narrative_ref = str(ws_id) + "/" + str(narr_obj_id)
+                info = wsadmin.administer({'command': "getObjectInfo",
+                                           'params':  {"objects": [{"ref": narrative_ref}], "includeMetadata": 1}
+                })["infos"][0]
+                meta = info[10]
+                app_dict = dict() #keeps track of dicts so we can add apps together with differeny git commit hashes
+                for key in meta:
+                    #NEEDS THE period after method. There is anothe key called "method"
+                    if key.startswith("method."):
+                        app_name = key[7:]
+                        app_name = app_name.rsplit("/",1)[0]
+                        if app_name not in app_dict:
+                            app_dict[app_name] = 0
+                        app_dict[app_name] +=  int(meta[key])
+                if len(app_dict) > max_app_count:
+                    max_app_count = len(app_dict)
+                for app_name in sorted(app_dict):
+                    app_categories = ""
+                    if app_name in app_category_lookup:
+                        app_categories = app_category_lookup[app_name]
+                    workspaces_dict[ws_id]["apps_list"].append(app_name)
+                    workspaces_dict[ws_id]["apps_list"].append(app_categories)
+                    workspaces_dict[ws_id]["apps_list"].append(str(app_dict[app_name]))
+        except:
+            # means the workspace was likely deleted since the monthly run.
+            workspaces_dict[ws_id]["is_deleted"] = 1
+            continue
+                
     return(workspaces_dict,max_app_count)
                     
 
