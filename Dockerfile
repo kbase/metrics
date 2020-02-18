@@ -1,6 +1,6 @@
 FROM kbase/narrative:latest as narrative
 
-FROM python:3.7-slim
+FROM python:3.6-slim
 
 # Build arguments passed into the docker command for image metadata
 ARG BUILD_DATE
@@ -18,12 +18,14 @@ RUN mkdir -p /kb/runtime
 # but kind of guarantees that anything that runs in a narrative python setup
 # will run here as well
 COPY --from=narrative /kb/runtime/lib /kb/runtime/lib
+COPY --from=narrative /kb/dev_container/narrative/src/dist/biokbase-0.0.1-py3.6.egg /tmp/biokbase-0.0.1-py3.6.egg
 
 COPY bin /root/bin
 RUN cd /root/bin && \
     wget https://github.com/kbase/dockerize/raw/master/dockerize-linux-amd64-v0.6.1.tar.gz && \
     tar xzf dockerize-linux-amd64-v0.6.1.tar.gz && \
-    rm dockerize-linux-amd64-v0.6.1.tar.gz
+    rm dockerize-linux-amd64-v0.6.1.tar.gz && \
+    easy_install --no-deps /tmp/biokbase-0.0.1-py3.6.egg
 
 COPY source /root/source
 WORKDIR /root/source
