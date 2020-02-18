@@ -128,7 +128,7 @@ print("############################################")
 print("Making Report Tables (UTC): " + str(datetime.datetime.utcnow()))
 start_time = time.time()
 make_reporting_tables()
-print("--- public narratives count time :  %s seconds ---" % (time.time() - start_time))
+print("--- making reporting tables count time :  %s seconds ---" % (time.time() - start_time))
 
 
 
