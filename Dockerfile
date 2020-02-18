@@ -1,4 +1,4 @@
-FROM kbase/narrative:py3-update as narrative
+FROM kbase/narrative:latest as narrative
 
 FROM python:3.7-slim
 
@@ -33,8 +33,7 @@ WORKDIR /root/source
 # modified version of the narrative containers easy-install.pth file into the
 # the default search path so that the eggs are picked up by this container's
 # python interpreter
-RUN sed 's/^\./\/kb\/runtime\/lib\/python3.7\/site-packages/' /kb/runtime/lib/python3.7/site-packages/easy-install.pth >/usr/local/lib/python3.7/site-packages/kbase.pth
-ENV PYTHONPATH=/kb/runtime/lib/python3.7/site-packages/:/kb/runtime/lib/python3.6/site-packages/
+ENV PYTHONPATH=/kb/runtime/lib/python3.6/site-packages/
 ENV PATH="/root/bin:/root/source:${PATH}"
 
 LABEL org.label-schema.build-date=$BUILD_DATE \
