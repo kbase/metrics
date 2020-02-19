@@ -26,7 +26,7 @@ def get_workspaces(db_connection):
             "is_deleted, is_public, top_lvl_object_count, total_object_count "\
             "from metrics_reporting.workspaces_current ws "\
             "inner join metrics.user_info ui on ws.username = ui.username "\
-            "where ws.number_of_shares > 0 and narrative_version > 0;"
+            "where ws.narrative_version > 0;"
     cursor.execute(query)
     for (record) in cursor:
         workspaces_dict[record[0]] = {"ws_id" : record[0],
@@ -65,7 +65,8 @@ def get_orgs(workspaces_dict):
     #                             "added_date -> val},....]
     
     #only gives orgs with at least 5 shared narratives
-    orgs_query = db.groups.find({"id":"enigma","resources.workspace": {"$exists":True}, "$where":"this.resources.workspace.length > 4"},
+#    orgs_query = db.groups.find({"id":"enigma","resources.workspace": {"$exists":True}, "$where":"this.resources.workspace.length > 4"},
+    orgs_query = db.groups.find({"resources.workspace": {"$exists":True}, "$where":"this.resources.workspace.length > 4"},
 	                        {"id":1,"name":1, "create":1, "mod":1, "memb":1, "resources.workspace":1,"_id":0})
     for record in orgs_query:
         orgs_dict[record["id"]] = {"name" : record["name"],
@@ -82,19 +83,19 @@ def get_orgs(workspaces_dict):
                                                        "join":member["join"]})
 
         workspaces = record["resources"]["workspace"]
-        print("WORKSPACES: " + str(workspaces))
+#        print("WORKSPACES: " + str(workspaces))
         earliest_date = datetime.datetime.utcnow()
 
         for workspace in workspaces:
             ws_id = int(workspace["aid"])
-            print("WSID: " + str(ws_id))
+#            print("WSID: " + str(ws_id))
             if ws_id in workspaces_dict:
                 temp_ws_dict = workspaces_dict[ws_id]
             else:
                 temp_ws_dict = {"ws_id" : ws_id}
             if "add" in workspace:
-                print("TYPE OF OBJECT : " + str(type(workspace["add"])))
-                print("TYPE OF OBJECT EARLIEST DATE: " + str(type(earliest_date)))
+#                print("TYPE OF OBJECT : " + str(type(workspace["add"])))
+#                print("TYPE OF OBJECT EARLIEST DATE: " + str(type(earliest_date)))
                 if workspace["add"] < earliest_date:
                     earliest_date = workspace["add"]
                 temp_ws_dict["date_added_to_org"] = workspace["add"]
@@ -159,41 +160,4 @@ def get_orgs_details():
                 print("{}\t{}\t\t\t\t{}".format(org_id, narrative["ws_id"], narrative["date_added_to_org"]))
     print()
 
-
-    #  "id" -> {"name"->val,
-    #           "create" -> val,
-    #           "mod" -> val,
-    #           "members" -> [{"user"->val,
-    #                        "join" ->val},..]
-    #           "narratives" -> [{"ws_id" -> val,
-    #                             "username" -> val,
-    #                             "created" -> val,
-    #                             "mod" -> val,
-    #                             "is_public" -> val,
-    #                             "is_deleted" -> val,
-    #                             "top_lvl_object_count" -> val
-    #                             "total_object_count" -> val},....]
-
-#    print("ORG DETAILS : " + str(orgs_dict))
-"""                                                      
-    ################
-    # Print the header line:
-    ################
-    header_line = "Narrative ID\tOwner\tCreation Date\tLast Modified\tis_deleted\tis_public"
-    for i in range(max_shared_count):
-        header_line += "\tShared_person_{}\tShare_Type_{}\tis_KB_Staff_{}".format(str(i+1),str(i+1),str(i+1))
-    print(header_line)
-
-    ###############
-    # Print the WS rows
-    ###############
-    for ws_id in workspaces_dict:
-        print("{}\t{}\t{}\t{}\t{}\t{}\t{}".format(str(ws_id),
-                                                  workspaces_dict[ws_id]["username"],
-                                                  workspaces_dict[ws_id]["creation_date"],
-                                                  workspaces_dict[ws_id]["mod_date"],
-                                                  str(workspaces_dict[ws_id]["is_deleted"]),
-                                                  str(workspaces_dict[ws_id]["is_public"]),
-                                                  "\t".join(workspaces_dict[ws_id]["shares_list"])))
-"""    
 get_orgs_details()
