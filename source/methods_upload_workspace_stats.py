@@ -57,7 +57,8 @@ def get_workspaces(db):
                                              "is_public" : 0,
                                              "is_deleted" : is_deleted_ws,
                                              "is_temporary" : None,
-                                             "number_of_shares" : 0
+                                             "number_of_shares" : 0,
+                                             "num_nar_obj_ids" : 0
             }
 
     workspace_is_temporary_cursor = db.workspaces.find({"moddate": {"$exists":True},
@@ -173,7 +174,7 @@ def get_kbase_staff(db_connection):
         kbase_staff.add(username[0])
     return kbase_staff
 
-def get_objects(db, workspaces_dict, db_connection):
+def get_objects(db, workspaces_dict, kbase_staff):
     """
     get object counts 
     as well as hidden del, size, is_narrative informationf for the workspace.
@@ -198,7 +199,7 @@ def get_objects(db, workspaces_dict, db_connection):
     #                          "total_size" : # ,
     #                          "top_lvl_size" : #}}
 
-    kbase_staff = get_kbase_staff(db_connection)
+
 #    workspaces_with_app_cell_oddities = set() #keeping track of workspaces with odd metadata where app cell counting fails
     narrative_refs_with_shock_node_issues = set() #keep track of narrative refs with shocknode issues to keep track of later.
     
@@ -212,21 +213,46 @@ def get_objects(db, workspaces_dict, db_connection):
 #        if ws_counter > ws_limit :
 #            del workspaces_dict[ws_id]
     ###########################
-    #debugging lines to minimal Workspaces
+    #debugging lines to minimal Workspaces - these workspaces test different edge cases
 #    temp_dict = dict()
 #    temp_dict[49114] = workspaces_dict[49114]
 #    temp_dict[3] = workspaces_dict[3]
 #    temp_dict[5009] = workspaces_dict[5009]
 #    temp_dict[1000] = workspaces_dict[1000]
 #    temp_dict[53462] = workspaces_dict[53462]
-#    temp_dict[324] = workspaces_dict[324]        
+#    temp_dict[324] = workspaces_dict[324]
+#    temp_dict[2777] = workspaces_dict[2777]
+#    temp_dict[6964] = workspaces_dict[6964]
+#    temp_dict[56261] = workspaces_dict[56261]        
 #    workspaces_dict.clear()
 #    workspaces_dict = temp_dict
 ###############
-
+    from datetime import datetime
     for ws_id in sorted(workspaces_dict.keys()):
+        min_save_date = None
+        narr_obj_ids = set()
         print("PROCESSING WS : " + str(ws_id))
+        #print(date.datetime.now())
+        print(datetime.now())
         is_narrative = False
+        narrative_object_id = None
+
+        if workspaces_dict[ws_id]["is_deleted"] == 0:
+            #DOES ANOTHER CHECK SINCE JOB RUNS SO LONG TO INSURE WS is still NOT DELETED
+            workspaces_cursor = db.workspaces.find({"ws": ws_id},
+                                                   {"del":1,"_id":0})
+            for record in workspaces_cursor:
+                if record["del"] == True:
+                    workspaces_dict[ws_id]["is_deleted"] = 1
+#                print("IN DELETED WS CHECK : " + str(record["del"]))
+                              
+        if workspaces_dict[ws_id]["is_deleted"] == 0:
+            ws_info = wsadmin.administer({'command': "getWorkspaceInfo",
+                                          'params':  {"id": str(ws_id)}})
+            ws_info_dict = ws_info[8]
+            if "narrative" in ws_info_dict:
+                narrative_object_id = ws_info_dict["narrative"]
+
         top_level_lookup_dict = dict()
         is_public_flag = workspaces_dict[ws_id]["is_public"] 
 
@@ -260,21 +286,45 @@ def get_objects(db, workspaces_dict, db_connection):
                 top_obj_size = obj_size
                 workspaces_dict[ws_id]["top_lvl_size"] += obj_size
                 #IF A NARRATIVE OBJECT, UPDATE THE WS dict
-                if object_type == "KBaseNarrative.Narrative":
+                # INSURES IF MULTIPLE NARRATIVES IN WS U HAVE THE RIGHT NARRATIVE AS THE LIVE REAL ONE
+                #print("narrative_object_id: " + str(narrative_object_id))
+                #print("object_id: " + str(obj_id))
+#                if narrative_object_id is not None:
+#                    print("Equality Check: " + str(int(obj_id) == int(narrative_object_id)))
+                try:
+                    #Some narrative_object_id are not integer id, some are names, tests this
+                    narrative_object_int = int(narrative_object_id)
+                except:
+                    narrative_object_int = None
+                    
+                if narrative_object_id is not None and narrative_object_int is not None and int(obj_id) == int(narrative_object_id):
                     workspaces_dict[ws_id]["narrative_version"] = obj_ver
                     if top_level_lookup_dict[obj_id]["del"]:
                         workspaces_dict[ws_id]["visible_app_cells_count"] = 0
                         workspaces_dict[ws_id]["code_cells_count"] = 0
-#                    else:
-#                        (workspaces_dict[ws_id]["visible_app_cells_count"],workspaces_with_app_cell_oddities) = get_app_cell_count(wsadmin,
-#                                                                                                                                   str(ws_id) + "/" + str(obj_id),
-#                                                                                                                                   workspaces_with_app_cell_oddities)
+##                    else:
+##                        (workspaces_dict[ws_id]["visible_app_cells_count"],workspaces_with_app_cell_oddities) = get_app_cell_count(wsadmin,
+##                                                                                                                      str(ws_id) + "/" + str(obj_id),
+##                                                                                                                      workspaces_with_app_cell_oddities)
                     else:
                         (workspaces_dict[ws_id]["visible_app_cells_count"], workspaces_dict[ws_id]["code_cells_count"], is_suspect) = \
                             get_narrative_cell_counts(wsadmin, str(ws_id) + "/" + str(obj_id) + "/" + str(obj_ver))
                         if is_suspect == 1:
                             narrative_refs_with_shock_node_issues.add(str(ws_id) + "/" + str(obj_id) + "/" + str(obj_ver))
-                    
+                elif narrative_object_id is not None and object_type == "KBaseNarrative.Narrative" :
+                    #THIS IS A SPECIAL CASE WHERE the narrative object id is narrative name not an ID like WS:2777
+                    workspaces_dict[ws_id]["narrative_version"] = obj_ver
+                    if top_level_lookup_dict[obj_id]["del"]:
+                        workspaces_dict[ws_id]["visible_app_cells_count"] = 0
+                        workspaces_dict[ws_id]["code_cells_count"] = 0
+                    else:
+                        (workspaces_dict[ws_id]["visible_app_cells_count"], workspaces_dict[ws_id]["code_cells_count"], is_suspect) = \
+                            get_narrative_cell_counts(wsadmin, str(ws_id) + "/" + str(obj_id) + "/" + str(obj_ver))
+                        if is_suspect == 1:
+                            narrative_refs_with_shock_node_issues.add(str(ws_id) + "/" + str(obj_id) + "/" + str(obj_ver))    
+                elif object_type == "KBaseNarrative.Narrative" :
+                     #SPECIAL CASE THAT IS NOT THE ABOVE BUT THE NARRATIVE OBJECT DOES NOT HAVE META DATA
+                    workspaces_dict[ws_id]["narrative_version"] = obj_ver
                 #Get Workspace numbers
                 workspaces_dict[ws_id]["top_lvl_object_count"] += 1
                 if top_level_lookup_dict[obj_id]["hide"]:
@@ -282,8 +332,12 @@ def get_objects(db, workspaces_dict, db_connection):
                 if top_level_lookup_dict[obj_id]["del"]:
                     workspaces_dict[ws_id]["deleted_object_count"] += obj_ver
 
-            if obj_ver == 1 and object_type == "KBaseNarrative.Narrative":
-                workspaces_dict[ws_id]["initial_save_date"] = obj_save_date
+            if object_type == "KBaseNarrative.Narrative":
+                narr_obj_ids.add(obj_id)
+                
+            if obj_ver == 1 :
+                if min_save_date is None or obj_save_date < min_save_date:
+                    min_save_date = obj_save_date
                     
             if top_level_lookup_dict[obj_id]["hide"]:
                 is_hidden = 1
@@ -373,6 +427,8 @@ def get_objects(db, workspaces_dict, db_connection):
                     users_object_counts_dict[object_type_full]["public_object_count"] += is_public_flag
                     if is_public_flag == 0:
                         users_object_counts_dict[object_type_full]["private_object_count"] += 1
+        workspaces_dict[ws_id]["num_nar_obj_ids"] = len(narr_obj_ids)
+        workspaces_dict[ws_id]["initial_save_date"] = min_save_date
     return (workspaces_dict, object_counts_dict, users_object_counts_dict, narrative_refs_with_shock_node_issues)
 
         
@@ -402,7 +458,7 @@ def upload_workspace_stats():
     cursor.execute(query)
     for (db_date) in cursor:
         db_date_month = db_date[0]
-
+    
     if db_date_month == current_month:
         print("THE WORKSPACE and WS OBJECTS COUNTS UPLOADER HAS BEEN RUN THIS MONTH. THE PROGRAM WILL EXIT")
         exit()
@@ -413,14 +469,27 @@ def upload_workspace_stats():
     client= MongoClient(mongoDB_metrics_connection+to_workspace)
     db = client.workspace
 
+    
     workspaces_dict = get_workspaces(db)
     get_ws_top_info_time = time.time() - start_time
+    kbase_staff = get_kbase_staff(db_connection)
+    db_connection.close()
     workspaces_dict = get_workspace_shares(db, workspaces_dict)
     workspaces_dict = get_public_workspaces(db, workspaces_dict)
+    #THIS NEXT STEP TAKES A LONG TIME. MYSQL CONNECTION WILL TIME OUT)                     
     (workspaces_dict, object_counts_dict, users_object_counts_dict, narrative_refs_with_shock_node_issues) = \
-                                                                    get_objects(db, workspaces_dict, db_connection)
+                                                                    get_objects(db, workspaces_dict, kbase_staff)
     print("TOTAL WS Number : " + str(len(workspaces_dict)))
     gather_time = time.time() - start_time
+
+    #connect to mysql AGAIN
+    db_connection = mysql.connect(
+	host = sql_host,
+        user = "metrics",
+	passwd = metrics_mysql_password,
+	database = "metrics"
+    )
+                                            
 #    print("--- gather data %s seconds ---" % (gather_time))
 #    print("WORKSPACE DICT : ")
 #    pp.pprint(workspaces_dict)
@@ -435,11 +504,10 @@ def upload_workspace_stats():
                                   "visible_app_cells_count, code_cells_count, narrative_version, "\
                                   "hidden_object_count, deleted_object_count, "\
                                   "total_size, top_lvl_size, is_public, "\
-                                  "is_temporary, is_deleted, number_of_shares) "\
-                                  "values(%s,%s, %s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+                                  "is_temporary, is_deleted, number_of_shares, num_nar_obj_ids) "\
+                                  "values(%s,%s, %s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
 
     for ws_id in sorted(workspaces_dict.keys()):
-#        print("PROCESSING WS: " + str(ws_id) + "  USERNAME: " + workspaces_dict[ws_id]['username'])
         input = (ws_id, workspaces_dict[ws_id]['username'], workspaces_dict[ws_id]['mod_date'],
                  workspaces_dict[ws_id]['initial_save_date'],
                  workspaces_dict[ws_id]['top_lvl_object_count'], workspaces_dict[ws_id]['total_object_count'],
@@ -447,7 +515,8 @@ def upload_workspace_stats():
                  workspaces_dict[ws_id]['narrative_version'],
                  workspaces_dict[ws_id]['hidden_object_count'], workspaces_dict[ws_id]['deleted_object_count'],
                  workspaces_dict[ws_id]['total_size'], workspaces_dict[ws_id]['top_lvl_size'], workspaces_dict[ws_id]['is_public'],
-                 workspaces_dict[ws_id]['is_temporary'], workspaces_dict[ws_id]['is_deleted'], workspaces_dict[ws_id]['number_of_shares'])
+                 workspaces_dict[ws_id]['is_temporary'], workspaces_dict[ws_id]['is_deleted'],
+                 workspaces_dict[ws_id]['number_of_shares'], workspaces_dict[ws_id]["num_nar_obj_ids"])
         prep_cursor.execute(workspaces_insert_statement,input)
 
         
