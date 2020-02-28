@@ -252,6 +252,7 @@ CREATE OR REPLACE TABLE `workspaces` (
   `is_temporary` tinyint(1) DEFAULT NULL,
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0',	
   `number_of_shares` int(11) NOT NULL DEFAULT '0',
+  `num_nar_obj_ids` int(6) not null default 0,
   UNIQUE KEY `uk_ws_user_rd_workspaces` (`ws_id`,`username`,`record_date`),
   KEY `idx_workspaces_ws_id` (`ws_id`),
   KEY `idx_workspaces_user` (`username`),
