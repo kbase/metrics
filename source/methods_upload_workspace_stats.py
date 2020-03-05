@@ -7,6 +7,8 @@ import mysql.connector as mysql
 import requests
 import time
 from  datetime import date
+from datetime import datetime
+
 #import pprint
 requests.packages.urllib3.disable_warnings()
 
@@ -227,13 +229,10 @@ def get_objects(db, workspaces_dict, kbase_staff):
 #    workspaces_dict.clear()
 #    workspaces_dict = temp_dict
 ###############
-    from datetime import datetime
     for ws_id in sorted(workspaces_dict.keys()):
         min_save_date = None
         narr_obj_ids = set()
-        print("PROCESSING WS : " + str(ws_id))
-        #print(date.datetime.now())
-        print(datetime.now())
+        print("PROCESSING WS : " + str(ws_id) + " : " + datetime.now())
         is_narrative = False
         narrative_object_id = None
 
