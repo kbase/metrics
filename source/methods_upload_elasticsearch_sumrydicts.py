@@ -44,9 +44,12 @@ def results_to_formatted_dicts(query_results):
                 data_formatted.append(doc)
             
             else:
-               # Delete duplicate country code and rename country_code2 -> country_code
-               del source_dictionary['geoip']["country_code3"]
-               source_dictionary['geoip']["country_code"] = source_dictionary['geoip'].pop("country_code2")
+               # Delete duplicate country code and rename country_code2 -> country_code - if country code exists
+               try:
+                   del source_dictionary['geoip']["country_code3"]
+                   source_dictionary['geoip']["country_code"] = source_dictionary['geoip'].pop("country_code2")
+               except: 
+                   source_dictionary['geoip']["country_code"] = "N/A"
                # Collect all items in geoip dictionary
                geoip_items = source_dictionary['geoip']
 
