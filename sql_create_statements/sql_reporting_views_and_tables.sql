@@ -991,3 +991,57 @@ max(max_object_size) as max_object_size,
 sum(total_size/total_object_count) as avg_object_size
 from metrics.users_workspace_object_counts
 group by record_month, object_type;
+
+
+---------------------
+# USER CODE CELLS COUNTS AND DISTRIBUTIONS
+#IN MEtrics Reporting
+create or replace view metrics_reporting.user_code_cell_counts as
+select wc.username, sum(code_cells_count) as user_code_cells_count
+from metrics_reporting.workspaces_current wc
+inner join metrics.user_info ui on ui.username = wc.username
+where ui.kb_internal_user = 0
+group by wc.username;
+
+create or replace view metrics_reporting.user_code_cell_count_distribution as
+select user_code_cells_count, count(*) as user_count
+from metrics_reporting.user_code_cell_counts
+group by user_code_cells_count;
+
+create or replace view metrics_reporting.user_narratives_code_cell_count_distribution as
+select code_cells_count, count(*) as nar_count 
+from metrics_reporting.workspaces_current wc 
+inner join metrics.user_info ui on ui.username = wc.username
+where ui.kb_internal_user = 0
+and wc.narrative_version > 0
+group by code_cells_count;
+
+-----------------------
+#APP RUNS BY USERS AND WORKSPACES
+#IN METRICS REPORTING
+create or replace view metrics_reporting.user_app_runs as
+select uau.username, count(*) as app_runs_count
+from metrics.user_app_usage uau
+inner join metrics.user_info ui on ui.username = uau.username
+where ui.kb_internal_user = 0
+group by uau.username;
+
+create or replace view metrics_reporting.user_app_runs_distribution as
+select app_runs_count, count(*) as user_count
+from metrics_reporting.user_app_runs
+group by app_runs_count;
+
+#NOTE THESE ARE AGAINST EE2 TEMP TABLE CURRENTLY
+create or replace view metrics_reporting.workspace_user_app_runs as
+select uau.ws_id, count(*) as app_runs_count
+from metrics.user_app_usage_ee2 uau
+inner join metrics.user_info ui on ui.username = uau.username
+where ui.kb_internal_user = 0
+group by uau.ws_id;
+
+create or replace view metrics_reporting.workspaces_user_app_runs_distribution as
+select app_runs_count, count(*) as ws_count
+from metrics_reporting.workspace_user_app_runs
+group by app_runs_count;
+
+----------------------------
