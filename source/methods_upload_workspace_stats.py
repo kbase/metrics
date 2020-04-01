@@ -232,7 +232,7 @@ def get_objects(db, workspaces_dict, kbase_staff):
     for ws_id in sorted(workspaces_dict.keys()):
         min_save_date = None
         narr_obj_ids = set()
-        print("PROCESSING WS : " + str(ws_id) + " : " + datetime.now())
+        print("PROCESSING WS : " + str(ws_id) + " : " + str(datetime.now()))
         is_narrative = False
         narrative_object_id = None
 
