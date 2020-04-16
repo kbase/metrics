@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python upload_app_stats.py
+python daily_cron_jobs/upload_app_stats.py

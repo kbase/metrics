@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python get_workspace_share_details.py
+python custom_scripts/get_workspace_share_details.py

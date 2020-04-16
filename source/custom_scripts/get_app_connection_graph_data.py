@@ -4,6 +4,10 @@ from biokbase.workspace.client import Workspace
 import os
 import mysql.connector as mysql
 
+"""
+THIS NEEDS TO BE RUN ON MYSQL1 as it requires the special token to investigate the workspaces
+"""
+
 metrics_mysql_password = os.environ['METRICS_MYSQL_PWD']
 #mongoDB_metrics_connection = os.environ['MONGO_PATH']
 

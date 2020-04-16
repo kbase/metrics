@@ -28,9 +28,14 @@ def dump_query_results():
     cursor.execute(query)
 
     #CHANGE QUERY HERE
-    query = "select username, display_name, email, orcid, kb_internal_user, institution, country, signup_date, last_signin_date from user_info order by signup_date"
+    query = "select job_id from user_app_usage where finish_date <= '2020-03-03 07:05:15' and job_id not in (select job_id from user_app_usage_ee2);";
+#    query = "select func_name, DATE_FORMAT(`finish_date`,'%Y-%m') as finish_month, count(*) as run_count, "\
+#            "avg(run_time) as avg_run_time_secs, sum(run_time) as total_run_time_secs "\
+#            "from metrics.user_app_usage where is_error = 0 group by func_name, finish_month;"
     #CHANGE COLUMN HEADERS HERE TO MATCH QUERY HEADERS
-    print("username\tdisplay_name\temail\torcid\tkb_internal_user\tinstitution\tcountry\tsignup_date\tlast_signin_date")
+#    print("username\temail\tlast_signin_date\tmax_last_seen\tHasBeenSeen")
+#    print("ws_id\tusername\tmod_date\tinitial_save_date\trecord_date\ttop_lvl_object_count\ttotal_object_count\tvisible_app_cells_count\tnarrative_version\thidden_object_count\tdeleted_object_count\ttotal_size\ttop_lvl_size\tis_public\tis_temporary\tnumber_of_shares")
+#    print("function_name\tfinish_month\tsuccessful_run_count\taverage_run_time\ttotal_run_time")
 
     cursor.execute(query)
     row_values = list()
