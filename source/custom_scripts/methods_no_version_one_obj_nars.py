@@ -5,6 +5,17 @@ import os
 import mysql.connector as mysql
 from pprint import pprint
 
+"""
+THIS SCRIPT WAS USED TO DETERMINE THE ISSUE WITH OLD WAY QZ DID NARRATIVE COUNTING.
+Before only the first version of an object was looked for in the workspaceObjects Mongo collection.
+The problem is that collection only looks at the top level (highest version number) of that object.
+So as a result there were two problems, workspaces that had no first version of objects as their top level
+object would be excluded. 
+The second is the timestamp was arbitrary as far as a first version of an object and would
+change in future runnings if that first version of the object got a nother version.
+I used this to confirm the discrepancy I saw between her approach and my (Jason B)
+approach, The workspaceObjVersion table is the correct place to look
+"""
 # NOTE get_user_info_from_auth2 sets up the initial dict. 
 #The following functions update certain fields in the dict.
 # So get_user_info_from_auth2 must be called before get_internal_users and get_user_orgs_count

@@ -8,7 +8,10 @@ from biokbase.catalog.Client import Catalog
 from biokbase.narrative_method_store.client import NarrativeMethodStore
 
 requests.packages.urllib3.disable_warnings()
-
+"""
+THIS IS A SCRIPT MADE TO BACKFILL THE QUEUE TIMES FOR THE APP STATS RETRIEVED FROM APP CATALOG.
+THIS PROBABLY ONLY NEEDED TO BE RUN THE ONE TIME, AND WILL NOT BE RELEVANT ONCE WE SWITCH OVER TO EE2.
+"""
 
 catalog = Catalog(url = os.environ['CATALOG_URL'], token = os.environ['METRICS_USER_TOKEN'])
 nms = NarrativeMethodStore(url = os.environ['NARRATIVE_METHOD_STORE'])

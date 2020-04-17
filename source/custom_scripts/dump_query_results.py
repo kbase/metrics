@@ -14,6 +14,8 @@ def dump_query_results():
     the query/results. Otherwise it is good to go. 
     It can be called simply with the bin shell script. 
     Read the README at the top level for an example.
+    docker-compose run --rm metrics ../bin/custom_scripts/dump_query_results.sh > query_results.txt
+
     """
     #connect to mysql
     db_connection = mysql.connect(
