@@ -1,5 +1,4 @@
----------------------
-2020-04-20
+***2020-04-20***
 First creation of the file.
 Major reorg of directories. Hopefully easier to follow.
 There is now 3 major directories in source :

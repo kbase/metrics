@@ -28,7 +28,7 @@ def get_user_app_stats(start_date=datetime.datetime.combine(yesterday, datetime.
     If no statt and end date are entered it will default to the last 15 calendar days (UTC TIME).
     It is 15 days because it uses an underlying method that 
     filters by creation_time and not finish_time
-    """
+    """ 
     # From str to datetime, defaults to zero time.
     if type(start_date) == str:
         start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
