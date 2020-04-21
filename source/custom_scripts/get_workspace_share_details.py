@@ -10,6 +10,25 @@ sql_host = os.environ['SQL_HOST']
 query_on = os.environ['QUERY_ON']
 to_workspace =  os.environ['WRK_SUFFIX']
 
+"""
+THIS IS A SPECIAL SCRIPT TO GIVE ADAM INFORMATION TO CREATE A USER SHARING CONNECTION GRAPH
+Step	What to Do
+1	Git clone https://github.com/kbase/metrics
+2	cd metrics
+3	configure the .env file (ask Jason or Steve for details)
+4	Build  from metrics directory: docker build . -t test_build
+5	docker-compose run --rm metrics ../bin/custom_scripts/get_workspace_share_details.sh > users_sharing.txt
+6	scp that file to your computer and use accordingly.
+	example from your computer run:
+	scp jkbaumohl@login1.berkeley.kbase.us:/homes/oakland/jkbaumohl/metrics/users_sharing.txt ./Desktop/
+
+Creates output like this:
+Narrative ID	Owner	Creation Date	Last Modified	is_deleted	is_public	Shared_person_0	Share_Type_0	is_KB_Staff_0	Shared_person_1	Share_Type_1	is_KB_Staff_1	Shared_person_2	Share_Type_2	is_KB_Staff_2	...    Shared_person_31	Share_Type_31	is_KB_Staff_31
+24863	aafoutouhi	2017-09-21	2017-09-22	0	0	weimer	edit	0
+24900	aafoutouhi	2017-09-22	2017-09-22	0	0	weimer	edit	0
+34151	aappaakbase	2018-07-08	2018-07-09	0	0	saysonsg	view	0
+"""
+
 def get_workspaces(db_connection):
     """
     gets user narrative workspaces - capturing ws_id, owner, creation_date, last_mod_date, is_deleted, is_public. 

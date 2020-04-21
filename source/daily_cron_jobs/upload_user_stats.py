@@ -2,6 +2,8 @@ import time
 import methods_upload_user_stats
 import datetime
 print("############################################")
+print("############################################")
+print("############################################")
 print("User Stats Upload (UTC): " + str(datetime.datetime.utcnow()))
 start_time = time.time()
 user_stats_dict = methods_upload_user_stats.get_user_info_from_auth2()

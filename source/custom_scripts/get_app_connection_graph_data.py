@@ -4,6 +4,22 @@ from biokbase.workspace.client import Workspace
 import os
 import mysql.connector as mysql
 
+"""
+THIS NEEDS TO BE RUN ON MYSQL1 as it requires the special token to investigate the workspaces
+
+THIS CREATES A TXT OUPUT THAT LOOKS LIKE THIS THAT ADAM THEN INGESTS INTO R TO DO HIS SPECIAL NETWORK GRAPH
+
+Narrative ID	Owner	Creation Date	Last Modified	is_deleted	is_public	App_Name_1	App_Categories_1	App_Count_1	App_Name_2	App_Categories_2	App_Count_2 ... ... App_Name_50	App_Categories_50	App_Count_50
+49286	a0912	2019-10-05	2019-10-05	0	0	
+39835	a20080600	2019-01-25	2019-02-21	0	0	fba_tools/bulk_download_modeling_objects	metabolic_modeling	1	fba_tools/compare_fba_solutions	metabolic_modeling	1	fba_tools/compare_flux_with_expression	expression;metabolic_modeling	1	fba_tools/compare_models	metabolic_modeling	1	kb_uploadmethods/import_file_as_fba_model_from_staging		3	kb_uploadmethods/import_genbank_as_genome_from_staging		1
+40766	a20080600	2019-02-21	2019-02-21	0	0	
+
+14906	a7med	2016-05-16	2016-05-16	0	0	annotate_contigset		1	assemble_contigset_from_reads		1
+15596	a9887688zboy	2016-06-17	2016-06-17	0	0	fba_tools/build_metabolic_model	metabolic_modeling	1
+12166	aaaring	2016-01-08	2016-01-08	0	0	
+24863	aafoutouhi	2017-09-21	2017-09-22	0	0	ProkkaAnnotation/annotate_contigs	annotation	3	RAST_SDK/reannotate_microbial_genome	annotation	2	RAST_SDK/reannotate_microbial_genomes	annotation	1	kb_SPAdes/run_SPAdes	assembly	2	kb_blast/BLASTn_Search	sequence	1	kb_trimmomatic/run_trimmomatic	reads	2	kb_uploadmethods/import_fastq_sra_as_reads_from_staging		1
+"""
+
 metrics_mysql_password = os.environ['METRICS_MYSQL_PWD']
 #mongoDB_metrics_connection = os.environ['MONGO_PATH']
 

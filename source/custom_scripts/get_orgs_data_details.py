@@ -12,6 +12,40 @@ sql_host = os.environ['SQL_HOST']
 query_on = os.environ['QUERY_ON']
 to_groups =  os.environ['GRP_SUFFIX']
 
+"""
+THIS SCRIPT MAKES THE ORG INFORMATION THAT ADAM WANTED - ORGS WITH 5+ narratives
+STEPS	
+1	Git clone https://github.com/kbase/metrics
+2	cd metrics
+3	configure the .env file (ask Jason or Steve for details)
+4	Build  from metrics directory: docker build . -t test_build
+5	docker-compose run --rm metrics ../bin/custom_scripts/get_orgs_data_details.sh > org_details.txt
+6	"Copy that file from login1 to your local computer : From your local computer:  
+scp jkbaumohl@login1.berkeley.kbase.us:/homes/oakland/jkbaumohl/metrics/org_details.txt ./Desktop/"
+7	Open in excel
+8	Format Date fields.
+9	Copy to Google Sheets
+
+It makes 3 Tables:
+ORGS TOP LEVEL INFORMATION				
+ORG ID	ORG Name	ORG Creation Date	ORG Last Modified Date	
+kbasegspdemoorg	KBase GSP Demo Org	1/23/19 9:37 PM	2/10/20 4:12 PM	
+northenlab	Northen Lab	1/15/19 6:14 PM	2/24/19 9:19 PM	
+
+ORGS MEMBER INFORMATION		
+ORG ID	Member Name	Join Date
+kbasegspdemoorg	royk	1/23/19 9:37 PM
+kbasegspdemoorg	psdehal	1/23/19 9:42 PM
+kbasegspdemoorg	pranjan77	1/23/19 9:42 PM
+
+ORGS NARRATIVES INFORMATION									
+ORG ID	WS_ID	Owner	Creation Date	Mod Date	Date_Added_To_ORG	IS_Public	IS_Deleted	top_lvl_object_count	total_object_count
+kbasegspdemoorg	39605	jmc	1/18/19	2/26/19	2/15/19 7:19 PM	0	0	55	278
+kbasegspdemoorg	39595	qzhang	1/18/19	2/21/19	2/24/19 9:18 PM	1	0	46	112
+kbasegspdemoorg	39686	chenry	1/22/19	3/14/19	2/15/19 7:19 PM	0	0	186	300
+"""
+
+
 def get_workspaces(db_connection):
     """
     gets user narrative workspaces - capturing ws_id, owner, creation_date, last_mod_date, is_deleted, is_public. 

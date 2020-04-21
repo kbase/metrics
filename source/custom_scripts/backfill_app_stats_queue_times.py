@@ -8,7 +8,10 @@ from biokbase.catalog.Client import Catalog
 from biokbase.narrative_method_store.client import NarrativeMethodStore
 
 requests.packages.urllib3.disable_warnings()
-
+"""
+THIS IS A SCRIPT MADE TO BACKFILL THE QUEUE TIMES FOR THE APP STATS RETRIEVED FROM APP CATALOG.
+THIS PROBABLY ONLY NEEDED TO BE RUN THE ONE TIME, AND WILL NOT BE RELEVANT ONCE WE SWITCH OVER TO EE2.
+"""
 
 catalog = Catalog(url = os.environ['CATALOG_URL'], token = os.environ['METRICS_USER_TOKEN'])
 nms = NarrativeMethodStore(url = os.environ['NARRATIVE_METHOD_STORE'])
@@ -25,7 +28,7 @@ def get_user_app_stats(start_date=datetime.datetime.combine(yesterday, datetime.
     If no statt and end date are entered it will default to the last 15 calendar days (UTC TIME).
     It is 15 days because it uses an underlying method that 
     filters by creation_time and not finish_time
-    """
+    """ 
     # From str to datetime, defaults to zero time.
     if type(start_date) == str:
         start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')

@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python get_orgs_data_details.py
+python custom_scripts/get_orgs_data_details.py

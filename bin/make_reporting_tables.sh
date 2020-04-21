@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python make_reporting_tables.py
+python daily_cron_jobs/make_reporting_tables.py
