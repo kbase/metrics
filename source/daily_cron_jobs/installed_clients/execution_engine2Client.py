@@ -7,6 +7,7 @@
 ############################################################
 
 from __future__ import print_function
+
 # the following is a hack to get the baseclient to import whether we're in a
 # package or not. This makes pep8 unhappy hence the annotations.
 try:
@@ -18,20 +19,30 @@ except ImportError:
 
 
 class execution_engine2(object):
-
     def __init__(
-            self, url=None, timeout=30 * 60, user_id=None,
-            password=None, token=None, ignore_authrc=False,
-            trust_all_ssl_certificates=False,
-            auth_svc='https://ci.kbase.us/services/auth/api/legacy/KBase/Sessions/Login'):
+        self,
+        url=None,
+        timeout=30 * 60,
+        user_id=None,
+        password=None,
+        token=None,
+        ignore_authrc=False,
+        trust_all_ssl_certificates=False,
+        auth_svc="https://ci.kbase.us/services/auth/api/legacy/KBase/Sessions/Login",
+    ):
         if url is None:
-            raise ValueError('A url is required')
+            raise ValueError("A url is required")
         self._service_ver = None
         self._client = _BaseClient(
-            url, timeout=timeout, user_id=user_id, password=password,
-            token=token, ignore_authrc=ignore_authrc,
+            url,
+            timeout=timeout,
+            user_id=user_id,
+            password=password,
+            token=token,
+            ignore_authrc=ignore_authrc,
             trust_all_ssl_certificates=trust_all_ssl_certificates,
-            auth_svc=auth_svc)
+            auth_svc=auth_svc,
+        )
 
     def list_config(self, context=None):
         """
@@ -53,16 +64,18 @@ class execution_engine2(object):
         transfer_input_files - initial list of files to transfer to HTCondor for job running
         :returns: instance of mapping from String to String
         """
-        return self._client.call_method('execution_engine2.list_config',
-                                        [], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.list_config", [], self._service_ver, context
+        )
 
     def ver(self, context=None):
         """
         Returns the current running version of the execution_engine2 servicve as a semantic version string.
         :returns: instance of String
         """
-        return self._client.call_method('execution_engine2.ver',
-                                        [], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.ver", [], self._service_ver, context
+        )
 
     def status(self, context=None):
         """
@@ -81,8 +94,9 @@ class execution_engine2(object):
            String, parameter "version" of String, parameter "service" of
            String, parameter "server_time" of Double
         """
-        return self._client.call_method('execution_engine2.status',
-                                        [], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.status", [], self._service_ver, context
+        )
 
     def run_job(self, params, context=None):
         """
@@ -146,8 +160,9 @@ class execution_engine2(object):
            "request_refdata_volume_mounts" of list of String
         :returns: instance of type "job_id" (A job id.)
         """
-        return self._client.call_method('execution_engine2.run_job',
-                                        [params], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.run_job", [params], self._service_ver, context
+        )
 
     def run_job_as_admin(self, params, as_admin, context=None):
         """
@@ -210,8 +225,12 @@ class execution_engine2(object):
         :param as_admin: instance of type "boolean" (@range [0,1])
         :returns: instance of type "job_id" (A job id.)
         """
-        return self._client.call_method('execution_engine2.run_job_as_admin',
-                                        [params, as_admin], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.run_job_as_admin",
+            [params, as_admin],
+            self._service_ver,
+            context,
+        )
 
     def get_job_params(self, job_id, context=None):
         """
@@ -274,8 +293,9 @@ class execution_engine2(object):
            "request_staging_volume_mounts" of list of String, parameter
            "request_refdata_volume_mounts" of list of String
         """
-        return self._client.call_method('execution_engine2.get_job_params',
-                                        [job_id], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.get_job_params", [job_id], self._service_ver, context
+        )
 
     def get_job_params_as_admin(self, job_id, as_admin, context=None):
         """
@@ -338,8 +358,12 @@ class execution_engine2(object):
            "request_staging_volume_mounts" of list of String, parameter
            "request_refdata_volume_mounts" of list of String
         """
-        return self._client.call_method('execution_engine2.get_job_params_as_admin',
-                                        [job_id, as_admin], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.get_job_params_as_admin",
+            [job_id, as_admin],
+            self._service_ver,
+            context,
+        )
 
     def update_job_status(self, params, context=None):
         """
@@ -349,8 +373,9 @@ class execution_engine2(object):
            "status" of String
         :returns: instance of type "job_id" (A job id.)
         """
-        return self._client.call_method('execution_engine2.update_job_status',
-                                        [params], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.update_job_status", [params], self._service_ver, context
+        )
 
     def update_job_status_as_admin(self, params, as_admin, context=None):
         """
@@ -361,8 +386,12 @@ class execution_engine2(object):
         :param as_admin: instance of type "boolean" (@range [0,1])
         :returns: instance of type "job_id" (A job id.)
         """
-        return self._client.call_method('execution_engine2.update_job_status_as_admin',
-                                        [params, as_admin], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.update_job_status_as_admin",
+            [params, as_admin],
+            self._service_ver,
+            context,
+        )
 
     def add_job_logs(self, job_id, lines, context=None):
         """
@@ -375,8 +404,12 @@ class execution_engine2(object):
            "is_error" of type "boolean" (@range [0,1]), parameter "ts" of Long
         :returns: instance of Long
         """
-        return self._client.call_method('execution_engine2.add_job_logs',
-                                        [job_id, lines], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.add_job_logs",
+            [job_id, lines],
+            self._service_ver,
+            context,
+        )
 
     def add_job_logs_as_admin(self, job_id, lines, as_admin, context=None):
         """
@@ -390,8 +423,12 @@ class execution_engine2(object):
         :param as_admin: instance of type "boolean" (@range [0,1])
         :returns: instance of Long
         """
-        return self._client.call_method('execution_engine2.add_job_logs_as_admin',
-                                        [job_id, lines, as_admin], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.add_job_logs_as_admin",
+            [job_id, lines, as_admin],
+            self._service_ver,
+            context,
+        )
 
     def get_job_logs(self, params, context=None):
         """
@@ -411,8 +448,9 @@ class execution_engine2(object):
            type "boolean" (@range [0,1]), parameter "ts" of Long, parameter
            "last_line_number" of Long
         """
-        return self._client.call_method('execution_engine2.get_job_logs',
-                                        [params], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.get_job_logs", [params], self._service_ver, context
+        )
 
     def get_job_logs_as_admin(self, params, as_admin, context=None):
         """
@@ -433,8 +471,12 @@ class execution_engine2(object):
            type "boolean" (@range [0,1]), parameter "ts" of Long, parameter
            "last_line_number" of Long
         """
-        return self._client.call_method('execution_engine2.get_job_logs_as_admin',
-                                        [params, as_admin], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.get_job_logs_as_admin",
+            [params, as_admin],
+            self._service_ver,
+            context,
+        )
 
     def finish_job(self, params, context=None):
         """
@@ -452,8 +494,9 @@ class execution_engine2(object):
            parameter "code" of Long, parameter "message" of String, parameter
            "error" of String, parameter "job_output" of unspecified object
         """
-        return self._client.call_method('execution_engine2.finish_job',
-                                        [params], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.finish_job", [params], self._service_ver, context
+        )
 
     def finish_job_as_admin(self, params, as_admin, context=None):
         """
@@ -471,8 +514,12 @@ class execution_engine2(object):
            "error" of String, parameter "job_output" of unspecified object
         :param as_admin: instance of type "boolean" (@range [0,1])
         """
-        return self._client.call_method('execution_engine2.finish_job_as_admin',
-                                        [params, as_admin], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.finish_job_as_admin",
+            [params, as_admin],
+            self._service_ver,
+            context,
+        )
 
     def start_job(self, params, context=None):
         """
@@ -482,8 +529,9 @@ class execution_engine2(object):
            (A job id.), parameter "skip_estimation" of type "boolean" (@range
            [0,1])
         """
-        return self._client.call_method('execution_engine2.start_job',
-                                        [params], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.start_job", [params], self._service_ver, context
+        )
 
     def start_job_as_admin(self, params, as_admin, context=None):
         """
@@ -494,8 +542,12 @@ class execution_engine2(object):
            [0,1])
         :param as_admin: instance of type "boolean" (@range [0,1])
         """
-        return self._client.call_method('execution_engine2.start_job_as_admin',
-                                        [params, as_admin], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.start_job_as_admin",
+            [params, as_admin],
+            self._service_ver,
+            context,
+        )
 
     def check_job(self, params, context=None):
         """
@@ -603,8 +655,9 @@ class execution_engine2(object):
            parameter "error_code" of Long, parameter "errormsg" of String,
            parameter "terminated_code" of Long
         """
-        return self._client.call_method('execution_engine2.check_job',
-                                        [params], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.check_job", [params], self._service_ver, context
+        )
 
     def check_job_as_admin(self, params, as_admin, context=None):
         """
@@ -712,8 +765,12 @@ class execution_engine2(object):
            parameter "error_code" of Long, parameter "errormsg" of String,
            parameter "terminated_code" of Long
         """
-        return self._client.call_method('execution_engine2.check_job_as_admin',
-                                        [params, as_admin], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.check_job_as_admin",
+            [params, as_admin],
+            self._service_ver,
+            context,
+        )
 
     def check_jobs(self, params, context=None):
         """
@@ -824,8 +881,9 @@ class execution_engine2(object):
            parameter "error_code" of Long, parameter "errormsg" of String,
            parameter "terminated_code" of Long
         """
-        return self._client.call_method('execution_engine2.check_jobs',
-                                        [params], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.check_jobs", [params], self._service_ver, context
+        )
 
     def check_jobs_as_admin(self, params, as_admin, context=None):
         """
@@ -937,8 +995,12 @@ class execution_engine2(object):
            parameter "error_code" of Long, parameter "errormsg" of String,
            parameter "terminated_code" of Long
         """
-        return self._client.call_method('execution_engine2.check_jobs_as_admin',
-                                        [params, as_admin], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.check_jobs_as_admin",
+            [params, as_admin],
+            self._service_ver,
+            context,
+        )
 
     def check_workspace_jobs(self, params, context=None):
         """
@@ -1049,8 +1111,12 @@ class execution_engine2(object):
            parameter "error_code" of Long, parameter "errormsg" of String,
            parameter "terminated_code" of Long
         """
-        return self._client.call_method('execution_engine2.check_workspace_jobs',
-                                        [params], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.check_workspace_jobs",
+            [params],
+            self._service_ver,
+            context,
+        )
 
     def check_workspace_jobs_as_admin(self, params, as_admin, context=None):
         """
@@ -1162,8 +1228,12 @@ class execution_engine2(object):
            parameter "error_code" of Long, parameter "errormsg" of String,
            parameter "terminated_code" of Long
         """
-        return self._client.call_method('execution_engine2.check_workspace_jobs_as_admin',
-                                        [params, as_admin], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.check_workspace_jobs_as_admin",
+            [params, as_admin],
+            self._service_ver,
+            context,
+        )
 
     def cancel_job(self, params, context=None):
         """
@@ -1176,8 +1246,9 @@ class execution_engine2(object):
            terminated_code) -> structure: parameter "job_id" of type "job_id"
            (A job id.), parameter "terminated_code" of Long
         """
-        return self._client.call_method('execution_engine2.cancel_job',
-                                        [params], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.cancel_job", [params], self._service_ver, context
+        )
 
     def cancel_job_as_admin(self, params, as_admin, context=None):
         """
@@ -1190,8 +1261,12 @@ class execution_engine2(object):
            (A job id.), parameter "terminated_code" of Long
         :param as_admin: instance of type "boolean" (@range [0,1])
         """
-        return self._client.call_method('execution_engine2.cancel_job_as_admin',
-                                        [params, as_admin], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.cancel_job_as_admin",
+            [params, as_admin],
+            self._service_ver,
+            context,
+        )
 
     def check_job_canceled(self, params, context=None):
         """
@@ -1212,8 +1287,9 @@ class execution_engine2(object):
            [0,1]), parameter "canceled" of type "boolean" (@range [0,1]),
            parameter "ujs_url" of String
         """
-        return self._client.call_method('execution_engine2.check_job_canceled',
-                                        [params], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.check_job_canceled", [params], self._service_ver, context
+        )
 
     def check_job_canceled_as_admin(self, params, as_admin, context=None):
         """
@@ -1234,8 +1310,12 @@ class execution_engine2(object):
            [0,1]), parameter "canceled" of type "boolean" (@range [0,1]),
            parameter "ujs_url" of String
         """
-        return self._client.call_method('execution_engine2.check_job_canceled_as_admin',
-                                        [params, as_admin], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.check_job_canceled_as_admin",
+            [params, as_admin],
+            self._service_ver,
+            context,
+        )
 
     def get_job_status(self, job_id, context=None):
         """
@@ -1244,8 +1324,9 @@ class execution_engine2(object):
         :returns: instance of type "GetJobStatusResult" -> structure:
            parameter "status" of String
         """
-        return self._client.call_method('execution_engine2.get_job_status',
-                                        [job_id], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.get_job_status", [job_id], self._service_ver, context
+        )
 
     def get_job_status_as_admin(self, job_id, as_admin, context=None):
         """
@@ -1254,8 +1335,12 @@ class execution_engine2(object):
         :returns: instance of type "GetJobStatusResult" -> structure:
            parameter "status" of String
         """
-        return self._client.call_method('execution_engine2.get_job_status_as_admin',
-                                        [job_id, as_admin], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.get_job_status_as_admin",
+            [job_id, as_admin],
+            self._service_ver,
+            context,
+        )
 
     def check_jobs_date_range_for_user(self, params, context=None):
         """
@@ -1375,8 +1460,12 @@ class execution_engine2(object):
            parameter "error_code" of Long, parameter "errormsg" of String,
            parameter "terminated_code" of Long
         """
-        return self._client.call_method('execution_engine2.check_jobs_date_range_for_user',
-                                        [params], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.check_jobs_date_range_for_user",
+            [params],
+            self._service_ver,
+            context,
+        )
 
     def check_jobs_date_range_for_user_as_admin(self, params, as_admin, context=None):
         """
@@ -1497,8 +1586,12 @@ class execution_engine2(object):
            parameter "error_code" of Long, parameter "errormsg" of String,
            parameter "terminated_code" of Long
         """
-        return self._client.call_method('execution_engine2.check_jobs_date_range_for_user_as_admin',
-                                        [params, as_admin], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.check_jobs_date_range_for_user_as_admin",
+            [params, as_admin],
+            self._service_ver,
+            context,
+        )
 
     def check_jobs_date_range_for_all(self, params, context=None):
         """
@@ -1618,8 +1711,12 @@ class execution_engine2(object):
            parameter "error_code" of Long, parameter "errormsg" of String,
            parameter "terminated_code" of Long
         """
-        return self._client.call_method('execution_engine2.check_jobs_date_range_for_all',
-                                        [params], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.check_jobs_date_range_for_all",
+            [params],
+            self._service_ver,
+            context,
+        )
 
     def check_jobs_date_range_for_all_as_admin(self, params, as_admin, context=None):
         """
@@ -1740,16 +1837,21 @@ class execution_engine2(object):
            parameter "error_code" of Long, parameter "errormsg" of String,
            parameter "terminated_code" of Long
         """
-        return self._client.call_method('execution_engine2.check_jobs_date_range_for_all_as_admin',
-                                        [params, as_admin], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.check_jobs_date_range_for_all_as_admin",
+            [params, as_admin],
+            self._service_ver,
+            context,
+        )
 
     def is_admin(self, context=None):
         """
         Check if current user has ee2 admin rights.
         :returns: instance of type "boolean" (@range [0,1])
         """
-        return self._client.call_method('execution_engine2.is_admin',
-                                        [], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.is_admin", [], self._service_ver, context
+        )
 
     def get_admin_permission(self, context=None):
         """
@@ -1759,5 +1861,6 @@ class execution_engine2(object):
            of 'r|w|x' (('read' | 'write' | 'none'))) -> structure: parameter
            "permission" of String
         """
-        return self._client.call_method('execution_engine2.get_admin_permission',
-                                        [], self._service_ver, context)
+        return self._client.call_method(
+            "execution_engine2.get_admin_permission", [], self._service_ver, context
+        )
