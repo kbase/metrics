@@ -1,7 +1,7 @@
 #!/usr/local/bin/python
 
 import os
-import mysql.connector as mysql    
+import mysql.connector as mysql
 
 metrics_mysql_password = os.environ['METRICS_MYSQL_PWD']
 sql_host = os.environ['SQL_HOST']
