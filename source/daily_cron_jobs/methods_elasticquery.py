@@ -1,12 +1,11 @@
-
-
 import requests
 import json
 import os
 
-elasticsearch_url = os.environ['ELASTICSEARCH_URL'] 
+elasticsearch_url = os.environ["ELASTICSEARCH_URL"]
 
 # Query Elastic for Narrative Data
+
 
 def retrieve_elastic_response(epoch_intial, epoch_final, search_after_timestamp=[]):
     """ Retrieve_elastic_response generates an elasticsearch query to pull narrative container information from Elasticsearch.
@@ -14,89 +13,57 @@ def retrieve_elastic_response(epoch_intial, epoch_final, search_after_timestamp=
            The 'search_after_timestamp' is given to the query after the initial pull. The search_after option in
            the query instructs Elasticsearch to pull all data after the 'search_after' timestamp. """
 
-    elastic_query = {"query": {
-        "bool": {
-            "must": [
-                {
-                    "match_all": {}
-                },
-                {
-                    "match_phrase": {
-                        "type.keyword": {
-                            "query": "narrativecontainers"
+    elastic_query = {
+        "query": {
+            "bool": {
+                "must": [
+                    {"match_all": {}},
+                    {
+                        "match_phrase": {
+                            "type.keyword": {"query": "narrativecontainers"}
                         }
-                    }
-                },
-                {
-                    "range": {
-                        "@timestamp": {
-                            "gte": epoch_intial,
-                            "lte": epoch_final,
-                            "format": "epoch_millis"
+                    },
+                    {
+                        "range": {
+                            "@timestamp": {
+                                "gte": epoch_intial,
+                                "lte": epoch_final,
+                                "format": "epoch_millis",
+                            }
                         }
-                    }
-                }
-            ],
-            "must_not": [
-                {
-                    "match_phrase": {
-                        "session_id": {
-                            "query": "*"
-                        }
-                    }
-                }
-            ]
-        }
-    },
-        "size": 10000,
-        "sort": [
-            {
-                "@timestamp": {
-                    "order": "desc",
-                    "unmapped_type": "boolean"
-                }
+                    },
+                ],
+                "must_not": [{"match_phrase": {"session_id": {"query": "*"}}}],
             }
-        ],
-        "_source": {
-            "excludes": []
         },
+        "size": 10000,
+        "sort": [{"@timestamp": {"order": "desc", "unmapped_type": "boolean"}}],
+        "_source": {"excludes": []},
         "aggs": {
             "2": {
                 "date_histogram": {
                     "field": "@timestamp",
                     "interval": "30m",
                     "time_zone": "America/Los_Angeles",
-                    "min_doc_count": 1
+                    "min_doc_count": 1,
                 }
             }
         },
-        "stored_fields": [
-            "*"
-        ],
+        "stored_fields": ["*"],
         "script_fields": {},
-        "docvalue_fields": [
-            "@timestamp"
-        ],
+        "docvalue_fields": ["@timestamp"],
         "highlight": {
-            "pre_tags": [
-                "@kibana-highlighted-field@"
-            ],
-            "post_tags": [
-                "@/kibana-highlighted-field@"
-            ],
+            "pre_tags": ["@kibana-highlighted-field@"],
+            "post_tags": ["@/kibana-highlighted-field@"],
             "fields": {
                 "*": {
                     "highlight_query": {
                         "bool": {
                             "must": [
-                                {
-                                    "match_all": {}
-                                },
+                                {"match_all": {}},
                                 {
                                     "match_phrase": {
-                                        "type.keyword": {
-                                            "query": "narrativecontainers"
-                                        }
+                                        "type.keyword": {"query": "narrativecontainers"}
                                     }
                                 },
                                 {
@@ -104,32 +71,27 @@ def retrieve_elastic_response(epoch_intial, epoch_final, search_after_timestamp=
                                         "@timestamp": {
                                             "gte": epoch_intial,
                                             "lte": epoch_final,
-                                            "format": "epoch_millis"
+                                            "format": "epoch_millis",
                                         }
                                     }
-                                }
+                                },
                             ],
                             "must_not": [
-                                {
-                                    "match_phrase": {
-                                        "session_id": {
-                                            "query": "*"
-                                        }
-                                    }
-                                }
-                            ]
+                                {"match_phrase": {"session_id": {"query": "*"}}}
+                            ],
                         }
                     }
                 }
             },
-            "fragment_size": 2147483647
-        }
-
+            "fragment_size": 2147483647,
+        },
     }
 
     if not search_after_timestamp:
         narrative_container_query_intial = json.dumps(elastic_query)
-        response = requests.get(elasticsearch_url, data=narrative_container_query_intial)
+        response = requests.get(
+            elasticsearch_url, data=narrative_container_query_intial
+        )
         results_initial = json.loads(response.text)
 
         return results_initial
