@@ -1,3 +1,7 @@
+#2020-04023
+*Fixed Sonar bugs for undefined variables and made non-existant type of errors into generic exceptions 
+
+
 #2020-04-20
 First creation of the file.
 Major reorg of directories. Hopefully easier to follow.
