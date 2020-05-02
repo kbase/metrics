@@ -11,16 +11,17 @@ import biokbase.narrative.clients as clients
 import datetime
 from installed_clients.execution_engine2Client import execution_engine2
 
-#import pprint
-#pp = pprint.PrettyPrinter(indent=4)
+# import pprint
+# pp = pprint.PrettyPrinter(indent=4)
 
 
 requests.packages.urllib3.disable_warnings()
 
 # GetEE2AppStats
 ee2 = execution_engine2(
-    url="https://kbase.us/services/ee2", token=os.environ["METRICS_USER_TOKEN"]
-#    url="https://ci.kbase.us/services/ee2", token=os.environ["METRICS_USER_TOKEN"]
+    url="https://kbase.us/services/ee2",
+    token=os.environ["METRICS_USER_TOKEN"]
+    #    url="https://ci.kbase.us/services/ee2", token=os.environ["METRICS_USER_TOKEN"]
 )
 
 # catalog = Catalog(url = os.environ['CATALOG_URL'], token = os.environ['METRICS_USER_TOKEN'])
@@ -42,7 +43,7 @@ def get_user_app_stats(
     It is 15 days because it uses an underlying method that
     filters by creation_time and not finish_time
     """
-    #import pprint
+    # import pprint
     # From str to datetime, defaults to zero time.
     if type(start_date) == str:
         start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
@@ -59,7 +60,7 @@ def get_user_app_stats(
     #    print("BEGIN: " + str(begin))
     #    print("END: " + str(end))
     # For params get finished jobs from execution engine
-    params = {"start_time": begin, "end_time": end, "ascending": 0, "limit":1000000}
+    params = {"start_time": begin, "end_time": end, "ascending": 0, "limit": 1000000}
     stats = ee2.check_jobs_date_range_for_all(params=params)
     print("LENGTH OF EE2 PULL : " + str(len(stats["jobs"])))
     has_queued_counter = 0
@@ -102,9 +103,13 @@ def get_user_app_stats(
             if job["status"] == "error":
                 is_error = True
             reserved_cpu = None
-            if 'job_input' in job and 'requirements' in job['job_input'] and 'cpu' in job['job_input']['requirements']:
+            if (
+                "job_input" in job
+                and "requirements" in job["job_input"]
+                and "cpu" in job["job_input"]["requirements"]
+            ):
                 has_requirements_counter += 1
-                reserved_cpu = job['job_input']['requirements']['cpu']
+                reserved_cpu = job["job_input"]["requirements"]["cpu"]
             # For values present construct job stats dictionary and append to job array
             if "job_input" not in job:
                 print("JOB ID : " + str(job["job_id"]) + " has no job_input ")
@@ -122,7 +127,7 @@ def get_user_app_stats(
                 "is_error": is_error,
                 "ws_id": ws_id,
                 "queue_time": queue_time,
-                'reserved_cpu': reserved_cpu,
+                "reserved_cpu": reserved_cpu,
             }
             job_array.append(job_stats)
     print("HAS QUEUED Count: " + str(has_queued_counter))
@@ -130,9 +135,11 @@ def get_user_app_stats(
     print("HAS REQUIREMENTS Count: " + str(has_requirements_counter))
     return job_array
 
+
 #    exit(0)
 #    return 1
-    
+
+
 def upload_user_app_stats(start_date=None, end_date=None):
     """ 
     Uploads the catalog app records into the MySQL back end.
@@ -225,7 +232,7 @@ def upload_user_app_stats(start_date=None, end_date=None):
             record["git_commit_hash"],
             record["func_name"],
             record["ws_id"],
-            record['reserved_cpu']
+            record["reserved_cpu"],
         ]
         # if not doing clean wiped insert, check for duplicates with job_id is null (some with app_name is Null)
         if "job_id" not in record:

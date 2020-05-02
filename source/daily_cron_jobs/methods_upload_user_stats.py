@@ -23,8 +23,9 @@ to_auth2 = os.environ["AUTH2_SUFFIX"]
 to_groups = os.environ["GRP_SUFFIX"]
 to_workspace = os.environ["WRK_SUFFIX"]
 
-_CT = 'content-type'
-_AJ = 'application/json'
+_CT = "content-type"
+_AJ = "application/json"
+
 
 def get_user_info_from_auth2():
     """ get auth2 info and kbase_internal_users. Creates initial dict for the data. """
