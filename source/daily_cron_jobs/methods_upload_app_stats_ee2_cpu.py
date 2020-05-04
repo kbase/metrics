@@ -5,33 +5,28 @@ import os
 import datetime, time
 import mysql.connector as mysql
 
-# from biokbase.catalog.Client import Catalog
 from biokbase.narrative_method_store.client import NarrativeMethodStore
 import biokbase.narrative.clients as clients
 import datetime
 from installed_clients.execution_engine2Client import execution_engine2
 
-# import pprint
-# pp = pprint.PrettyPrinter(indent=4)
-
-
 requests.packages.urllib3.disable_warnings()
 
 # GetEE2AppStats
 ee2 = execution_engine2(
+    # CHANGE URL to production: https://kbase.us/services/ee2
+    # CHANGE URL for CI: https://ci.kbase.us/services/ee2 (Need to change token in .env as well)
+    # CHANGE URL for APPDEV: https://appdev.kbase.us/services/ee2
     url="https://kbase.us/services/ee2",
     token=os.environ["METRICS_USER_TOKEN"]
-    #    url="https://ci.kbase.us/services/ee2", token=os.environ["METRICS_USER_TOKEN"]
 )
 
-# catalog = Catalog(url = os.environ['CATALOG_URL'], token = os.environ['METRICS_USER_TOKEN'])
 nms = NarrativeMethodStore(url=os.environ["NARRATIVE_METHOD_STORE"])
 sql_host = os.environ["SQL_HOST"]
 query_on = os.environ["QUERY_ON"]
 
 # Insures all finish times within last day.
 yesterday = datetime.date.today() - datetime.timedelta(days=1)
-
 
 def get_user_app_stats(
     start_date=datetime.datetime.combine(yesterday, datetime.datetime.min.time()),
@@ -43,7 +38,6 @@ def get_user_app_stats(
     It is 15 days because it uses an underlying method that
     filters by creation_time and not finish_time
     """
-    # import pprint
     # From str to datetime, defaults to zero time.
     if type(start_date) == str:
         start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
@@ -70,12 +64,6 @@ def get_user_app_stats(
         if job["status"] in statuses or "finished" not in job:
             continue
         else:
-            # For finished job run calculate run time and convert values from milliseconds to seconds
-            #            if "finished" not in job or "running" not in job:
-            #                print("JOB No Finished or Running: " + str(job))
-            #                print("JOB ID: " + str(job["job_id"]))
-            #                count_of_issues+= 1
-            #            else:
             if "running" not in job:
                 print("Job Id did not have running: " + str(job["job_id"]))
                 job["running"] = job["finished"]
@@ -88,12 +76,6 @@ def get_user_app_stats(
             else:
                 queue_time = (job["running"] - job["created"]) / 1000
                 no_queued_counter += 1
-            #            if has_queued_counter < 30:
-            #                print("JOB ID: " + str(job['job_id']))
-            #                print("Running: " + str(datetime.datetime.fromtimestamp(job['running'] / 1000)))
-            #                print("Created: " + str(datetime.datetime.fromtimestamp(job['created'] / 1000)))
-            #                print("Queue Time: " + str(queue_time))
-            #            queue_time = (job['running'] - job['queued'])
 
             ws_id = None
             if "wsid" in job:
@@ -135,11 +117,6 @@ def get_user_app_stats(
     print("HAS REQUIREMENTS Count: " + str(has_requirements_counter))
     return job_array
 
-
-#    exit(0)
-#    return 1
-
-
 def upload_user_app_stats(start_date=None, end_date=None):
     """ 
     Uploads the catalog app records into the MySQL back end.
@@ -153,9 +130,7 @@ def upload_user_app_stats(start_date=None, end_date=None):
     else:
         app_usage_list = get_user_app_stats()
 
-    #    print("RESULTS : " + str(app_usage_list))
     print("Number of records in app list : " + str(len(app_usage_list)))
-    #    exit(0)
     metrics_mysql_password = os.environ["METRICS_MYSQL_PWD"]
     # connect to mysql
     db_connection = mysql.connect(
