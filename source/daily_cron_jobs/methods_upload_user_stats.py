@@ -79,7 +79,7 @@ def get_internal_users(user_stats_dict):
     """
     Gets the internal users from the kb_internal_staff google sheet that Roy maintains.
     """
-    params = (("tqx", "out:csv"), ("sheet", "KBaseStaffAssociatedUsernamesPastPresent"))
+    params = (("tqx", "out:csv"), ("sheet", "KBaseStaffAccounts"))
     response = requests.get(kb_internal_user_url, params=params)
     if response.status_code != 200:
         print(
