@@ -401,32 +401,32 @@ CREATE OR REPLACE TABLE `suspect_shock_nodes` (
 # OUTREACH EVENT TRACKING
 # OUTREACH_EVENTS
 CREATE OR REPLACE TABLE `outreach_events` (
-  `outreach_event_id` INT NOT NULL AUTO_INCREMENT,
+  `outreach_event_name` varchar(255) NOT NULL,
   `event_date` date NOT NULL,
-  `event_name` varchar(255) NOT NULL,
-  `event_type` ENUM('webinar', 'workshop', 'class'),
+  `attendee_list_url` varchar(255) default NULL,
+  `event_type` enum('webinar','workshop','class') DEFAULT NULL,
   `presenters` varchar(255) NOT NULL,
-  `duration_hours` int(3) NULL,
+  `narrative_urls` varchar(255) DEFAULT NULL,
+  `duration_hours` int(3) DEFAULT NULL,
   `app_categories` varchar(255) NOT NULL,
-  `estimated_attendance` int(5) NULL,
-  `location` varchar(255) NULL,
-  `point_of_contact` varchar(255) NULL,
-  `comments` varchar(255) NULL,
-  PRIMARY KEY (`outreach_event_id`),
-  UNIQUE KEY `uk_oe_oe_name` (`event_name`),
+  `estimated_attendance` int(6) DEFAULT NULL,
+  `location` varchar(255) DEFAULT NULL,
+  `point_of_contact` varchar(255) DEFAULT NULL,
+  `comments` varchar(255) DEFAULT NULL,
+  UNIQUE KEY `uk_oe_oe_name` (`outreach_event_name`),
   KEY `idx_oe_edate` (`event_date`),
-  KEY `idx_oe_etype` (`event_type`),		
+  KEY `idx_oe_etype` (`event_type`),
   KEY `idx_oe_presenters` (`presenters`),
   KEY `idx_oe_acategories` (`app_categories`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
 
 # OUTREACH_EVENT_USERS
 CREATE OR REPLACE TABLE	`outreach_event_users` (
-  `outreach_event_id` INT NOT NULL,
+  `outreach_event_name` varchar(255) NOT NULL,
   `username` varchar(255) NOT NULL,
-  UNIQUE KEY `uk_oue_oei_un` (`outreach_event_id`,`username`),
-  FOREIGN KEY fk_oeu_oevent_id(outreach_event_id)
-  REFERENCES outreach_events(outreach_event_id)
+  UNIQUE KEY `uk_oue_oei_un` (`outreach_event_name`,`username`),
+  FOREIGN KEY fk_oeu_oevent_name(outreach_event_name)
+  REFERENCES outreach_events(outreach_event_name)
   ON UPDATE CASCADE
   ON DELETE RESTRICT,
   FOREIGN KEY fk_oeu_username(username)
