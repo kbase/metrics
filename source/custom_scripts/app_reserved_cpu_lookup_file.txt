@@ -1,0 +1,84 @@
+AssemblyRAST	run_arast	bigmem request_cpus=32
+kb_uploadmethods	unpack_staging_file	kb_upload  request_cpus=1  request_memory=6000
+ReferenceDataManager	index_genomes_in_solr	kb_upload  request_cpus=1  request_memory=6000
+ReferenceDataManager	index_taxa_in_solr	kb_upload  request_cpus=1  request_memory=6042
+ReferenceDataManager	update_loaded_genomes	kb_upload  request_cpus=1  request_memory=6042
+jgi_mg_assembly	run_mg_assembly_pipeline	bigmemlong  request_cpus=32
+kb_uploadmethods	import_file_as_fba_model_from_staging	kb_upload  request_cpus=1  request_memory=6042
+kb_uploadmethods	import_tsv_as_phenotype_set_from_staging	kb_upload  request_cpus=1  request_memory=6042
+RAST_SDK	reannotate_microbial_genome	bigmem  request_cpus=32
+RAST_SDK	annotate_genome	bigmem  request_cpus=32
+kb_diamond	diamond_blast_search	bigmemlong  request_cpus=16
+kb_diamond	Diamond_Blast_Search	bigmemlong  request_cpus=16
+AssemblyRAST	run_velvet	bigmemlong  request_cpus=32
+AssemblyRAST	run_a6	bigmemlong  request_cpus=32
+AssemblyRAST	run_kiki	bigmemlong  request_cpus=32
+AssemblyRAST	run_miniasm	bigmemlong  request_cpus=32
+AssemblyRAST	run_a5	bigmemlong  request_cpus=32
+AssemblyRAST	run_spades	bigmemlong  request_cpus=32
+AssemblyRAST	run_idba	bigmemlong  request_cpus=32
+AssemblyRAST	run_ray	bigmemlong  request_cpus=32
+AssemblyRAST	run_masurca	bigmemlong  request_cpus=32
+BBTools	run_RQCFilter_app	bigmemlong  request_cpus=32
+kb_staging_exporter	export_to_staging	kb_upload  request_cpus=1  request_memory=6042
+kb_variation_importer	import_variation	kb_upload  request_cpus=1  request_memory=6042
+GenericsAPI	import_matrix_from_excel	kb_upload  request_cpus=1  request_memory=6042
+GenericsAPI	import_matrix_from_biom	kb_upload  request_cpus=1  request_memory=6042
+MotifUtils	importFromNarrative	kb_upload  request_cpus=1  request_memory=6041
+kb_SPAdes	run_metaSPAdes	bigmemlong  request_cpus=32
+kb_uploadmethods	import_attribute_mapping_from_staging	kb_upload  request_cpus=1  request_memory=6041
+kb_gtdbtk	run_kb_gtdbtk	bigmem  request_cpus=32  request_memory=100000
+kb_uploadmethods	upload_fastq_file	kb_upload  request_cpus=1  request_memory=6041
+genome_transform	genbank_to_genome_GFU	kb_upload  request_cpus=1  request_memory=6041
+genome_transform	sra_reads_to_library	kb_upload  request_cpus=1  request_memory=6041
+genome_transform	reads_to_library	kb_upload  request_cpus=1  request_memory=6041
+genome_transform	narrative_genbank_to_genome	kb_upload  request_cpus=1  request_memory=6041
+kb_uploadmethods	import_genbank_from_staging	kb_upload  request_cpus=1  request_memory=6041
+kb_uploadmethods	upload_fasta_gff_file	kb_upload  request_cpus=1  request_memory=6041
+kb_uploadmethods	import_sra_from_staging	kb_upload  request_cpus=1  request_memory=6041
+hipmer	run_hipmer_hpc	hpc  request_cpus=3
+kb_uploadmethods	import_fasta_as_assembly_from_staging	kb_upload_bulk  request_cpus=3
+kb_uploadmethods	import_tsv_or_excel_as_media_from_staging	kb_upload  request_cpus=1  request_memory=6041
+RAST_SDK	annotate_genomes	bigmem  request_cpus=32
+RAST_SDK	reannotate_microbial_genomes	bigmem  request_cpus=32
+kb_uploadmethods	import_reads_from_staging	kb_upload  request_cpus=1  request_memory=6041
+kb_IDBA	run_idba_ud	bigmemlong  request_cpus=32
+CompoundSetUtils	compound_set_from_file	kb_upload  request_cpus=1  request_memory=6041
+kb_orthofinder	annotate_plant_transcripts	bigmem  request_cpus=32
+MEGAHIT	run_megahit	bigmem  request_cpus=31
+kb_SPAdes	run_SPAdes	bigmem  request_cpus=32
+ProteinStructureUtils	import_model_pdb_file	kb_upload  request_cpus=1  request_memory=6041
+GenericsAPI	update_matrix_attribute_mapping	kb_upload  request_cpus=1  request_memory=6041
+MSAUtils	import_msa_file	kb_upload  request_cpus=1  request_memory=6041
+MergeMetabolicAnnotations	import_annotations	kb_upload  request_cpus=1  request_memory=6041
+FamaProfiling	run_FamaProfiling	bigmem  request_cpus=32
+kb_uploadmethods	batch_import_assemblies_from_staging	kb_upload_bulk  request_cpus=3
+kb_uploadmethods	batch_import_genomes_from_staging	kb_upload  request_cpus=1  request_memory=6041
+VariationUtil	import_variation_from_vcf	kb_upload  request_cpus=1  request_memory=6041
+VariationUtil	save_variation_from_vcf	kb_upload  request_cpus=1  request_memory=6041
+kb_rnaseq_export	export_rna_seq_alignment_as_bam_to_staging	kb_upload  request_cpus=1  request_memory=6042
+kb_uploadmethods	import_tsv_as_expression_matrix_from_staging	kb_upload  request_cpus=1  request_memory=6041
+SBMLTools	sbml_importer	kb_upload  request_cpus=1  request_memory=6042
+KBaseFeatureValues	cluster_k_means	bigmem  request_cpus=32
+stressTest	run_stressTest	stressTest  request_cpus=32
+stressTest	run_stressTest2	stressTest  request_cpus=32
+stressTest	run_stressTest3	stressTest  request_cpus=32
+kb_SPAdes	run_hybridSPAdes	bigmem  request_cpus=32
+kb_SPAdes	run_HybridSPAdes	bigmem  request_cpus=32
+kb_MaSuRCA	run_masurca_assembler	bigmem  request_cpus=32
+kb_kaiju	run_kaiju	njs  request_memory=53248
+RAST_SDK	annotate_contigset	bigmem  request_cpus=32
+RAST_SDK	annotate_contigsets	bigmem  request_cpus=32
+kb_genomeclassification	upload_trainingset	kb_upload  request_cpus=1  request_memory=6041
+KBase2IMG_submit	run_KBase2IMG_submit	kb_upload  request_cpus=1  request_memory=6042
+kb_uploadmethods	import_gff_fasta_as_metagenome_from_staging	kb_upload  request_cpus=1  request_memory=6000
+kb_uploadmethods	upload_metagenome_fasta_gff_file	kb_upload  request_cpus=1  request_memory=6000
+ReadsUtils	export_reads	njs  request_cpus=4  request_disk=400000
+DomainAnnotation	search_domains	njs  request_cpus=8  request_disk=400000
+kb_Bowtie2	align_reads_to_assembly_app	bigmem  request_cpus=32
+kb_ReadsUtilities	KButil_Random_Subsample_Reads	njs  request_cpus=8  request_disk=400000
+CoExpression	expression_toolkit_cluster_WGCNA	njs  request_cpus=8  request_disk=400000
+CoExpression	const_coex_net_clust	njs  request_cpus=8  request_disk=400000
+dRep	dereplicate	njs  request_cpus=8
+CompMolNWChem	run_CompMolNWChem	kb_upload_bulk  request_cpus=3
+kb_model_analysis	model_heatmap_analysis	kb_upload  request_cpus=1  request_memory=6000

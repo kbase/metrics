@@ -1,4 +1,8 @@
-#2020-04023
+#2020-05-05
+* Apps stats uploading set up for EE2 and grabs reserved CPU. Also made backfil script.
+
+
+#2020-04-23
 *Fixed Sonar bugs for undefined variables and made non-existant type of errors into generic exceptions 
 
 
