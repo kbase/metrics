@@ -5,25 +5,22 @@ import os
 import datetime, time
 import mysql.connector as mysql
 
-# from biokbase.catalog.Client import Catalog
 from biokbase.narrative_method_store.client import NarrativeMethodStore
 import biokbase.narrative.clients as clients
 import datetime
 from installed_clients.execution_engine2Client import execution_engine2
 
-import pprint
-
-pp = pprint.PrettyPrinter(indent=4)
-
-
 requests.packages.urllib3.disable_warnings()
 
 # GetEE2AppStats
 ee2 = execution_engine2(
-    url="https://kbase.us/services/ee2", token=os.environ["METRICS_USER_TOKEN"]
+    # CHANGE URL to production: https://kbase.us/services/ee2
+    # CHANGE URL for CI: https://ci.kbase.us/services/ee2 (Need to change token in .env as well)
+    # CHANGE URL for APPDEV: https://appdev.kbase.us/services/ee2
+    url="https://kbase.us/services/ee2",
+    token=os.environ["METRICS_USER_TOKEN"],
 )
 
-# catalog = Catalog(url = os.environ['CATALOG_URL'], token = os.environ['METRICS_USER_TOKEN'])
 nms = NarrativeMethodStore(url=os.environ["NARRATIVE_METHOD_STORE"])
 sql_host = os.environ["SQL_HOST"]
 query_on = os.environ["QUERY_ON"]
@@ -63,16 +60,12 @@ def get_user_app_stats(
     print("LENGTH OF EE2 PULL : " + str(len(stats["jobs"])))
     has_queued_counter = 0
     no_queued_counter = 0
+    has_requirements_counter = 0
+    no_job_input_counter = 0
     for job in stats["jobs"]:
         if job["status"] in statuses or "finished" not in job:
             continue
         else:
-            # For finished job run calculate run time and convert values from milliseconds to seconds
-            #            if "finished" not in job or "running" not in job:
-            #                print("JOB No Finished or Running: " + str(job))
-            #                print("JOB ID: " + str(job["job_id"]))
-            #                count_of_issues+= 1
-            #            else:
             if "running" not in job:
                 print("Job Id did not have running: " + str(job["job_id"]))
                 job["running"] = job["finished"]
@@ -85,12 +78,6 @@ def get_user_app_stats(
             else:
                 queue_time = (job["running"] - job["created"]) / 1000
                 no_queued_counter += 1
-            #            if has_queued_counter < 30:
-            #                print("JOB ID: " + str(job['job_id']))
-            #                print("Running: " + str(datetime.datetime.fromtimestamp(job['running'] / 1000)))
-            #                print("Created: " + str(datetime.datetime.fromtimestamp(job['created'] / 1000)))
-            #                print("Queue Time: " + str(queue_time))
-            #            queue_time = (job['running'] - job['queued'])
 
             ws_id = None
             if "wsid" in job:
@@ -99,15 +86,21 @@ def get_user_app_stats(
             is_error = False
             if job["status"] == "error":
                 is_error = True
-
-            #            if job['job_id'] == '5e597f13e4b0fb2e65178f06':
-            #                #print("JOB : " + str(job))
-            #                print("JOB : " + str(job))
-            #                pp.pprint(job)
-            #                error_result = job.get("error")
-            #                print("ERROR RESULT: " + str(error_result))
-            #                print("IS ERROR: " + str(is_error))
+            reserved_cpu = None
+            if (
+                "job_input" in job
+                and "requirements" in job["job_input"]
+                and "cpu" in job["job_input"]["requirements"]
+            ):
+                has_requirements_counter += 1
+                reserved_cpu = job["job_input"]["requirements"]["cpu"]
             # For values present construct job stats dictionary and append to job array
+            if "job_input" not in job:
+                no_job_input_counter += 1
+                continue
+            #                print("JOB ID : " + str(job["job_id"]) + " has no job_input ")
+            #                print(str(job))
+            #                exit()
             job_stats = {
                 "job_id": job["job_id"],
                 "user": job["user"],
@@ -120,10 +113,13 @@ def get_user_app_stats(
                 "is_error": is_error,
                 "ws_id": ws_id,
                 "queue_time": queue_time,
+                "reserved_cpu": reserved_cpu,
             }
             job_array.append(job_stats)
     print("HAS QUEUED Count: " + str(has_queued_counter))
-    print("HAS QUEUED Count: " + str(no_queued_counter))
+    print("NO QUEUED Count: " + str(no_queued_counter))
+    print("HAS REQUIREMENTS Count: " + str(has_requirements_counter))
+    print("NO JOB INPUT COUNT: " + str(no_job_input_counter))
     return job_array
 
 
@@ -140,9 +136,7 @@ def upload_user_app_stats(start_date=None, end_date=None):
     else:
         app_usage_list = get_user_app_stats()
 
-    #    print("RESULTS : " + str(app_usage_list))
     print("Number of records in app list : " + str(len(app_usage_list)))
-    #    exit(0)
     metrics_mysql_password = os.environ["METRICS_MYSQL_PWD"]
     # connect to mysql
     db_connection = mysql.connect(
@@ -155,16 +149,16 @@ def upload_user_app_stats(start_date=None, end_date=None):
 
     prep_cursor = db_connection.cursor(prepared=True)
     user_app_insert_statement = (
-        "insert into metrics.user_app_usage_ee2 "
+        "insert into metrics.user_app_usage_ee2_cpu "
         "(job_id, username, app_name, "
         "start_date, finish_date, "
         "run_time, queue_time, is_error, "
-        "git_commit_hash, func_name, ws_id) "
-        "values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);"
+        "git_commit_hash, func_name, "
+        "ws_id, reserved_cpu) "
+        "values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);"
     )
-    #                                "values(%s,%s,%s,FROM_UNIXTIME(%s),FROM_UNIXTIME(%s),%s,%s,%s,%s,%s);"
 
-    check_if_first_run = "select count(*) from metrics.user_app_usage_ee2"
+    check_if_first_run = "select count(*) from metrics.user_app_usage_ee2_cpu"
     cursor.execute(check_if_first_run)
     num_previous_records = 0
     for row in cursor:
@@ -172,7 +166,7 @@ def upload_user_app_stats(start_date=None, end_date=None):
 
     check_no_job_id_duplicate_record_cursor = db_connection.cursor(prepared=True)
     check_dup_no_job_id_statement = (
-        "select count(*) from metrics.user_app_usage_ee2 "
+        "select count(*) from metrics.user_app_usage_ee2_cpu "
         "where job_id is NULL "
         "and username = %s "
         "and app_name = %s "
@@ -185,11 +179,9 @@ def upload_user_app_stats(start_date=None, end_date=None):
         "and func_name = %s "
         "and ws_id = %s"
     )
-    #                                    "and start_date = FROM_UNIXTIME(%s) " \
-    #                                    "and finish_date = FROM_UNIXTIME(%s) " \
 
     check_dup_no_job_id_no_app_name_statement = (
-        "select count(*) from metrics.user_app_usage_ee2 "
+        "select count(*) from metrics.user_app_usage_ee2_cpu "
         "where job_id is NULL "
         "and username = %s "
         "and app_name is NULL "
@@ -202,8 +194,6 @@ def upload_user_app_stats(start_date=None, end_date=None):
         "and func_name = %s "
         "and ws_id = %s"
     )
-    #                                                "and start_date = FROM_UNIXTIME(%s) " \
-    #                                                "and finish_date = FROM_UNIXTIME(%s) " \
 
     num_rows_inserted = 0
     num_rows_failed_duplicates = 0
@@ -211,13 +201,9 @@ def upload_user_app_stats(start_date=None, end_date=None):
     num_no_job_id_duplicate = 0
     # insert each record.
     for record in app_usage_list:
-        #        is_error = False
-        #        if record['is_error'] == 1:
-        #            is_error = True
         input = [
             record.get("job_id"),
             record["user"],
-            #                 helper_concatenation(record["app_module_name"], record["app_id"]),
             record["app_name"],
             record["start_date"],
             record["finish_date"],
@@ -225,15 +211,15 @@ def upload_user_app_stats(start_date=None, end_date=None):
             round((record["queue_time"])),
             record["is_error"],
             record["git_commit_hash"],
-            # helper_concatenation(record["func_module_name"], record["func_name"])]
             record["func_name"],
             record["ws_id"],
+            record["reserved_cpu"],
         ]
         # if not doing clean wiped insert, check for duplicates with job_id is null (some with app_name is Null)
         if "job_id" not in record:
             num_no_job_id += 1
             if num_previous_records > 0:
-                check_input = input[1:]
+                check_input = input[1:-1]
                 if record["app_name"] is None:
                     # Don't need app_name
                     del check_input[1:2]
