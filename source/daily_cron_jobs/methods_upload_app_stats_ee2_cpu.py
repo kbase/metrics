@@ -18,7 +18,7 @@ ee2 = execution_engine2(
     # CHANGE URL for CI: https://ci.kbase.us/services/ee2 (Need to change token in .env as well)
     # CHANGE URL for APPDEV: https://appdev.kbase.us/services/ee2
     url="https://kbase.us/services/ee2",
-    token=os.environ["METRICS_USER_TOKEN"]
+    token=os.environ["METRICS_USER_TOKEN"],
 )
 
 nms = NarrativeMethodStore(url=os.environ["NARRATIVE_METHOD_STORE"])
@@ -27,6 +27,7 @@ query_on = os.environ["QUERY_ON"]
 
 # Insures all finish times within last day.
 yesterday = datetime.date.today() - datetime.timedelta(days=1)
+
 
 def get_user_app_stats(
     start_date=datetime.datetime.combine(yesterday, datetime.datetime.min.time()),
@@ -97,9 +98,9 @@ def get_user_app_stats(
             if "job_input" not in job:
                 no_job_input_counter += 1
                 continue
-#                print("JOB ID : " + str(job["job_id"]) + " has no job_input ")
-#                print(str(job))
-#                exit()
+            #                print("JOB ID : " + str(job["job_id"]) + " has no job_input ")
+            #                print(str(job))
+            #                exit()
             job_stats = {
                 "job_id": job["job_id"],
                 "user": job["user"],
@@ -120,6 +121,7 @@ def get_user_app_stats(
     print("HAS REQUIREMENTS Count: " + str(has_requirements_counter))
     print("NO JOB INPUT COUNT: " + str(no_job_input_counter))
     return job_array
+
 
 def upload_user_app_stats(start_date=None, end_date=None):
     """ 
