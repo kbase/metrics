@@ -60,6 +60,7 @@ def get_user_app_stats(
     has_queued_counter = 0
     no_queued_counter = 0
     has_requirements_counter = 0
+    no_job_input_counter = 0
     for job in stats["jobs"]:
         if job["status"] in statuses or "finished" not in job:
             continue
@@ -94,9 +95,11 @@ def get_user_app_stats(
                 reserved_cpu = job["job_input"]["requirements"]["cpu"]
             # For values present construct job stats dictionary and append to job array
             if "job_input" not in job:
-                print("JOB ID : " + str(job["job_id"]) + " has no job_input ")
-                print(str(job))
-                exit()
+                no_job_input_counter += 1
+                continue
+#                print("JOB ID : " + str(job["job_id"]) + " has no job_input ")
+#                print(str(job))
+#                exit()
             job_stats = {
                 "job_id": job["job_id"],
                 "user": job["user"],
@@ -115,6 +118,7 @@ def get_user_app_stats(
     print("HAS QUEUED Count: " + str(has_queued_counter))
     print("NO QUEUED Count: " + str(no_queued_counter))
     print("HAS REQUIREMENTS Count: " + str(has_requirements_counter))
+    print("NO JOB INPUT COUNT: " + str(no_job_input_counter))
     return job_array
 
 def upload_user_app_stats(start_date=None, end_date=None):
