@@ -129,7 +129,7 @@ CREATE INDEX idx_user_app_usage_git_commit_hash ON metrics.user_app_usage (git_c
 
 CREATE INDEX idx_user_app_usage_func_name ON metrics.user_app_usage (func_name);
 
-#######
+######################
 #EE2 with CPU
 CREATE TABLE `user_app_usage_ee2_cpu` (
   `job_id` varchar(255) DEFAULT NULL,
