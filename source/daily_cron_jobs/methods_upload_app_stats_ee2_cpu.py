@@ -12,6 +12,15 @@ from installed_clients.execution_engine2Client import execution_engine2
 
 requests.packages.urllib3.disable_warnings()
 
+##########################
+#
+#   IMPORTANT - IF EVER BLOW AWAY THE TABLE
+#   AND NEED TO REPOPULATE IT (WHICH INCLUDES EE2 Backfill data)
+#   MAKSE SURE TO RUN THE CUSTOM_SCRIPTS/Backfill_Ee2_reserved_cpu script
+#
+##########################
+
+
 # GetEE2AppStats
 ee2 = execution_engine2(
     # CHANGE URL to production: https://kbase.us/services/ee2
