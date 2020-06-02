@@ -1,7 +1,7 @@
 from methods_elasticquery import retrieve_elastic_response
 import warnings
 import time
-
+import pprint
 warnings.simplefilter(action="ignore", category=Warning)
 import pandas as pd
 import datetime
@@ -107,22 +107,25 @@ def elasticsearch_pull(start_date, end_date):
         # datetime to epoch. Epoch format needed for elastic query
         epoch_start = int(start_date.strftime("%s")) * 1000
         epoch_end = int(end_date.strftime("%s")) * 1000
-
+        
     # Return results of elastic query and format data to dictionary structures
     results = retrieve_elastic_response(epoch_start, epoch_end)
     #    import pprint
     #    pp = pprint.PrettyPrinter(indent=4)
     #    pp.pprint(results)
     data_array = results_to_formatted_dicts(results)
-
+    
     # Get relative sizes of data
     total_results = results["hits"]["total"]
     size_results_pulled = len(results["hits"]["hits"])
-
-    # Start array from first index with a different timestamp than the last element
-    check_timestamp = [data_array[-1]["epoch_timestamp"]]
-    attempt_index = -2
-    attempt_timestamp = [data_array[attempt_index]["epoch_timestamp"]]
+    try:
+        # Start array from first index with a different timestamp than the last element
+        check_timestamp = [data_array[-1]["epoch_timestamp"]]
+        attempt_index = -2
+        attempt_timestamp = [data_array[attempt_index]["epoch_timestamp"]]
+    except IndexError:
+        print ("Oops! Data array from Elasticsearch is empty. Please check Elasticsearch is running and try pull again")
+        
     while check_timestamp == attempt_timestamp and (
         (total_results + attempt_index) > 0
     ):
