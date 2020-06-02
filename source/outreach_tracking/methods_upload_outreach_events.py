@@ -47,7 +47,7 @@ def get_outreach_events():
         line = temp_line.split('","')
         (event_name, event_date, pre_attendee_list_url, event_type, presenters,
          narrative_urls, duration_hours, app_categories, estimated_attendance,
-         location, point_of_contact, comments ) = line[:12]
+         location, point_of_contact, feedback_form_url, comments ) = line[:13]
         attendee_list_url = ""
         if pre_attendee_list_url is not None and pre_attendee_list_url.startswith("https://docs.google.com/spreadsheets/"):
             attendee_list_url = pre_attendee_list_url.rsplit("/",1)[0] + "/gviz/tq"
@@ -62,6 +62,7 @@ def get_outreach_events():
             "estimated_attendance": estimated_attendance.strip(),
             "location": location.strip(),
             "point_of_contact": point_of_contact.strip(),
+            "feedback_form_url": feedback_form_url.strip(),
             "comments": comments.strip()}
     return events
 
@@ -89,7 +90,7 @@ def upload_events(events):
     query = (
         "select outreach_event_name, event_date, attendee_list_url, event_type, "
         "presenters, narrative_urls, duration_hours, app_categories, "
-        "estimated_attendance, location, point_of_contact, comments " 
+        "estimated_attendance, location, point_of_contact, feedback_form_url, comments " 
         "from metrics.outreach_events"
     )
     cursor.execute(query)
@@ -105,6 +106,7 @@ def upload_events(events):
         estimated_attendance,
         location,
         point_of_contact,
+        feedback_form_url,
         comments,
     ) in cursor:
         existing_events_info[event_name] = {
@@ -118,6 +120,7 @@ def upload_events(events):
             "estimated_attendance": estimated_attendance,
             "location": location,
             "point_of_contact": point_of_contact,
+            "feedback_form_url": feedback_form_url,
             "comments": comments,
         }
 
@@ -128,9 +131,10 @@ def upload_events(events):
         "insert into outreach_events "
         "(outreach_event_name, event_date, attendee_list_url, event_type, "
         "presenters, narrative_urls, duration_hours, app_categories, "
-        "estimated_attendance, location, point_of_contact, comments) "
+        "estimated_attendance, location, "
+        "point_of_contact, feedback_form_url, comments) "
         "values(%s, %s, %s, %s, %s, %s, "
-        "%s, %s, %s, %s, %s, %s );"
+        "%s, %s, %s, %s, %s, %s, %s);"
     )
 
     update_prep_cursor = db_connection.cursor(prepared=True)
@@ -139,7 +143,7 @@ def upload_events(events):
         "set event_date = %s, attendee_list_url = %s, event_type = %s, "
         "presenters = %s, narrative_urls = %s, duration_hours = %s, "
         "app_categories = %s, estimated_attendance = %s, location = %s, "
-        "point_of_contact = %s, comments = %s "
+        "point_of_contact = %s, feedback_form_url = %s, comments = %s  "
         "where outreach_event_name = %s;"
     )
 
@@ -161,6 +165,7 @@ def upload_events(events):
                 events[event_name]["estimated_attendance"],
                 events[event_name]["location"],
                 events[event_name]["point_of_contact"],
+                events[event_name]["feedback_form_url"],
                 events[event_name]["comments"],
             )
             prep_cursor.execute(events_insert_statement, input)
@@ -191,6 +196,8 @@ def upload_events(events):
                 == existing_events_info[event_name]["location"]
                 and events[event_name]["point_of_contact"]
                 == existing_events_info[event_name]["point_of_contact"]
+                and events[event_name]["feedback_form_url"]
+                == existing_events_info[event_name]["feedback_form_url"]
                 and events[event_name]["comments"]
                 == existing_events_info[event_name]["comments"]
             ):
@@ -205,6 +212,7 @@ def upload_events(events):
                     events[event_name]["estimated_attendance"],
                     events[event_name]["location"],
                     events[event_name]["point_of_contact"],
+                    events[event_name]["feedback_form_url"],
                     events[event_name]["comments"],
                     event_name,
                 )

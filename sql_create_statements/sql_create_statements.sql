@@ -412,13 +412,14 @@ CREATE OR REPLACE TABLE `outreach_events` (
   `estimated_attendance` int(6) DEFAULT NULL,
   `location` varchar(255) DEFAULT NULL,
   `point_of_contact` varchar(255) DEFAULT NULL,
+  `feedback_form_url` varchar(255) DEFAULT NULL,
   `comments` varchar(255) DEFAULT NULL,
   UNIQUE KEY `uk_oe_oe_name` (`outreach_event_name`),
   KEY `idx_oe_edate` (`event_date`),
   KEY `idx_oe_etype` (`event_type`),
   KEY `idx_oe_presenters` (`presenters`),
   KEY `idx_oe_acategories` (`app_categories`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 # OUTREACH_EVENT_USERS
 CREATE OR REPLACE TABLE	`outreach_event_users` (
