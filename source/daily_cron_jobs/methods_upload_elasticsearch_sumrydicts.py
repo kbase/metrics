@@ -115,9 +115,10 @@ def elasticsearch_pull(start_date, end_date):
     #    pp.pprint(results)
     data_array = results_to_formatted_dicts(results)
     
-    # Get relative sizes of data
+    # Get relative size of data and initiate values
     total_results = results["hits"]["total"]
     size_results_pulled = len(results["hits"]["hits"])
+    check_timestamp = 0
     try:
         # Start array from first index with a different timestamp than the last element
         check_timestamp = [data_array[-1]["epoch_timestamp"]]
