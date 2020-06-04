@@ -120,11 +120,11 @@ def elasticsearch_pull(start_date, end_date):
     size_results_pulled = len(results["hits"]["hits"])
     check_timestamp = 0
     attemp_timestamp = 1
+    attempt_index = -2
     try:
         # Start array from first index with a different timestamp than the last element
         check_timestamp = [data_array[-1]["epoch_timestamp"]]
         attempt_timestamp = [data_array[attempt_index]["epoch_timestamp"]]
-        attempt_index = -2
     except IndexError:
         print ("Oops! Data array from Elasticsearch is empty. Please check Elasticsearch is running and try pull again")
         
