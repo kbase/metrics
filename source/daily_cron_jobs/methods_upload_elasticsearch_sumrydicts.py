@@ -119,7 +119,7 @@ def elasticsearch_pull(start_date, end_date):
     total_results = results["hits"]["total"]
     size_results_pulled = len(results["hits"]["hits"])
     check_timestamp = 0
-    attemp_timestamp = 1
+    attempt_timestamp = 1
     attempt_index = -2
     try:
         # Start array from first index with a different timestamp than the last element
