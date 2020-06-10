@@ -158,6 +158,72 @@ CREATE TABLE `user_app_usage_ee2_cpu` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 
 
+# TABLE AFTER EE2 swap pver
+CREATE TABLE `user_app_usage` (
+  `job_id` varchar(255) DEFAULT NULL,
+  `username` varchar(255) NOT NULL,
+  `app_name` varchar(255) DEFAULT NULL,
+  `start_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `finish_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `run_time` int(11) NOT NULL,
+  `queue_time` int(11) NOT NULL,
+  `is_error` tinyint(1) NOT NULL DEFAULT '0',
+  `git_commit_hash` varchar(255) NOT NULL,
+  `func_name` varchar(255) DEFAULT NULL,
+  `ws_id` int(11) DEFAULT NULL,
+  `reserved_cpu` int(4) DEFAULT NULL,
+  UNIQUE KEY `uk_jobid_user_app_usage` (`job_id`),
+  KEY `idx_user_app_usage_job_id` (`job_id`),
+  KEY `idx_user_app_usage_username` (`username`),
+  KEY `idx_user_app_usage_app_name` (`app_name`),
+  KEY `idx_user_app_usage_start_date` (`start_date`),
+  KEY `idx_user_app_usage_finish_date` (`finish_date`),
+  KEY `idx_user_app_usage_is_error` (`is_error`),
+  KEY `idx_user_app_usage_git_commit_hash` (`git_commit_hash`),
+  KEY `idx_user_app_usage_func_name` (`func_name`),
+  KEY `idx_user_app_usage_ws_id` (`ws_id`),
+  CONSTRAINT `fk_app_usage_username` FOREIGN KEY (`username`) REFERENCES `user_info` (`username`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+
+
+#################################
+# user_app_usage_old_app_catalog
+# THE OLD TABLE DATA THAT CAME FROM APP CATALOG. NOTE IT INCLUDES APP_DEV jobs.
+#
+# populated with
+# insert into metrics.user_app_usage_old_app_catalog
+# (job_id, username, app_name, start_date, finish_date,
+# run_time, queue_time, is_error, git_commit_hash, func_name)
+# select job_id, username, app_name, start_date, finish_date,
+# run_time, queue_time, is_error, git_commit_hash, func_name
+# from user_app_usage;
+#
+
+CREATE TABLE `user_app_usage_old_app_catalog` (
+  `job_id` varchar(255) DEFAULT NULL,
+  `username` varchar(255) NOT NULL,
+  `app_name` varchar(255) DEFAULT NULL,
+  `start_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `finish_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `run_time` int(11) NOT NULL,
+  `queue_time` int(11) NOT NULL,
+  `is_error` tinyint(1) NOT NULL DEFAULT '0',
+  `git_commit_hash` varchar(255) NOT NULL,
+  `func_name` varchar(255) DEFAULT NULL,
+  UNIQUE KEY `uk_jobid_user_app_usage_old` (`job_id`),
+  KEY `idx_user_app_usage_old_job_id` (`job_id`),
+  KEY `idx_user_app_usage_old_username` (`username`),
+  KEY `idx_user_app_usage_old_app_name` (`app_name`),
+  KEY `idx_user_app_usage_old_start_date` (`start_date`),
+  KEY `idx_user_app_usage_old_finish_date` (`finish_date`),
+  KEY `idx_user_app_usage_old_is_error` (`is_error`),
+  KEY `idx_user_app_usage_old_git_commit_hash` (`git_commit_hash`),
+  KEY `idx_user_app_usage_old_func_name` (`func_name`),
+  CONSTRAINT `fk_app_usage_old_username` FOREIGN KEY (`username`) REFERENCES `user_info` (`username`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+
 ######################
 #app_name_category_map
 
