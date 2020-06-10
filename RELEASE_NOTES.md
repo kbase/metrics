@@ -1,3 +1,6 @@
+#2020-06-09
+    * Moved EE2 to active spot instead of app catalog. Created old_app_catalog_equivalent
+
 #2020-05-27
     * Making code to use EE2 for app stats active
 
