@@ -1031,10 +1031,9 @@ select app_runs_count, count(*) as user_count
 from metrics_reporting.user_app_runs
 group by app_runs_count;
 
-#NOTE THESE ARE AGAINST EE2 TEMP TABLE CURRENTLY
 create or replace view metrics_reporting.workspace_user_app_runs as
 select uau.ws_id, count(*) as app_runs_count
-from metrics.user_app_usage_ee2 uau
+from metrics.user_app_usage uau
 inner join metrics.user_info ui on ui.username = uau.username
 where ui.kb_internal_user = 0
 group by uau.ws_id;
