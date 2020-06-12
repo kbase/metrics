@@ -126,8 +126,7 @@ def elasticsearch_pull(start_date, end_date):
         check_timestamp = [data_array[-1]["epoch_timestamp"]]
         attempt_timestamp = [data_array[attempt_index]["epoch_timestamp"]]
     except IndexError:
-        print ("Oops! Data array from Elasticsearch is empty. Please check Elasticsearch is running and try pull again")
-        
+        return IndexError("Oops! Data array from Elasticsearch is empty. Please check Elasticsearch is running and try pull again.")
     while check_timestamp == attempt_timestamp and (
         (total_results + attempt_index) > 0
     ):
