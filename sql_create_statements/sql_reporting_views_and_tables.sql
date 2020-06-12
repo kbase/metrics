@@ -154,10 +154,13 @@ group by app_name, func_name, git_commit_hash;
 
 #IN METRICS
 create or replace view metrics.hv_total_exec_app_function_git as
-select count(*) as tot_cnt, IFNULL(app_name,"None") as app_name, 
-func_name, git_commit_hash 
+select count(*) as tot_cnt, IFNULL(app_name,"None") as app_name,
+func_name, git_commit_hash, 
+round(avg(queue_time),1) as avg_queue_time, 
+round(avg(reserved_cpu),1) as avg_reserved_cpu
 from metrics.user_app_usage
 group by app_name, func_name, git_commit_hash;
+
 
 #IN METRICS
 create or replace view metrics.hv_fail_exec_app_function_git as
@@ -170,7 +173,8 @@ group by app_name, func_name, git_commit_hash;
 #IN METRICS
 create or replace view metrics.hv_fail_pct_app_function_git_combo as
 select (IFNULL(fe.err_cnt,0)/te.tot_cnt) * 100 as fail_pct, 
-te.tot_cnt, te.app_name, te.func_name, te.git_commit_hash
+te.tot_cnt, te.app_name, te.func_name, te.git_commit_hash,
+te.avg_queue_time, te.avg_reserved_cpu
 from metrics.hv_total_exec_app_function_git as te left outer join
 metrics.hv_fail_exec_app_function_git as fe
 on te.app_name = fe.app_name
@@ -193,7 +197,8 @@ art.app_count as success_app_count,
 art.avg_run_time, art.stdev_run_time, 
 art.last_finish_date,
 fpa.fail_pct, fpa.tot_cnt as all_app_run_count, 
-nuu.all_users_count, non_kb_user_count
+nuu.all_users_count, non_kb_user_count,
+fpa.avg_queue_time, fpa.avg_reserved_cpu
 from metrics.hv_app_run_time_app_function_git_combo art inner join
 metrics.hv_fail_pct_app_function_git_combo fpa on 
 art.app_name = fpa.app_name
@@ -236,14 +241,17 @@ and ui.exclude = False;
 
 #IN METRICS
 create or replace view metrics.hv_number_nonKB_users_using_function_git_combo as
-select count(*)as non_kb_user_count, func_name, git_commit_hash 
+select count(*) as non_kb_user_count, func_name, git_commit_hash 
 from metrics.hv_distinct_nonKB_users_using_func_git
 group by func_name, git_commit_hash;
 
 #IN METRICS
 create or replace view metrics.hv_total_exec_function_git as
 select count(*) as tot_cnt,  
-func_name, git_commit_hash from metrics.user_app_usage
+func_name, git_commit_hash, 
+round(avg(queue_time),1) as avg_queue_time, 
+round(avg(reserved_cpu),1) as avg_reserved_cpu
+from metrics.user_app_usage
 group by func_name, git_commit_hash;
 
 #IN METRICS
@@ -256,7 +264,8 @@ group by func_name, git_commit_hash;
 #IN METRICS
 create or replace view metrics.hv_fail_pct_function_git_combo as
 select (IFNULL(fe.err_cnt,0)/te.tot_cnt) * 100 as fail_pct, 
-te.tot_cnt, te.func_name, te.git_commit_hash
+te.tot_cnt, te.func_name, te.git_commit_hash,
+te.avg_queue_time, te.avg_reserved_cpu
 from metrics.hv_total_exec_function_git as te left outer join
 metrics.hv_fail_exec_function_git as fe
 on te.func_name = fe.func_name
@@ -277,7 +286,8 @@ art.app_count as success_app_count,
 art.avg_run_time, art.stdev_run_time, 
 art.last_finish_date,
 fpa.fail_pct, fpa.tot_cnt as all_app_run_count, 
-nuu.all_users_count, non_kb_user_count
+nuu.all_users_count, non_kb_user_count,
+fpa.avg_queue_time, fpa.avg_reserved_cpu
 from metrics.hv_app_run_time_function_git_combo art inner join
 metrics.hv_fail_pct_function_git_combo fpa on 
 art.func_name = fpa.func_name
@@ -324,7 +334,9 @@ group by func_name;
 
 #IN METRICS
 create or replace view metrics.hv_total_exec_function as
-select count(*) as tot_cnt, func_name 
+select count(*) as tot_cnt, func_name,
+round(avg(queue_time),1) as avg_queue_time,
+round(avg(reserved_cpu),1) as avg_reserved_cpu
 from metrics.user_app_usage
 group by func_name;
 
@@ -338,7 +350,8 @@ group by func_name;
 #IN METRICS REPORTING
 create or replace view metrics_reporting.fail_pct_function as
 select (IFNULL(fe.err_cnt,0)/te.tot_cnt) * 100 as fail_pct, 
-te.tot_cnt, te.func_name
+te.tot_cnt, te.func_name,
+te.avg_queue_time, te.avg_reserved_cpu
 from metrics.hv_total_exec_function as te left outer join
 metrics.hv_fail_exec_function as fe
 on te.func_name = fe.func_name;
@@ -358,7 +371,8 @@ art.app_count as success_app_count,
 art.avg_run_time, art.stdev_run_time, 
 art.last_finish_date,
 fpa.fail_pct, fpa.tot_cnt as all_app_run_count, 
-nuu.all_users_count, non_kb_user_count
+nuu.all_users_count, non_kb_user_count,
+fpa.avg_queue_time, fpa.avg_reserved_cpu
 from metrics.hv_app_run_time_function art inner join
 metrics_reporting.fail_pct_function fpa on 
 art.func_name = fpa.func_name
@@ -373,7 +387,8 @@ art.func_name = nnu.func_name;
 #IN METRICS
 create or replace view metrics.hv_app_usage_by_month as
 select DATE_FORMAT(`finish_date`,'%Y-%m') as finish_month,
-count(*) as number_app_runs
+count(*) as number_app_runs,
+round(avg(queue_time),1) as avg_queue_time
 from metrics.user_app_usage
 group by finish_month;
 
@@ -411,7 +426,8 @@ create or replace view metrics_reporting.app_usage_stats_by_month as
 select apm.finish_month, apm.number_app_runs as num_all_app_runs,
 nkapm.number_app_runs as non_kbase_user_app_runs,
 aepm.number_app_runs as num_all_error_app_runs,
-nkaepm.number_app_runs as non_kbase_user_error_app_runs
+nkaepm.number_app_runs as non_kbase_user_error_app_runs,
+apm.avg_queue_time
 from metrics.hv_app_usage_by_month apm
 left outer join metrics.hv_non_kbase_users_app_usage_by_month nkapm
 on apm.finish_month = nkapm.finish_month
@@ -805,7 +821,10 @@ count(run_time) as count, avg(run_time) as avg_run_time,
 max(run_time) as max_run_time, min(run_time) as min_run_time, 
 stddev(run_time) as run_time_std_dev, 
 max(finish_date) as max_finish_date,
-min(finish_date) as min_finish_date
+min(finish_date) as min_finish_date,
+round(avg(queue_time),1) as avg_queue_time,
+min(queue_time) as min_queue_time,
+max(queue_time) as max_queue_time
 from metrics.user_app_usage 
 where is_error = 0 
 group by func_name, git_commit_hash;
@@ -821,7 +840,10 @@ count(run_time) as count, avg(run_time) as avg_run_time,
 max(run_time) as max_run_time, min(run_time) as min_run_time, 
 stddev(run_time) as run_time_std_dev, 
 max(finish_date) as max_finish_date,
-min(finish_date) as min_finish_date
+min(finish_date) as min_finish_date,
+round(avg(queue_time),1) as avg_queue_time,
+min(queue_time) as min_queue_time,
+max(queue_time) as max_queue_time
 from metrics.user_app_usage 
 where is_error = 0 
 group by func_name;
