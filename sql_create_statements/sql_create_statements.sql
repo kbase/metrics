@@ -459,3 +459,14 @@ CREATE OR REPLACE TABLE `suspect_shock_nodes` (
   KEY `idx_ssn_lsd` (`last_seen_date`),
   KEY `idx_ssn_wsid` (`ws_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+####################################################
+# User ORCID Counts
+
+CREATE TABLE `user_orcid_count` (
+  `user_orcid_count` int(11) NOT NULL,
+  `record_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_user_orcid_count_oid_record_date` (`user_orcid_count`,`record_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
