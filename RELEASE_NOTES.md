@@ -1,3 +1,6 @@
+#2020-06-15
+    * Added user orcid count tracking
+
 #2020-06-09
     * Moved EE2 to active spot instead of app catalog. Created old_app_catalog_equivalent
 
