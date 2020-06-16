@@ -267,7 +267,7 @@ def elastic_summary_dictionaries(
     # Pull elastic results, drop duplicates from backtracking timestamps in elastic queries,
     # and format timestamp to readable datetime format
     elastic_dictionaries = elasticsearch_pull(str_date, end_date)
-    elastic_data_df = pd.DataFrame(elastic_dictionaries)
+    elastic_data_df = pd.DataFrame.from_dict(elastic_dictionaries)
     elastic_data_df.drop_duplicates(inplace=True)
     elastic_data_df["last_seen"] = pd.to_datetime(
         elastic_data_df["last_seen"], format="%a %b %d %H:%M:%S %Y"
