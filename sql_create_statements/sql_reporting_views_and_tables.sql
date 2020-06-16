@@ -1066,3 +1066,30 @@ from metrics_reporting.workspace_user_app_runs
 group by app_runs_count;
 
 ----------------------------
+
+#------------------------------
+# USER ORCID COUNT VIEWS.
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.user_orcid_count_daily as
+select 
+DATE_FORMAT(`record_date`,'%Y-%m-%d') as record_date,
+max(user_orcid_count)
+from metrics.user_orcid_count
+group by record_date;
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.user_orcid_count_weekly as
+select 
+concat(substring(YEARWEEK(record_date),1,4),"-",substring(YEARWEEK(record_date),5,2)) as record_week,
+max(user_orcid_count)
+from metrics.user_orcid_count
+group by record_week;
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.user_orcid_count_monthly as
+select 
+DATE_FORMAT(`record_date`,'%Y-%m') as record_month,
+max(user_orcid_count)
+from metrics.user_orcid_count
+group by record_month;
