@@ -1073,10 +1073,10 @@ group by app_runs_count;
 #IN METRICS_REPORTING
 create or replace view metrics_reporting.user_orcid_count_daily as
 select 
-DATE_FORMAT(`record_date`,'%Y-%m-%d') as record_date,
+DATE_FORMAT(`record_date`,'%Y-%m-%d') as record_daily,
 max(user_orcid_count)
 from metrics.user_orcid_count
-group by record_date;
+group by record_daily;
 
 #IN METRICS_REPORTING
 create or replace view metrics_reporting.user_orcid_count_weekly as
