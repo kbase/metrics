@@ -6,6 +6,7 @@ warnings.simplefilter(action="ignore", category=Warning)
 import pandas as pd
 import datetime
 import os
+import sys
 import mysql.connector as mysql
 
 yesterday = datetime.date.today() - datetime.timedelta(days=1)
@@ -126,7 +127,7 @@ def elasticsearch_pull(start_date, end_date):
         check_timestamp = [data_array[-1]["epoch_timestamp"]]
         attempt_timestamp = [data_array[attempt_index]["epoch_timestamp"]]
     except IndexError:
-        return IndexError("Oops! Data array from Elasticsearch is empty. Please check Elasticsearch is running and try pull again.")
+        sys.exit("Oops! Data array from Elasticsearch is empty. Please check Narrative Container logs in Kibana for input date range.")
     while check_timestamp == attempt_timestamp and (
         (total_results + attempt_index) > 0
     ):
