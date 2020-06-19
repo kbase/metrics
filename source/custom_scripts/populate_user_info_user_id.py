@@ -69,10 +69,6 @@ def populate_user_ids():
         
     for (cur_username, cur_user_id) in existing_records_list:
         records_evaluated += 1
-#        if (first_record_not_done and first_populating):
-#            # keep the first record with a user_id of zero
-#            first_record_not_done = False
-#            continue
         if cur_user_id == 0:
             # meatns need to assign a real user_id to it
             # Do an update and increment the counter
