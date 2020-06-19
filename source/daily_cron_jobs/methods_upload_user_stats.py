@@ -255,6 +255,14 @@ def upload_user_data(user_stats_dict):
     query = "use " + query_on
     cursor.execute(query)
 
+    counter_user_id = -1
+    get_max_user_id_q = (
+	"select max(user_id) from metrics.user_info "
+    )
+    cursor.execute(get_max_user_id_q)
+    for row in cursor:
+        counter_user_id = row[0]
+        
     # get all existing users
     existing_user_info = dict()
     query = (
@@ -289,10 +297,11 @@ def upload_user_data(user_stats_dict):
     prep_cursor = db_connection.cursor(prepared=True)
     user_info_insert_statement = (
         "insert into user_info "
-        "(username,display_name,email,orcid,kb_internal_user, "
-        "institution,country,signup_date,last_signin_date) "
-        "values(%s,%s,%s,%s,%s, "
-        "%s,%s,%s,%s);"
+        "(username, display_name, email, orcid, "
+        "user_id, kb_internal_user, institution, "
+        "country, signup_date, last_signin_date) "
+        "values(%s, %s, %s, %s, %s, "
+        "%s, %s, %s, %s, %s);"
     )
 
     update_prep_cursor = db_connection.cursor(prepared=True)
@@ -311,17 +320,20 @@ def upload_user_data(user_stats_dict):
     for username in user_stats_dict:
         # check if new user_info exists in the existing user info, if not insert the record.
         if username not in existing_user_info:
+            counter_user_id += 1
             input = (
                 username,
                 user_stats_dict[username]["name"],
                 user_stats_dict[username]["email"],
                 user_stats_dict[username]["orcid"],
+                counter_user_id,
                 user_stats_dict[username]["kbase_internal_user"],
                 user_stats_dict[username]["institution"],
                 user_stats_dict[username]["country"],
                 user_stats_dict[username]["signup_date"],
                 user_stats_dict[username]["last_signin_date"],
             )
+            print("INPUT:" +str(input))
             prep_cursor.execute(user_info_insert_statement, input)
             new_user_info_count += 1
         else:
@@ -451,3 +463,4 @@ def upload_user_data(user_stats_dict):
     )
 
     return 1
+
