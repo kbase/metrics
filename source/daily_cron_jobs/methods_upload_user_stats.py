@@ -333,7 +333,6 @@ def upload_user_data(user_stats_dict):
                 user_stats_dict[username]["signup_date"],
                 user_stats_dict[username]["last_signin_date"],
             )
-            print("INPUT:" +str(input))
             prep_cursor.execute(user_info_insert_statement, input)
             new_user_info_count += 1
         else:

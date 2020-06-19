@@ -1,3 +1,6 @@
+#2020-06-19
+    * Added user_id to user info, backfilling and uploading
+
 #2020-06-15
     * Added user orcid count tracking
 
