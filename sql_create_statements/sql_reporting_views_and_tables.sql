@@ -1091,3 +1091,25 @@ DATE_FORMAT(`record_date`,'%Y-%m') as date_monthly,
 max(user_orcid_count) as max_user_orcid_count
 from metrics.user_orcid_count
 group by date_monthly;
+
+
+#----------------------------------
+# Weekly App Category Users
+# NOTE THESE ARE TABLES NOT VIEWS, made by the CRON JOB
+
+create or replace table metrics.hv_weekly_app_category_unique_users as
+select distinct DATE_FORMAT(`finish_date`,'%Y-%u') as week_run, 
+IFNULL(app_category,'None') as app_category, uau.username
+from metrics.user_app_usage uau inner join 
+metrics.user_info ui on uau.username = ui.username
+left outer join
+metrics.app_name_category_map anc on uau.app_name = anc.app_name
+where ui.kb_internal_user = 0
+and func_name != 'kb_gtdbtk/run_kb_gtdbtk';
+
+create or replace table metrics_reporting.app_category_unique_users_weekly as
+select week_run, app_category, count(*) as unique_users
+from metrics.hv_app_category_unique_users_weekly
+group by week_run, app_category;
+
+
