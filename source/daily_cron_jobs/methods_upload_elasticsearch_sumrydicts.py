@@ -200,8 +200,7 @@ def make_user_activity_dict(data, ip, user):
                 "timezone": list(data["timezone"])[0],
                 "latitude": list(data["latitude"])[0],
                 "longitude": list(data["longitude"])[0],
-                "host_ip": list(data["host"])[0],
-                "proxy_target": list(data["proxy_target"])[0],
+                "host_ip": list(data["host"])[0]
             }
 
         else:
@@ -242,8 +241,7 @@ def make_user_activity_dict(data, ip, user):
             "timezone": list(data["timezone"])[0],
             "latitude": list(data["latitude"])[0],
             "longitude": list(data["longitude"])[0],
-            "host_ip": list(data["host"])[0],
-            "proxy_target": list(data["proxy_target"])[0],
+            "host_ip": list(data["host"])[0]
         }
 
     # print("Elasticsearch dictionaries took ", time.time() - start_time, " seconds to create")
