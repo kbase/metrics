@@ -142,7 +142,7 @@ def make_reporting_tables():
     cursor.execute(hv_app_category_unique_users_weekly_create_statement)
     print("hv_app_category_unique_users_weekly created")
 
-    hv_app_category_unique_users_weekly_create_statement = (
+    app_category_unique_users_weekly_create_statement = (
         "create or replace table metrics_reporting.app_category_unique_users_weekly as "
         "select week_run, app_category, count(*) as unique_users "
         "from metrics.hv_app_category_unique_users_weekly "
