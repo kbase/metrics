@@ -200,7 +200,7 @@ def make_user_activity_dict(data, ip, user):
                 "timezone": list(data["timezone"])[0],
                 "latitude": list(data["latitude"])[0],
                 "longitude": list(data["longitude"])[0],
-                "host_ip": list(data["host"])[0]
+                "host_ip": list(data["host"])[0],
             }
 
         else:
@@ -212,7 +212,6 @@ def make_user_activity_dict(data, ip, user):
                 "first_seen": earliest_seen,
                 "ip_address": tag,
                 "host_ip": list(data["host"])[0],
-                "proxy_target": list(data["proxy_target"])[0],
                 "country_name": tag,
                 "country_code": tag,
                 "region_name": tag,
@@ -241,7 +240,7 @@ def make_user_activity_dict(data, ip, user):
             "timezone": list(data["timezone"])[0],
             "latitude": list(data["latitude"])[0],
             "longitude": list(data["longitude"])[0],
-            "host_ip": list(data["host"])[0]
+            "host_ip": list(data["host"])[0],
         }
 
     # print("Elasticsearch dictionaries took ", time.time() - start_time, " seconds to create")
@@ -341,10 +340,10 @@ def upload_elastic_search_session_info(elastic_data):
         "city, latitude, longitude, "
         "region_name, region_code, postal_code, "
         "timezone, estimated_hrs_active, "
-        "first_seen, last_seen, proxy_target) "
+        "first_seen, last_seen) "
         "values(%s, %s, %s, %s, %s, "
         "%s, %s, %s, %s, %s, %s, "
-        "%s, %s, %s, %s, %s);"
+        "%s, %s, %s, %s);"
     )
 
     check_record_cursor = db_connection.cursor(buffered=True)
@@ -363,7 +362,7 @@ def upload_elastic_search_session_info(elastic_data):
         "city = %s, latitude = %s, longitude = %s, "
         "region_name = %s, region_code = %s, postal_code = %s, "
         "timezone = %s, estimated_hrs_active = %s, "
-        "first_seen = %s, last_seen = %s, proxy_target = %s "
+        "first_seen = %s, last_seen = %s "
         "where username = %s and record_date = %s and ip_address = %s;"
     )
 
@@ -392,7 +391,6 @@ def upload_elastic_search_session_info(elastic_data):
             record["hours_on_system"],
             record["first_seen"],
             record["last_seen"],
-            record["proxy_target"],
         ]
         # Error handling from https://www.programcreek.com/python/example/93043/mysql.connector.Error
         try:
@@ -440,7 +438,6 @@ def upload_elastic_search_session_info(elastic_data):
                             record["hours_on_system"],
                             record["first_seen"],
                             record["last_seen"],
-                            record["proxy_target"],
                             record["username"],
                             record["date"],
                             record["ip_address"],

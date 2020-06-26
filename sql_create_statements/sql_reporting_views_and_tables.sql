@@ -64,7 +64,7 @@ order by signup_date;
 #IN METRICS_REPORTING
 create or replace view metrics_reporting.user_info_summary_stats as
 select ui.username, ui.display_name, ui.email, ui.orcid,
-ui.kb_internal_user, ui.institution, ui.country,
+ui.user_id, ui.kb_internal_user, ui.institution, ui.country,
 ui.signup_date, ui.last_signin_date, 
 round((UNIX_TIMESTAMP(ui.last_signin_date) - UNIX_TIMESTAMP(ui.signup_date))/86400,2) as days_signin_minus_signup,
 ceil((NOW() - last_signin_date)/86400) as days_since_last_signin,
@@ -548,7 +548,7 @@ on aac.app_category = nkbc.app_category;
 create or replace view metrics_reporting.app_category_run_counts_by_user as
 select count(*) as total_app_run_cnt, 
 IFNULL(acm.app_category,'unable to determine') as app_category,
-uau.username, ui.kb_internal_user
+uau.username, ui.user_id, ui.kb_internal_user
 from metrics.user_info ui 
 inner join metrics.user_app_usage uau
 on ui.username = uau.username
@@ -600,7 +600,7 @@ create or replace view metrics_reporting.app_name_run_counts_by_user as
 select count(*) as total_app_run_cnt, 
 IFNULL(uau.app_name,'not specified') as app_name,
 uau.func_name,
-uau.username, ui.kb_internal_user
+uau.username, ui.user_id, ui.kb_internal_user
 from metrics.user_info ui 
 inner join metrics.user_app_usage uau
 on ui.username = uau.username
@@ -628,10 +628,6 @@ metrics.app_name_category_map acm
 on IFNULL(uau.app_name,'not specified') = acm.app_name
 where ui.exclude = False
 group by ui.institution, app_category, app_run_month;
-
-
-
-
 
 
 ---------------------------------------------
@@ -1019,7 +1015,8 @@ group by record_month, object_type;
 # USER CODE CELLS COUNTS AND DISTRIBUTIONS
 #IN MEtrics Reporting
 create or replace view metrics_reporting.user_code_cell_counts as
-select wc.username, sum(code_cells_count) as user_code_cells_count
+select wc.username, ui.user_id,
+sum(code_cells_count) as user_code_cells_count
 from metrics_reporting.workspaces_current wc
 inner join metrics.user_info ui on ui.username = wc.username
 where ui.kb_internal_user = 0
@@ -1042,7 +1039,8 @@ group by code_cells_count;
 #APP RUNS BY USERS AND WORKSPACES
 #IN METRICS REPORTING
 create or replace view metrics_reporting.user_app_runs as
-select uau.username, count(*) as app_runs_count
+select uau.username, ui.user_id,
+count(*) as app_runs_count
 from metrics.user_app_usage uau
 inner join metrics.user_info ui on ui.username = uau.username
 where ui.kb_internal_user = 0
@@ -1093,3 +1091,25 @@ DATE_FORMAT(`record_date`,'%Y-%m') as date_monthly,
 max(user_orcid_count) as max_user_orcid_count
 from metrics.user_orcid_count
 group by date_monthly;
+
+
+#----------------------------------
+# Weekly App Category Users
+# NOTE THESE ARE TABLES NOT VIEWS, made by the CRON JOB
+
+create or replace table metrics.hv_weekly_app_category_unique_users as
+select distinct DATE_FORMAT(`finish_date`,'%Y-%u') as week_run, 
+IFNULL(app_category,'None') as app_category, uau.username
+from metrics.user_app_usage uau inner join 
+metrics.user_info ui on uau.username = ui.username
+left outer join
+metrics.app_name_category_map anc on uau.app_name = anc.app_name
+where ui.kb_internal_user = 0
+and func_name != 'kb_gtdbtk/run_kb_gtdbtk';
+
+create or replace table metrics_reporting.app_category_unique_users_weekly as
+select week_run, app_category, count(*) as unique_users
+from metrics.hv_app_category_unique_users_weekly
+group by week_run, app_category;
+
+

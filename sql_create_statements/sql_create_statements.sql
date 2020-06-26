@@ -6,6 +6,7 @@ CREATE TABLE user_info (
 	display_name VARCHAR(255) NOT NULL,  
 	email VARCHAR(255),  
 	orcid VARCHAR(255),
+	user_id int(11) NOT NULL,
 	kb_internal_user BOOLEAN NOT NULL DEFAULT 0,
 	institution VARCHAR(255),
 	country VARCHAR(255), 
@@ -13,6 +14,8 @@ CREATE TABLE user_info (
 	last_signin_date TIMESTAMP NULL default NULL,
 	exclude boolean NOT NULL default 0, 
 	PRIMARY KEY ( username )) ENGINE=InnoDB  DEFAULT CHARSET=utf8; 
+
+CREATE UNIQUE INDEX uk_user_info_user_id ON user_info(user_id);
 
 CREATE INDEX idx_user_info_email ON user_info (email);
 
