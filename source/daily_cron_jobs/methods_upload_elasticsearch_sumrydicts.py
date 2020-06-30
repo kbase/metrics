@@ -178,6 +178,8 @@ def make_user_activity_dict(data, ip, user):
     )
     # Get date and ip error tag as string
     date = str(date)[0:10]
+    # Replace dashes in usernames with underscores
+    user = user.replace("-", "_")
     # If an Ip error tag appears in the data, we need to separate the dictionaries to data without ip errors and those with
     if "tags" in data.columns:
 
