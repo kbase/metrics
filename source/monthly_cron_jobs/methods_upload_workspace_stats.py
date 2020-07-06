@@ -42,7 +42,7 @@ def get_workspaces(db):
         {"owner": 1, "ws": 1, "moddate": 1, "del": 1, "_id": 0},
     )
     for record in workspaces_cursor:
-        if record["ws"] != 615:
+        if record["ws"] != 615:   ## and record['ws'] != 19217 :
             is_deleted_ws = 0
             if record["del"] == True:
                 is_deleted_ws = 1
@@ -236,7 +236,7 @@ def get_objects(db, workspaces_dict, kbase_staff):
     #            del workspaces_dict[ws_id]
     ###########################
     # debugging lines to minimal Workspaces - these workspaces test different edge cases
-    #    temp_dict = dict()
+    #temp_dict = dict()
     #    temp_dict[49114] = workspaces_dict[49114]
     #    temp_dict[3] = workspaces_dict[3]
     #    temp_dict[5009] = workspaces_dict[5009]
@@ -246,8 +246,13 @@ def get_objects(db, workspaces_dict, kbase_staff):
     #    temp_dict[2777] = workspaces_dict[2777]
     #    temp_dict[6964] = workspaces_dict[6964]
     #    temp_dict[56261] = workspaces_dict[56261]
-    #    workspaces_dict.clear()
-    #    workspaces_dict = temp_dict
+    #temp_dict[19216] = workspaces_dict[19216]
+    #temp_dict[19217] = workspaces_dict[19217]   # THIS IS THE REFERENCE REFSEQ WS
+    #temp_dict[19218] = workspaces_dict[19218]
+    #temp_dict[52467] = workspaces_dict[52467]
+    #temp_dict[52468] = workspaces_dict[52468]
+    #workspaces_dict.clear()
+    #workspaces_dict = temp_dict
     ###############
     for ws_id in sorted(workspaces_dict.keys()):
         min_save_date = None
@@ -300,6 +305,8 @@ def get_objects(db, workspaces_dict, kbase_staff):
             object_type_full = ws_obj_ver["type"]
             (object_type, object_spec_version) = object_type_full.split("-")
             obj_id = ws_obj_ver["id"]
+            if obj_id not in top_level_lookup_dict:
+                continue
             obj_ver = ws_obj_ver["ver"]
             obj_size = ws_obj_ver["size"]
             top_obj_size = 0
