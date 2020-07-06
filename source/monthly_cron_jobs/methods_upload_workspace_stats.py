@@ -306,6 +306,7 @@ def get_objects(db, workspaces_dict, kbase_staff):
             (object_type, object_spec_version) = object_type_full.split("-")
             obj_id = ws_obj_ver["id"]
             if obj_id not in top_level_lookup_dict:
+                #FOR Workspaces growing in size while processing the workspace
                 continue
             obj_ver = ws_obj_ver["ver"]
             obj_size = ws_obj_ver["size"]
