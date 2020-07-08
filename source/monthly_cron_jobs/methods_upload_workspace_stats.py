@@ -585,6 +585,9 @@ def upload_workspace_stats():
     today = date.today()
     current_month = str(today.year) + "-" + today.strftime("%m")
 
+    # NOTE THIS IS ONE OF THREE TABLES THAT NEED TO BE DELETED FROM IS RAN ON A SMALL SAMPLE OF WORKSPACES
+    # SO DO NOT HAVE DOUBLE ENTRIES IN THE SAME MONTH
+    # metrics.users_workspace_object_counts, metrics.workspace_object_counts, metrics.workspaces
     query = "select DATE_FORMAT(max(record_date),'%Y-%m') from metrics.users_workspace_object_counts"
     cursor.execute(query)
     for db_date in cursor:
