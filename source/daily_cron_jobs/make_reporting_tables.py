@@ -150,6 +150,23 @@ def make_reporting_tables():
     )
     cursor.execute(app_category_unique_users_weekly_create_statement)
     print("app_category_unique_users_weekly created")
+
+    #################
+    app_category_run_hours_weekly_create_statement = (
+        "create or replace table metrics_reporting.app_category_run_hours_weekly as "
+        "select distinct DATE_FORMAT(`finish_date`,'%Y-%u') as week_run, "
+        "IFNULL(app_category,'None') as app_category, round(sum(run_time)/3600,1) as run_hours "
+        "from metrics.user_app_usage uau inner join "
+        "metrics.user_info ui on uau.username = ui.username "
+        "left outer join "
+        "metrics.app_name_category_map anc on uau.app_name = anc.app_name "
+        "where ui.kb_internal_user = 0 "
+        "and func_name != 'kb_gtdbtk/run_kb_gtdbtk' "
+        "group by app_category, week_run "
+    )
+    cursor.execute(app_category_run_hours_weekly_create_statement)
+    print("app_category_run_hours_weekly created")
+
     
     return
 
