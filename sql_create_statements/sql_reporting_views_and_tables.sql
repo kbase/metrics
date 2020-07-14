@@ -1113,3 +1113,22 @@ from metrics.hv_app_category_unique_users_weekly
 group by week_run, app_category;
 
 
+#------------------------------
+# App reserved cpus for success and failures.
+#
+
+create view metrics_reporting.app_reserved_cpu_success as
+select func_name, DATE_FORMAT(`finish_date`,'%Y-%m') as finish_month,
+count(*) as run_count, 
+round(avg(run_time),1) as avg_run_time_secs, round((sum(run_time)/3600) * reserved_cpu,1) as total_reserved_cpu_hours
+from metrics.user_app_usage 
+where is_error = 0
+group by func_name, finish_month;
+
+create view metrics_reporting.app_reserved_cpu_failure as
+select func_name, DATE_FORMAT(`finish_date`,'%Y-%m') as finish_month,
+count(*) as run_count, 
+round(avg(run_time),1) as avg_run_time_secs, round((sum(run_time)/3600) * reserved_cpu,1) as total_reserved_cpu_hours
+from metrics.user_app_usage 
+where is_error = 1
+group by func_name, finish_month;
