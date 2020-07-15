@@ -1132,3 +1132,15 @@ round(avg(run_time),1) as avg_run_time_secs, round((sum(run_time)/3600) * reserv
 from metrics.user_app_usage 
 where is_error = 1
 group by func_name, finish_month;
+
+
+#---------------------
+# App_queue_times_by_month
+#
+
+create view metrics_reporting.app_queue_times_by_month as
+select func_name, DATE_FORMAT(`finish_date`,'%Y-%m') as finish_month,
+count(*) as run_count, 
+round(avg(queue_time),1) as avg_queue_time_secs, round(sum(queue_time)/3600,1) as total_queue_time_hours
+from metrics.user_app_usage 
+group by func_name, finish_month;
