@@ -60,6 +60,13 @@ metrics.hv_user_app_error_count uec on ui.username = uec.username
 where exclude = False
 order by signup_date;
 
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.anonymize_user_info_plus as
+select user_id, kb_internal_user, institution, country, signup_date, last_signin_date, 
+days_signin_minus_signup, days_since_last_signin, total_app_count, total_app_err_count
+from metrics_reporting.user_info_plus
+where exclude = 0;
+
 
 #IN METRICS_REPORTING
 create or replace view metrics_reporting.user_info_summary_stats as
