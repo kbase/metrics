@@ -400,11 +400,13 @@ CREATE OR REPLACE TABLE `suspect_shock_nodes` (
 #################################################
 # OUTREACH EVENT TRACKING
 # OUTREACH_EVENTS
-CREATE OR REPLACE TABLE `outreach_events` (
+CREATE  or replace TABLE`outreach_events` (
   `outreach_event_name` varchar(255) NOT NULL,
   `event_date` date NOT NULL,
-  `attendee_list_url` varchar(255) default NULL,
+  `announcement_date` date DEFAULT NULL,
+  `attendee_list_url` varchar(255) DEFAULT NULL,
   `event_type` enum('webinar','workshop','class') DEFAULT NULL,
+  `topic` varchar(255) DEFAULT NULL,
   `presenters` varchar(255) NOT NULL,
   `narrative_urls` varchar(255) DEFAULT NULL,
   `duration_hours` int(3) DEFAULT NULL,

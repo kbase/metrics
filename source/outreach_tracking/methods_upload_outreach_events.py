@@ -45,14 +45,20 @@ def get_outreach_events():
         #print("Temp_line: " + str(temp_line))
         temp_line = quote_strip(temp_line)
         line = temp_line.split('","')
-        (event_name, event_date, pre_attendee_list_url, event_type, topic, presenters,
-         narrative_urls, duration_hours, app_categories, estimated_attendance,
-         location, point_of_contact, feedback_form_url, comments ) = line[:14]
+        (event_name, event_date, announcement_date, pre_attendee_list_url, event_type, topic,
+         presenters, narrative_urls, duration_hours, app_categories, estimated_attendance,
+         location, point_of_contact, feedback_form_url, comments ) = line[:15]
         attendee_list_url = ""
         if pre_attendee_list_url is not None and pre_attendee_list_url.startswith("https://docs.google.com/spreadsheets/"):
             attendee_list_url = pre_attendee_list_url.rsplit("/",1)[0] + "/gviz/tq"
+        announcement_used = None
+        if announcement_date.strip() == "":
+            announcement_used = None
+        else:
+            announcement_used = announcement_date.strip()
         events[event_name] = {
             "event_date": event_date.strip(),
+            "announcement_date": announcement_used,
             "attendee_list_url": attendee_list_url.strip(),
             "event_type": event_type.strip(),
             "topic": topic.strip(),
@@ -89,7 +95,7 @@ def upload_events(events):
     # get all existing users
     existing_events_info = dict()
     query = (
-        "select outreach_event_name, event_date, attendee_list_url, event_type, "
+        "select outreach_event_name, event_date, announcement_date, attendee_list_url, event_type, "
         "topic, presenters, narrative_urls, duration_hours, app_categories, "
         "estimated_attendance, location, point_of_contact, feedback_form_url, comments " 
         "from metrics.outreach_events"
@@ -97,6 +103,7 @@ def upload_events(events):
     cursor.execute(query)
     for (
             event_name,
+            announcement_date,
             event_date,
             attendee_list_url,
             event_type,
@@ -113,6 +120,7 @@ def upload_events(events):
     ) in cursor:
         existing_events_info[event_name] = {
             "event_date": event_date,
+            "announcement_date": announcement_date,
             "attendee_list_url": attendee_list_url,
             "event_type": event_type,
             "topic": topic,
@@ -132,19 +140,19 @@ def upload_events(events):
     prep_cursor = db_connection.cursor(prepared=True)
     events_insert_statement = (
         "insert into outreach_events "
-        "(outreach_event_name, event_date, attendee_list_url, event_type, "
+        "(outreach_event_name, event_date, announcement_date, attendee_list_url, event_type, "
         "topic, presenters, narrative_urls, duration_hours, app_categories, "
         "estimated_attendance, location, "
         "point_of_contact, feedback_form_url, comments) "
-        "values(%s, %s, %s, %s, %s, %s, "
+        "values(%s, %s, %s, %s, %s, %s, %s, "
         "%s, %s, %s, %s, %s, %s, %s, %s);"
     )
 
     update_prep_cursor = db_connection.cursor(prepared=True)
     events_update_statement = (
         "update outreach_events "
-        "set event_date = %s, attendee_list_url = %s, event_type = %s, "
-        "topic = %s, presenters = %s, "
+        "set event_date = %s, announcement_date = %s,  "
+        "attendee_list_url = %s, event_type = %s, topic = %s, presenters = %s, "
         "narrative_urls = %s, duration_hours = %s, "
         "app_categories = %s, estimated_attendance = %s, location = %s, "
         "point_of_contact = %s, feedback_form_url = %s, comments = %s  "
@@ -160,6 +168,7 @@ def upload_events(events):
             input = (
                 event_name,
                 events[event_name]["event_date"],
+                events[event_name]["announcement_date"],
                 events[event_name]["attendee_list_url"],
                 events[event_name]["event_type"],
                 events[event_name]["topic"],
@@ -182,6 +191,12 @@ def upload_events(events):
                     events[event_name]["event_date"] is None
                     or (events[event_name]["event_date"]
                     == str(existing_events_info[event_name]['event_date']))
+                )
+                and
+                (
+                    events[event_name]["announcement_date"] is None
+                    or (events[event_name]["announcement_date"]
+                    == str(existing_events_info[event_name]['announcement_date']))
                 )
                 and events[event_name]["attendee_list_url"]
                 == existing_events_info[event_name]["attendee_list_url"]   
@@ -210,6 +225,7 @@ def upload_events(events):
             ):
                 input = (
                     events[event_name]["event_date"],
+                    events[event_name]["announcement_date"],
                     events[event_name]["attendee_list_url"],
                     events[event_name]["event_type"],
                     events[event_name]["topic"],
