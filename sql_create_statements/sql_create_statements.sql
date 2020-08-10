@@ -1,18 +1,33 @@
 ######################
 # user_info table create and indices.
 
-CREATE TABLE user_info (
-	username VARCHAR(255) NOT NULL,  
-	display_name VARCHAR(255) NOT NULL,  
-	email VARCHAR(255),  
-	orcid VARCHAR(255),
-	kb_internal_user BOOLEAN NOT NULL DEFAULT 0,
-	institution VARCHAR(255),
-	country VARCHAR(255), 
-	signup_date TIMESTAMP NOT NULL default 0,
-	last_signin_date TIMESTAMP NULL default NULL,
-	exclude boolean NOT NULL default 0, 
-	PRIMARY KEY ( username )) ENGINE=InnoDB  DEFAULT CHARSET=utf8; 
+CREATE TABLE `user_info` (
+  `username` varchar(255) NOT NULL,
+  `display_name` varchar(255) NOT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `orcid` varchar(255) DEFAULT NULL,
+  `user_id` int(11) NOT NULL,
+  `kb_internal_user` tinyint(1) NOT NULL DEFAULT '0',
+  `institution` varchar(255) DEFAULT NULL,
+  `country` varchar(255) DEFAULT NULL,
+  `signup_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `last_signin_date` timestamp NULL DEFAULT NULL,
+  `exclude` tinyint(1) NOT NULL DEFAULT '0',
+  `department` varchar(255) DEFAULT NULL,
+  `job_title` varchar(255) DEFAULT NULL,
+  `job_title_other` varchar(255) DEFAULT NULL,
+  `city` varchar(255) DEFAULT NULL,
+  `state` varchar(255) DEFAULT NULL,
+  `postal_code` varchar(255) DEFAULT NULL,
+  `funding_source` varchar(255) DEFAULT NULL,
+  `research_statement` varchar(255) DEFAULT NULL,
+  `research_interests` varchar(255) DEFAULT NULL,
+  `avatar_option` varchar(255) DEFAULT NULL,
+  `gravatar_default` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+CREATE UNIQUE INDEX uk_user_info_user_id ON user_info(user_id);
 
 CREATE INDEX idx_user_info_email ON user_info (email);
 
@@ -158,6 +173,101 @@ CREATE TABLE `user_app_usage_ee2_cpu` (
   CONSTRAINT `fk_app_usage_username_ee2_cpu` FOREIGN KEY (`username`) REFERENCES `user_info` (`username`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 
+
+
+######################
+#EE2 with CPU
+CREATE TABLE `user_app_usage_ee2_cpu` (
+  `job_id` varchar(255) DEFAULT NULL,
+  `username` varchar(255) NOT NULL,
+  `app_name` varchar(255) DEFAULT NULL,
+  `start_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `finish_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `run_time` int(11) NOT NULL,
+  `queue_time` int(11) NOT NULL,
+  `is_error` tinyint(1) NOT NULL DEFAULT '0',
+  `git_commit_hash` varchar(255) NOT NULL,
+  `func_name` varchar(255) DEFAULT NULL,
+  `ws_id` int(11) DEFAULT NULL,
+  `reserved_cpu` int(4) DEFAULT NULL,
+  UNIQUE KEY `uk_jobid_user_app_usage_ee2_cpu` (`job_id`),
+  KEY `idx_user_app_usage_job_id_ee2_cpu` (`job_id`),
+  KEY `idx_user_app_usage_username_ee2_cpu` (`username`),
+  KEY `idx_user_app_usage_app_name_ee2_cpu` (`app_name`),
+  KEY `idx_user_app_usage_start_date_ee2_cpu` (`start_date`),
+  KEY `idx_user_app_usage_finish_date_ee2_cpu` (`finish_date`),
+  KEY `idx_user_app_usage_is_error_ee2_cpu` (`is_error`),
+  KEY `idx_user_app_usage_git_commit_hash_ee2_cpu` (`git_commit_hash`),
+  KEY `idx_user_app_usage_func_name_ee2_cpu` (`func_name`),
+  KEY `idx_user_app_usage_ws_id_ee2_cpu` (`ws_id`),
+  CONSTRAINT `fk_app_usage_username_ee2_cpu` FOREIGN KEY (`username`) REFERENCES `user_info` (`username`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+
+# TABLE AFTER EE2 swap pver
+CREATE TABLE `user_app_usage` (
+  `job_id` varchar(255) DEFAULT NULL,
+  `username` varchar(255) NOT NULL,
+  `app_name` varchar(255) DEFAULT NULL,
+  `start_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `finish_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `run_time` int(11) NOT NULL,
+  `queue_time` int(11) NOT NULL,
+  `is_error` tinyint(1) NOT NULL DEFAULT '0',
+  `git_commit_hash` varchar(255) NOT NULL,
+  `func_name` varchar(255) DEFAULT NULL,
+  `ws_id` int(11) DEFAULT NULL,
+  `reserved_cpu` int(4) DEFAULT NULL,
+  UNIQUE KEY `uk_jobid_user_app_usage` (`job_id`),
+  KEY `idx_user_app_usage_job_id` (`job_id`),
+  KEY `idx_user_app_usage_username` (`username`),
+  KEY `idx_user_app_usage_app_name` (`app_name`),
+  KEY `idx_user_app_usage_start_date` (`start_date`),
+  KEY `idx_user_app_usage_finish_date` (`finish_date`),
+  KEY `idx_user_app_usage_is_error` (`is_error`),
+  KEY `idx_user_app_usage_git_commit_hash` (`git_commit_hash`),
+  KEY `idx_user_app_usage_func_name` (`func_name`),
+  KEY `idx_user_app_usage_ws_id` (`ws_id`),
+  CONSTRAINT `fk_app_usage_username` FOREIGN KEY (`username`) REFERENCES `user_info` (`username`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+
+
+#################################
+# user_app_usage_old_app_catalog
+# THE OLD TABLE DATA THAT CAME FROM APP CATALOG. NOTE IT INCLUDES APP_DEV jobs.
+#
+# populated with
+# insert into metrics.user_app_usage_old_app_catalog
+# (job_id, username, app_name, start_date, finish_date,
+# run_time, queue_time, is_error, git_commit_hash, func_name)
+# select job_id, username, app_name, start_date, finish_date,
+# run_time, queue_time, is_error, git_commit_hash, func_name
+# from user_app_usage;
+#
+
+CREATE TABLE `user_app_usage_old_app_catalog` (
+  `job_id` varchar(255) DEFAULT NULL,
+  `username` varchar(255) NOT NULL,
+  `app_name` varchar(255) DEFAULT NULL,
+  `start_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `finish_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `run_time` int(11) NOT NULL,
+  `queue_time` int(11) NOT NULL,
+  `is_error` tinyint(1) NOT NULL DEFAULT '0',
+  `git_commit_hash` varchar(255) NOT NULL,
+  `func_name` varchar(255) DEFAULT NULL,
+  UNIQUE KEY `uk_jobid_user_app_usage_old` (`job_id`),
+  KEY `idx_user_app_usage_old_job_id` (`job_id`),
+  KEY `idx_user_app_usage_old_username` (`username`),
+  KEY `idx_user_app_usage_old_app_name` (`app_name`),
+  KEY `idx_user_app_usage_old_start_date` (`start_date`),
+  KEY `idx_user_app_usage_old_finish_date` (`finish_date`),
+  KEY `idx_user_app_usage_old_is_error` (`is_error`),
+  KEY `idx_user_app_usage_old_git_commit_hash` (`git_commit_hash`),
+  KEY `idx_user_app_usage_old_func_name` (`func_name`),
+  CONSTRAINT `fk_app_usage_old_username` FOREIGN KEY (`username`) REFERENCES `user_info` (`username`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
 
 
 ######################
@@ -437,3 +547,13 @@ CREATE OR REPLACE TABLE	`outreach_event_users` (
   ON UPDATE CASCADE
   ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+####################################################
+# User ORCID Counts
+
+CREATE TABLE `user_orcid_count` (
+  `user_orcid_count` int(11) NOT NULL,
+  `record_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_user_orcid_count_oid_record_date` (`user_orcid_count`,`record_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
