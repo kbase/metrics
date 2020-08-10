@@ -37,7 +37,6 @@ def get_outreach_events():
             + str(response.status_code)
         )
 
-        return user_stats_dict
     lines = response.text.split("\n")
     headers = lines.pop(0)
     events = dict()
