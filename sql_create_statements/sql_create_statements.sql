@@ -1,19 +1,31 @@
 ######################
 # user_info table create and indices.
 
-CREATE TABLE user_info (
-	username VARCHAR(255) NOT NULL,  
-	display_name VARCHAR(255) NOT NULL,  
-	email VARCHAR(255),  
-	orcid VARCHAR(255),
-	user_id int(11) NOT NULL,
-	kb_internal_user BOOLEAN NOT NULL DEFAULT 0,
-	institution VARCHAR(255),
-	country VARCHAR(255), 
-	signup_date TIMESTAMP NOT NULL default 0,
-	last_signin_date TIMESTAMP NULL default NULL,
-	exclude boolean NOT NULL default 0, 
-	PRIMARY KEY ( username )) ENGINE=InnoDB  DEFAULT CHARSET=utf8; 
+CREATE TABLE `user_info` (
+  `username` varchar(255) NOT NULL,
+  `display_name` varchar(255) NOT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `orcid` varchar(255) DEFAULT NULL,
+  `user_id` int(11) NOT NULL,
+  `kb_internal_user` tinyint(1) NOT NULL DEFAULT '0',
+  `institution` varchar(255) DEFAULT NULL,
+  `country` varchar(255) DEFAULT NULL,
+  `signup_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `last_signin_date` timestamp NULL DEFAULT NULL,
+  `exclude` tinyint(1) NOT NULL DEFAULT '0',
+  `department` varchar(255) DEFAULT NULL,
+  `job_title` varchar(255) DEFAULT NULL,
+  `job_title_other` varchar(255) DEFAULT NULL,
+  `city` varchar(255) DEFAULT NULL,
+  `state` varchar(255) DEFAULT NULL,
+  `postal_code` varchar(255) DEFAULT NULL,
+  `funding_source` varchar(255) DEFAULT NULL,
+  `research_statement` varchar(255) DEFAULT NULL,
+  `research_interests` varchar(255) DEFAULT NULL,
+  `avatar_option` varchar(255) DEFAULT NULL,
+  `gravatar_default` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
 
 CREATE UNIQUE INDEX uk_user_info_user_id ON user_info(user_id);
 
