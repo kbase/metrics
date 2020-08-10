@@ -23,8 +23,9 @@ to_auth2 = os.environ["AUTH2_SUFFIX"]
 to_groups = os.environ["GRP_SUFFIX"]
 to_workspace = os.environ["WRK_SUFFIX"]
 
-_CT = 'content-type'
-_AJ = 'application/json'
+_CT = "content-type"
+_AJ = "application/json"
+
 
 def get_user_info_from_auth2():
     """ get auth2 info and kbase_internal_users. Creates initial dict for the data. """
@@ -57,6 +58,17 @@ def get_user_info_from_auth2():
             "narrative_count": 0,
             "shared_count": 0,
             "narratives_shared": 0,
+            "department": None,
+            "job_title": None,
+            "job_title_other" : None,
+            "city" : None,
+            "state" : None,
+            "postal_code" : None,
+            "funding_source" : None,
+            "research_statement" : None,
+            "research_interests" : None,
+            "avatar_option" : None,
+            "gravatar_default" : None
         }
 
     # Get all users with an ORCID authentication set up.
@@ -79,7 +91,7 @@ def get_internal_users(user_stats_dict):
     """
     Gets the internal users from the kb_internal_staff google sheet that Roy maintains.
     """
-    params = (("tqx", "out:csv"), ("sheet", "KBaseStaffAssociatedUsernamesPastPresent"))
+    params = (("tqx", "out:csv"), ("sheet", "KBaseStaffAccounts"))
     response = requests.get(kb_internal_user_url, params=params)
     if response.status_code != 200:
         print(
@@ -165,10 +177,10 @@ def get_user_narrative_stats(user_stats_dict):
 
     return user_stats_dict
 
-
-def get_institution_and_country(user_stats_dict):
+def get_profile_info(user_stats_dict):
     """
-    Gets the institution and country information for the user from the profile information
+    Gets the institution(organization), country, department, job_title and job_title_other
+    information for the user from the profile information
     """
     url = profile_url
     headers = dict()
@@ -211,11 +223,62 @@ def get_institution_and_country(user_stats_dict):
         if obj is None:
             continue
         counter += 1
-
         if obj["user"]["username"] in user_stats_dict:
+            user_stats_dict[obj["user"]["username"]]["department"] = obj["profile"][
+	        "userdata"
+            ].get("department")
+            
+            user_stats_dict[obj["user"]["username"]]["job_title"] = obj["profile"][
+                "userdata"
+            ].get("jobTitle")
+            
+            user_stats_dict[obj["user"]["username"]]["job_title_other"] = obj["profile"][
+                "userdata"
+            ].get("jobTitleOther")
+            
             user_stats_dict[obj["user"]["username"]]["country"] = obj["profile"][
                 "userdata"
             ].get("country")
+
+
+
+
+
+            user_stats_dict[obj["user"]["username"]]["city"] = obj["profile"][
+                "userdata"
+            ].get("city")
+
+            user_stats_dict[obj["user"]["username"]]["state"] = obj["profile"][
+                "userdata"
+            ].get("state")
+
+            user_stats_dict[obj["user"]["username"]]["postal_code"] = obj["profile"][
+                "userdata"
+            ].get("postalCode")
+
+            user_stats_dict[obj["user"]["username"]]["funding_source"] = obj["profile"][
+                "userdata"
+            ].get("fundingSource")            
+
+            user_stats_dict[obj["user"]["username"]]["research_statement"] = obj["profile"][
+                "userdata"
+            ].get("country")
+
+            user_stats_dict[obj["user"]["username"]]["avatar_option"] = obj["profile"][
+                "userdata"
+            ].get("avatarOption")
+
+            user_stats_dict[obj["user"]["username"]]["gravatar_default"] = obj["profile"][
+                "userdata"
+            ].get("gravatarDefault")
+
+            research_interests_list = obj["profile"]["userdata"].get('researchInterests')
+            research_interests = None
+            if research_interests_list is not None:
+                research_interests_list.sort()
+                research_interests = ", " . join(map(str, research_interests_list))
+            user_stats_dict[obj["user"]["username"]]["research_interests"] = research_interests
+            
             institution = obj["profile"]["userdata"].get("organization")
             if institution == None:
                 if "affiliations" in obj["profile"]["userdata"]:
@@ -255,23 +318,44 @@ def upload_user_data(user_stats_dict):
     query = "use " + query_on
     cursor.execute(query)
 
+    counter_user_id = -1
+    get_max_user_id_q = (
+	"select max(user_id) from metrics.user_info "
+    )
+    cursor.execute(get_max_user_id_q)
+    for row in cursor:
+        counter_user_id = row[0]
+        
     # get all existing users
     existing_user_info = dict()
     query = (
-        "select username, display_name, email, orcid, kb_internal_user, institution, "
-        "country, signup_date, last_signin_date from user_info"
+        "select username, display_name, email, orcid, kb_internal_user, institution, country, "
+        "signup_date, last_signin_date, department, job_title, job_title_other, "
+        "city, state, postal_code, funding_source, research_statement, "
+        "research_interests, avatar_option, gravatar_default  from metrics.user_info"
     )
     cursor.execute(query)
     for (
-        username,
-        display_name,
-        email,
-        orcid,
-        kb_internal_user,
-        institution,
-        country,
-        signup_date,
-        last_signin_date,
+            username,
+            display_name,
+            email,
+            orcid,
+            kb_internal_user,
+            institution,
+            country,
+            signup_date,
+            last_signin_date,
+            department,
+            job_title,
+            job_title_other,
+            city,
+            state,
+            postal_code,
+            funding_source,
+            research_statement,
+            research_interests,
+            avatar_option,
+            gravatar_default
     ) in cursor:
         existing_user_info[username] = {
             "name": display_name,
@@ -282,6 +366,17 @@ def upload_user_data(user_stats_dict):
             "country": country,
             "signup_date": signup_date,
             "last_signin_date": last_signin_date,
+            "department": department,
+            "job_title": job_title,
+            "job_title_other": job_title_other,
+            "city" : city,
+            "state" : state,
+            "postal_code" : postal_code,
+            "funding_source" : funding_source,
+            "research_statement" : research_statement,
+            "research_interests" : research_interests,
+            "avatar_option" : avatar_option,
+            "gravatar_default" : gravatar_default            
         }
 
     print("Number of existing users:" + str(len(existing_user_info)))
@@ -289,11 +384,17 @@ def upload_user_data(user_stats_dict):
     prep_cursor = db_connection.cursor(prepared=True)
     user_info_insert_statement = (
         "insert into user_info "
-        "(username,display_name,email,orcid,kb_internal_user, "
-        "institution,country,signup_date,last_signin_date) "
-        "values(%s,%s,%s,%s,%s, "
-        "%s,%s,%s,%s);"
-    )
+        "(username, display_name, email, orcid, "
+        "user_id, kb_internal_user, institution, "
+        "country, signup_date, last_signin_date, "
+        "department, job_title, job_title_other, "
+        "city, state, postal_code, funding_source, "
+        "research_statement, research_interests, "
+        "avatar_option, gravatar_default )"
+        "values(%s, %s, %s, %s, %s, "
+        "%s, %s, %s, "
+        "%s, %s, %s, %s, %s, "
+        "%s, %s, %s, %s, %s, %s, %s, %s );")
 
     update_prep_cursor = db_connection.cursor(prepared=True)
     user_info_update_statement = (
@@ -301,7 +402,15 @@ def upload_user_data(user_stats_dict):
         "set display_name = %s, email = %s, "
         "orcid = %s, kb_internal_user = %s, "
         "institution = %s, country = %s, "
-        "signup_date = %s, last_signin_date = %s "
+        "signup_date = %s, last_signin_date = %s, "
+        "department = %s, job_title = %s, "
+        "job_title_other = %s, "
+        "city = %s, state = %s, "
+        "postal_code = %s, funding_source = %s, "
+        "research_statement = %s, "
+        "research_interests = %s, "
+        "avatar_option = %s, "
+        "gravatar_default = %s "
         "where username = %s;"
     )
 
@@ -311,16 +420,29 @@ def upload_user_data(user_stats_dict):
     for username in user_stats_dict:
         # check if new user_info exists in the existing user info, if not insert the record.
         if username not in existing_user_info:
+            counter_user_id += 1
             input = (
                 username,
                 user_stats_dict[username]["name"],
                 user_stats_dict[username]["email"],
                 user_stats_dict[username]["orcid"],
+                counter_user_id,
                 user_stats_dict[username]["kbase_internal_user"],
                 user_stats_dict[username]["institution"],
                 user_stats_dict[username]["country"],
                 user_stats_dict[username]["signup_date"],
                 user_stats_dict[username]["last_signin_date"],
+                user_stats_dict[username]["department"],
+                user_stats_dict[username]["job_title"],
+                user_stats_dict[username]["job_title_other"],
+                user_stats_dict[username]["city"],
+                user_stats_dict[username]["state"],
+                user_stats_dict[username]["postal_code"],
+                user_stats_dict[username]["funding_source"],
+                user_stats_dict[username]["research_statement"],
+                user_stats_dict[username]["research_interests"],
+                user_stats_dict[username]["avatar_option"],
+                user_stats_dict[username]["gravatar_default"],
             )
             prep_cursor.execute(user_info_insert_statement, input)
             new_user_info_count += 1
@@ -341,17 +463,39 @@ def upload_user_data(user_stats_dict):
                     == str(existing_user_info[username]["signup_date"])
                 )
                 and user_stats_dict[username]["country"]
-                == existing_user_info[username]["country"]
+                    == existing_user_info[username]["country"]
                 and user_stats_dict[username]["institution"]
-                == existing_user_info[username]["institution"]
+                    == existing_user_info[username]["institution"]
                 and user_stats_dict[username]["kbase_internal_user"]
-                == existing_user_info[username]["kb_internal_user"]
+                    == existing_user_info[username]["kb_internal_user"]
                 and user_stats_dict[username]["orcid"]
-                == existing_user_info[username]["orcid"]
+                    == existing_user_info[username]["orcid"]
                 and user_stats_dict[username]["email"]
-                == existing_user_info[username]["email"]
+                    == existing_user_info[username]["email"]
                 and user_stats_dict[username]["name"]
-                == existing_user_info[username]["name"]
+                    == existing_user_info[username]["name"]
+                and user_stats_dict[username]["department"]
+                    == existing_user_info[username]["department"]
+                and user_stats_dict[username]["job_title"]
+                    == existing_user_info[username]["job_title"]
+                and user_stats_dict[username]["job_title_other"]
+                    == existing_user_info[username]["job_title_other"]
+                and user_stats_dict[username]["city"]
+                    == existing_user_info[username]["city"]
+                and user_stats_dict[username]["state"]
+                    == existing_user_info[username]["state"]
+                and user_stats_dict[username]["postal_code"]
+                    == existing_user_info[username]["postal_code"]
+                and user_stats_dict[username]["funding_source"]
+                    == existing_user_info[username]["funding_source"]
+                and user_stats_dict[username]["research_statement"]
+                    == existing_user_info[username]["research_statement"]
+                and user_stats_dict[username]["research_interests"]
+                    == existing_user_info[username]["research_interests"]
+                and user_stats_dict[username]["avatar_option"]
+                    == existing_user_info[username]["avatar_option"]
+                and user_stats_dict[username]["gravatar_default"]
+                    == existing_user_info[username]["gravatar_default"]
             ):
                 input = (
                     user_stats_dict[username]["name"],
@@ -362,6 +506,17 @@ def upload_user_data(user_stats_dict):
                     user_stats_dict[username]["country"],
                     user_stats_dict[username]["signup_date"],
                     user_stats_dict[username]["last_signin_date"],
+                    user_stats_dict[username]["department"],
+                    user_stats_dict[username]["job_title"],
+                    user_stats_dict[username]["job_title_other"],
+                    user_stats_dict[username]["city"],
+                    user_stats_dict[username]["state"],
+                    user_stats_dict[username]["postal_code"],
+                    user_stats_dict[username]["funding_source"],
+                    user_stats_dict[username]["research_statement"],
+                    user_stats_dict[username]["research_interests"],
+                    user_stats_dict[username]["avatar_option"],
+                    user_stats_dict[username]["gravatar_default"],
                     username,
                 )
                 update_prep_cursor.execute(user_info_update_statement, input)
@@ -451,3 +606,4 @@ def upload_user_data(user_stats_dict):
     )
 
     return 1
+

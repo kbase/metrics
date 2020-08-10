@@ -1,11 +1,12 @@
 from methods_elasticquery import retrieve_elastic_response
 import warnings
 import time
-
+import pprint
 warnings.simplefilter(action="ignore", category=Warning)
 import pandas as pd
 import datetime
 import os
+import sys
 import mysql.connector as mysql
 
 yesterday = datetime.date.today() - datetime.timedelta(days=1)
@@ -107,22 +108,26 @@ def elasticsearch_pull(start_date, end_date):
         # datetime to epoch. Epoch format needed for elastic query
         epoch_start = int(start_date.strftime("%s")) * 1000
         epoch_end = int(end_date.strftime("%s")) * 1000
-
+        
     # Return results of elastic query and format data to dictionary structures
     results = retrieve_elastic_response(epoch_start, epoch_end)
     #    import pprint
     #    pp = pprint.PrettyPrinter(indent=4)
     #    pp.pprint(results)
     data_array = results_to_formatted_dicts(results)
-
-    # Get relative sizes of data
+    
+    # Get relative size of data and initiate values
     total_results = results["hits"]["total"]
     size_results_pulled = len(results["hits"]["hits"])
-
-    # Start array from first index with a different timestamp than the last element
-    check_timestamp = [data_array[-1]["epoch_timestamp"]]
+    check_timestamp = 0
+    attempt_timestamp = 1
     attempt_index = -2
-    attempt_timestamp = [data_array[attempt_index]["epoch_timestamp"]]
+    try:
+        # Start array from first index with a different timestamp than the last element
+        check_timestamp = [data_array[-1]["epoch_timestamp"]]
+        attempt_timestamp = [data_array[attempt_index]["epoch_timestamp"]]
+    except IndexError:
+        sys.exit("Oops! Data array from Elasticsearch is empty. Please check Narrative Container logs in Kibana for input date range.")
     while check_timestamp == attempt_timestamp and (
         (total_results + attempt_index) > 0
     ):
@@ -173,6 +178,10 @@ def make_user_activity_dict(data, ip, user):
     )
     # Get date and ip error tag as string
     date = str(date)[0:10]
+    # Replace dashes in usernames with underscores
+    if user[-2:] == "-0":
+        user = user[:-2]+"_"
+    user = user.replace("-", "_")
     # If an Ip error tag appears in the data, we need to separate the dictionaries to data without ip errors and those with
     if "tags" in data.columns:
 
@@ -196,7 +205,6 @@ def make_user_activity_dict(data, ip, user):
                 "latitude": list(data["latitude"])[0],
                 "longitude": list(data["longitude"])[0],
                 "host_ip": list(data["host"])[0],
-                "proxy_target": list(data["proxy_target"])[0],
             }
 
         else:
@@ -208,7 +216,6 @@ def make_user_activity_dict(data, ip, user):
                 "first_seen": earliest_seen,
                 "ip_address": tag,
                 "host_ip": list(data["host"])[0],
-                "proxy_target": list(data["proxy_target"])[0],
                 "country_name": tag,
                 "country_code": tag,
                 "region_name": tag,
@@ -238,7 +245,6 @@ def make_user_activity_dict(data, ip, user):
             "latitude": list(data["latitude"])[0],
             "longitude": list(data["longitude"])[0],
             "host_ip": list(data["host"])[0],
-            "proxy_target": list(data["proxy_target"])[0],
         }
 
     # print("Elasticsearch dictionaries took ", time.time() - start_time, " seconds to create")
@@ -263,7 +269,7 @@ def elastic_summary_dictionaries(
     # Pull elastic results, drop duplicates from backtracking timestamps in elastic queries,
     # and format timestamp to readable datetime format
     elastic_dictionaries = elasticsearch_pull(str_date, end_date)
-    elastic_data_df = pd.DataFrame(elastic_dictionaries)
+    elastic_data_df = pd.DataFrame.from_dict(elastic_dictionaries)
     elastic_data_df.drop_duplicates(inplace=True)
     elastic_data_df["last_seen"] = pd.to_datetime(
         elastic_data_df["last_seen"], format="%a %b %d %H:%M:%S %Y"
@@ -338,10 +344,10 @@ def upload_elastic_search_session_info(elastic_data):
         "city, latitude, longitude, "
         "region_name, region_code, postal_code, "
         "timezone, estimated_hrs_active, "
-        "first_seen, last_seen, proxy_target) "
+        "first_seen, last_seen) "
         "values(%s, %s, %s, %s, %s, "
         "%s, %s, %s, %s, %s, %s, "
-        "%s, %s, %s, %s, %s);"
+        "%s, %s, %s, %s);"
     )
 
     check_record_cursor = db_connection.cursor(buffered=True)
@@ -360,7 +366,7 @@ def upload_elastic_search_session_info(elastic_data):
         "city = %s, latitude = %s, longitude = %s, "
         "region_name = %s, region_code = %s, postal_code = %s, "
         "timezone = %s, estimated_hrs_active = %s, "
-        "first_seen = %s, last_seen = %s, proxy_target = %s "
+        "first_seen = %s, last_seen = %s "
         "where username = %s and record_date = %s and ip_address = %s;"
     )
 
@@ -389,7 +395,6 @@ def upload_elastic_search_session_info(elastic_data):
             record["hours_on_system"],
             record["first_seen"],
             record["last_seen"],
-            record["proxy_target"],
         ]
         # Error handling from https://www.programcreek.com/python/example/93043/mysql.connector.Error
         try:
@@ -437,7 +442,6 @@ def upload_elastic_search_session_info(elastic_data):
                             record["hours_on_system"],
                             record["first_seen"],
                             record["last_seen"],
-                            record["proxy_target"],
                             record["username"],
                             record["date"],
                             record["ip_address"],
