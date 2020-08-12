@@ -1151,3 +1151,30 @@ count(*) as run_count,
 round(avg(queue_time),1) as avg_queue_time_secs, round(sum(queue_time)/3600,1) as total_queue_time_hours
 from metrics.user_app_usage 
 group by func_name, finish_month;
+
+
+#---------------------
+# Users most common country from session info
+#
+
+create or replace view metrics_reporting.hv_session_info_user_country_count as
+select count(*) as session_count, si.username, si.country_name
+from metrics.session_info si
+group by si.username, si.country_name;
+
+
+create or replace view metrics_reporting.hv_session_info_user_max_country_count as
+select max(siuccm.session_count) as msession_count, siuccm.username 
+from metrics_reporting.hv_session_info_user_country_count siuccm 
+group by siuccm.username;
+
+
+create or replace view metrics_reporting.session_info_frequent_country as
+select siucc.username, min(siucc.country_name) as country
+from metrics_reporting.hv_session_info_user_country_count siucc
+inner join 
+metrics_reporting.hv_session_info_user_max_country_count siumcc
+on siucc.session_count = siumcc.msession_count
+and siucc.username = siumcc.username
+group by siucc.username;
+
