@@ -6,6 +6,8 @@ CREATE TABLE `user_info` (
   `display_name` varchar(255) NOT NULL,
   `email` varchar(255) DEFAULT NULL,
   `orcid` varchar(255) DEFAULT NULL,
+  `globus_login` tinyint(1) NOT NULL DEFAULT '0',
+  `google_login` tinyint(1) NOT NULL DEFAULT '0',
   `user_id` int(11) NOT NULL,
   `kb_internal_user` tinyint(1) NOT NULL DEFAULT '0',
   `institution` varchar(255) DEFAULT NULL,

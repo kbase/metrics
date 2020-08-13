@@ -54,6 +54,8 @@ def get_user_info_from_auth2():
             "institution": None,
             "country": None,
             "orcid": None,
+            "globus_login": False,
+            "google_login": False,
             "num_orgs": 0,
             "narrative_count": 0,
             "shared_count": 0,
@@ -72,16 +74,21 @@ def get_user_info_from_auth2():
         }
 
     # Get all users with an ORCID authentication set up.
-    users_orcid_query = db_auth2.users.find(
-        {"idents.prov": "OrcID"},
+    users_login_query = db_auth2.users.find(
+#        {"idents.prov": "OrcID"},
+        {},
         {"user": 1, "idents.prov": 1, "idents.prov_id": 1, "_id": 0},
     )
-    for record in users_orcid_query:
+    for record in users_login_query:
         for ident in record["idents"]:
             if ident["prov"] == "OrcID":
                 # just use the first orcid seen.
                 user_stats_dict[record["user"]]["orcid"] = ident["prov_id"]
-                continue
+                #continue
+            elif ident["prov"] == "Globus":
+                user_stats_dict[record["user"]]["globus_login"] = True
+            elif ident["prov"] == "Google":
+                user_stats_dict[record["user"]]["google_login"] = True
 
     client_auth2.close()
     return user_stats_dict
@@ -239,10 +246,6 @@ def get_profile_info(user_stats_dict):
                 "userdata"
             ].get("country")
 
-
-
-
-
             user_stats_dict[obj["user"]["username"]]["city"] = obj["profile"][
                 "userdata"
             ].get("city")
@@ -328,7 +331,8 @@ def upload_user_data(user_stats_dict):
     # get all existing users
     existing_user_info = dict()
     query = (
-        "select username, display_name, email, orcid, kb_internal_user, institution, country, "
+        "select username, display_name, email, orcid, globus_login, google_login, "
+        "kb_internal_user, institution, country, "
         "signup_date, last_signin_date, department, job_title, job_title_other, "
         "city, state, postal_code, funding_source, research_statement, "
         "research_interests, avatar_option, gravatar_default  from metrics.user_info"
@@ -339,6 +343,8 @@ def upload_user_data(user_stats_dict):
             display_name,
             email,
             orcid,
+            globus_login,
+            google_login,
             kb_internal_user,
             institution,
             country,
@@ -360,6 +366,8 @@ def upload_user_data(user_stats_dict):
             "name": display_name,
             "email": email,
             "orcid": orcid,
+            "globus_login": globus_login,
+            "google_login": google_login,
             "kb_internal_user": kb_internal_user,
             "institution": institution,
             "country": country,
@@ -384,22 +392,28 @@ def upload_user_data(user_stats_dict):
     user_info_insert_statement = (
         "insert into user_info "
         "(username, display_name, email, orcid, "
+        "globus_login, google_login, "
         "user_id, kb_internal_user, institution, "
         "country, signup_date, last_signin_date, "
         "department, job_title, job_title_other, "
         "city, state, postal_code, funding_source, "
         "research_statement, research_interests, "
         "avatar_option, gravatar_default )"
-        "values(%s, %s, %s, %s, %s, "
+        "values(%s, %s, %s, %s, "
+        "%s, %s, "
         "%s, %s, %s, "
-        "%s, %s, %s, %s, %s, "
-        "%s, %s, %s, %s, %s, %s, %s, %s );")
+        "%s, %s, %s, "
+        "%s, %s, %s, "
+        "%s, %s, %s, %s, "
+        "%s, %s, "
+        "%s, %s );")
 
     update_prep_cursor = db_connection.cursor(prepared=True)
     user_info_update_statement = (
         "update user_info "
         "set display_name = %s, email = %s, "
-        "orcid = %s, kb_internal_user = %s, "
+        "orcid = %s, globus_login = %s, "
+        "google_login = %s, kb_internal_user = %s, "
         "institution = %s, country = %s, "
         "signup_date = %s, last_signin_date = %s, "
         "department = %s, job_title = %s, "
@@ -425,6 +439,8 @@ def upload_user_data(user_stats_dict):
                 user_stats_dict[username]["name"],
                 user_stats_dict[username]["email"],
                 user_stats_dict[username]["orcid"],
+                user_stats_dict[username]["globus_login"],
+                user_stats_dict[username]["google_login"],
                 counter_user_id,
                 user_stats_dict[username]["kbase_internal_user"],
                 user_stats_dict[username]["institution"],
@@ -469,6 +485,10 @@ def upload_user_data(user_stats_dict):
                     == existing_user_info[username]["kb_internal_user"]
                 and user_stats_dict[username]["orcid"]
                     == existing_user_info[username]["orcid"]
+                and user_stats_dict[username]["globus_login"]
+                    == existing_user_info[username]["globus_login"]
+                and user_stats_dict[username]["google_login"]
+                    == existing_user_info[username]["google_login"]
                 and user_stats_dict[username]["email"]
                     == existing_user_info[username]["email"]
                 and user_stats_dict[username]["name"]
@@ -500,6 +520,8 @@ def upload_user_data(user_stats_dict):
                     user_stats_dict[username]["name"],
                     user_stats_dict[username]["email"],
                     user_stats_dict[username]["orcid"],
+                    user_stats_dict[username]["globus_login"],
+                    user_stats_dict[username]["google_login"],
                     user_stats_dict[username]["kbase_internal_user"],
                     user_stats_dict[username]["institution"],
                     user_stats_dict[username]["country"],

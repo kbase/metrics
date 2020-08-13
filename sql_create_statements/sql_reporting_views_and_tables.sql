@@ -47,7 +47,7 @@ group by username;
 
 #IN METRICS_REPORTING
 create or replace view metrics_reporting.user_info_plus as
-select ui.* ,
+select ui.* , sifc.country as session_info_country,
 round((UNIX_TIMESTAMP(ui.last_signin_date) - UNIX_TIMESTAMP(ui.signup_date))/86400,2) as days_signin_minus_signup,
 ceil((UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(last_signin_date))/86400) as days_since_last_signin,
 IFNULL(uac.total_app_count,0) as total_app_count,
@@ -57,6 +57,8 @@ left outer join
 metrics.hv_user_app_count uac on ui.username = uac.username
 left outer join   
 metrics.hv_user_app_error_count uec on ui.username = uec.username
+left outer join
+metrics_reporting.session_info_frequent_country sifc on ui.username = sifc.username
 where exclude = False
 order by signup_date;
 
