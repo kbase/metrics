@@ -97,6 +97,8 @@ where kb_internal_user = False
 and exclude = False
 group by signup_month;
 
+#NOTE THIS VIEW MUST BE MADE HAND AFTER AN RESTORING DB FROM BACKUP
+#BECAUSE METRICS IS RELYING METRICS_REPORTING (WHICH WILL NOT EXIST YET)
 #IN METRICS
 create or replace view metrics.hv_user_monthly_signups_still_active as
 select 
@@ -108,6 +110,8 @@ and days_since_last_signin < 90
 and exclude = False
 group by signup_month;
 
+#NOTE THIS VIEW MUST BE MADE HAND AFTER AN RESTORING DB FROM BACKUP
+#BECAUSE METRICS IS RELYING METRICS_REPORTING (WHICH WILL NOT EXIST YET)
 #IN METRICS
 create or replace view metrics.hv_user_monthly_signups_that_returned as
 select 
@@ -119,6 +123,8 @@ and days_signin_minus_signup >= 1
 and exclude = False
 group by signup_month;
 
+#NOTE THIS VIEW MUST BE MADE HAND AFTER AN RESTORING DB FROM BACKUP
+#BECAUSE METRICS IS RELYING METRICS_REPORTING (WHICH WILL NOT EXIST YET)
 #IN METRICS_REPORTING
 create or replace view metrics_reporting.user_monthly_signups_retention as
 select us.signup_month, us.total_signups, 
