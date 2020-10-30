@@ -70,7 +70,9 @@ def get_user_info_from_auth2():
             "research_statement" : None,
             "research_interests" : None,
             "avatar_option" : None,
-            "gravatar_default" : None
+            "gravatar_default" : None,
+            "how_u_hear_selected" : None,
+            "how_u_hear_other" : None,
         }
 
     # Get all users with an ORCID authentication set up.
@@ -298,6 +300,29 @@ def get_profile_info(user_stats_dict):
                     institution = institution.replace(key, replacement)
                 institution = institution.rstrip()
             user_stats_dict[obj["user"]["username"]]["institution"] = institution
+
+            #How did you hear about KBase part
+            how_u_hear_other = None
+            how_u_hear_selected = None
+            survey_data = obj["profile"].get('surveydata')
+            if survey_data:
+                how_u_hear_selected_list = list()
+                referral_sources = obj["profile"]["surveydata"].get("referralSources")
+                if referral_sources:
+                    responses = obj["profile"]["surveydata"]["referralSources"].get("response")
+                    for response in responses:
+                        if response == "other" and responses[response]:
+#                            print("OTHER Response: " + str(response) + " : Value : " + str(responses[response]))
+                            how_u_hear_other = str(responses[response]).rstrip()
+                        elif responses[response]:
+                            how_u_hear_selected_list.append(response)                                
+#                            print("Response: " + str(response) + " : Value : " + str(responses[response]))
+                if len(how_u_hear_selected_list) > 0:
+                    how_u_hear_selected_list.sort()
+                    how_u_hear_selected = "::".join(how_u_hear_selected_list)
+            user_stats_dict[obj["user"]["username"]]["how_u_hear_selected"] = how_u_hear_selected
+            user_stats_dict[obj["user"]["username"]]["how_u_hear_other"] = how_u_hear_other
+
     return user_stats_dict
 
 
@@ -335,7 +360,8 @@ def upload_user_data(user_stats_dict):
         "kb_internal_user, institution, country, "
         "signup_date, last_signin_date, department, job_title, job_title_other, "
         "city, state, postal_code, funding_source, research_statement, "
-        "research_interests, avatar_option, gravatar_default  from metrics.user_info"
+        "research_interests, avatar_option, gravatar_default , "
+        "how_u_hear_selected, how_u_hear_other from metrics.user_info"
     )
     cursor.execute(query)
     for (
@@ -360,7 +386,9 @@ def upload_user_data(user_stats_dict):
             research_statement,
             research_interests,
             avatar_option,
-            gravatar_default
+            gravatar_default,
+            how_u_hear_selected,
+            how_u_hear_other
     ) in cursor:
         existing_user_info[username] = {
             "name": display_name,
@@ -383,7 +411,9 @@ def upload_user_data(user_stats_dict):
             "research_statement" : research_statement,
             "research_interests" : research_interests,
             "avatar_option" : avatar_option,
-            "gravatar_default" : gravatar_default            
+            "gravatar_default" : gravatar_default,
+            "how_u_hear_selected" : how_u_hear_selected,
+            "how_u_hear_other" : how_u_hear_other
         }
 
     print("Number of existing users:" + str(len(existing_user_info)))
@@ -398,7 +428,8 @@ def upload_user_data(user_stats_dict):
         "department, job_title, job_title_other, "
         "city, state, postal_code, funding_source, "
         "research_statement, research_interests, "
-        "avatar_option, gravatar_default )"
+        "avatar_option, gravatar_default, "
+        "how_u_hear_selected, how_u_hear_other)"
         "values(%s, %s, %s, %s, "
         "%s, %s, "
         "%s, %s, %s, "
@@ -406,7 +437,8 @@ def upload_user_data(user_stats_dict):
         "%s, %s, %s, "
         "%s, %s, %s, %s, "
         "%s, %s, "
-        "%s, %s );")
+        "%s, %s, "
+        "%s, %s);")
 
     update_prep_cursor = db_connection.cursor(prepared=True)
     user_info_update_statement = (
@@ -423,7 +455,9 @@ def upload_user_data(user_stats_dict):
         "research_statement = %s, "
         "research_interests = %s, "
         "avatar_option = %s, "
-        "gravatar_default = %s "
+        "gravatar_default = %s, "
+        "how_u_hear_selected = %s, "
+        "how_u_hear_other = %s "
         "where username = %s;"
     )
 
@@ -458,6 +492,8 @@ def upload_user_data(user_stats_dict):
                 user_stats_dict[username]["research_interests"],
                 user_stats_dict[username]["avatar_option"],
                 user_stats_dict[username]["gravatar_default"],
+                user_stats_dict[username]["how_u_hear_selected"],
+                user_stats_dict[username]["how_u_hear_other"],
             )
             prep_cursor.execute(user_info_insert_statement, input)
             new_user_info_count += 1
@@ -515,6 +551,10 @@ def upload_user_data(user_stats_dict):
                     == existing_user_info[username]["avatar_option"]
                 and user_stats_dict[username]["gravatar_default"]
                     == existing_user_info[username]["gravatar_default"]
+                and user_stats_dict[username]["how_u_hear_selected"]
+                    == existing_user_info[username]["how_u_hear_selected"]
+                and user_stats_dict[username]["how_u_hear_other"]
+                    == existing_user_info[username]["how_u_hear_other"]
             ):
                 input = (
                     user_stats_dict[username]["name"],
@@ -538,6 +578,8 @@ def upload_user_data(user_stats_dict):
                     user_stats_dict[username]["research_interests"],
                     user_stats_dict[username]["avatar_option"],
                     user_stats_dict[username]["gravatar_default"],
+                    user_stats_dict[username]["how_u_hear_selected"],
+                    user_stats_dict[username]["how_u_hear_other"],
                     username,
                 )
                 update_prep_cursor.execute(user_info_update_statement, input)

@@ -26,6 +26,8 @@ CREATE TABLE `user_info` (
   `research_interests` varchar(255) DEFAULT NULL,
   `avatar_option` varchar(255) DEFAULT NULL,
   `gravatar_default` varchar(255) DEFAULT NULL,
+  `how_u_hear_selected` varchar(255) DEFAULT NULL,
+  `how_u_hear_other` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 
