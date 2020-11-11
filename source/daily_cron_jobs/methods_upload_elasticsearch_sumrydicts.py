@@ -7,6 +7,7 @@ import pandas as pd
 import datetime
 import os
 import sys
+import re
 import mysql.connector as mysql
 
 yesterday = datetime.date.today() - datetime.timedelta(days=1)
@@ -179,6 +180,7 @@ def make_user_activity_dict(data, ip, user):
     # Get date and ip error tag as string
     date = str(date)[0:10]
     # Replace dashes in usernames with underscores
+    test_string = user[-2:]
     if user[-2:] == "-0":
         user = user[:-2]+"_"
     user = user.replace("-", "_")
@@ -335,8 +337,26 @@ def upload_elastic_search_session_info(elastic_data):
     query = "use " + query_on
     cursor.execute(query)
 
-    insert_cursor = db_connection.cursor(prepared=True)
+    #Dict that has elasticized_name as key, has multiple_underscore username as a value
+    multiple_underscore_username_lookup_dict = dict()
+    get_multi_underscore_usernames_statement = (
+        "select username, email from metrics.user_info where username like '%\_\_%'"
+    )
+    cursor.execute(get_multi_underscore_usernames_statement)
+    for(
+        username, email
+    ) in cursor:
+        elasticized_username = re.sub('_+',"_",username)
+        multiple_underscore_username_lookup_dict[elasticized_username] = username
+        
+    #print("Usernames : " + str(multiple_underscore_username_lookup_dict))
 
+    check_if_single_underscore_cursor = db_connection.cursor(buffered=True)
+    check_if_single_underscore_statement = (
+        "select username, email from metrics.user_info where username = %s and 1 = %s"
+    )
+    
+    insert_cursor = db_connection.cursor(prepared=True)
     session_info_insert_statement = (
         "insert into metrics.session_info "
         "(username, record_date, ip_address, "
@@ -376,9 +396,24 @@ def upload_elastic_search_session_info(elastic_data):
     fail_inserts_count = 0
     # insert each record.
     for record in elastic_data:
+        #deal with geoid lookup failures
         if record["country_code"] == "_geoip_lookup_failure":
             record["country_code"] = " "
             record["ip_address"] = " "
+
+        #deal with usernames that have multiple consecutive underscores
+        if record['username'] in multiple_underscore_username_lookup_dict:
+            #see if the single underscore version exists in the database assign to that one first
+            check_single_underscore_name = (record['username'],1)
+            check_if_single_underscore_cursor.execute(check_if_single_underscore_statement,
+                                                      check_single_underscore_name)
+            #print("Row count equals : " + str(check_if_single_underscore_cursor.rowcount))
+            if check_if_single_underscore_cursor.rowcount == 0:
+                # means no one underscore version of the name exists.
+                # then use lookup to find the multi underscore version of the name.
+                # print("In if has single underscore in there :" + str(multiple_underscore_username_lookup_dict[record['username']]))
+                record['username'] = multiple_underscore_username_lookup_dict[record['username']]
+                
         input = [
             record["username"],
             record["date"],
@@ -396,6 +431,7 @@ def upload_elastic_search_session_info(elastic_data):
             record["first_seen"],
             record["last_seen"],
         ]
+        
         # Error handling from https://www.programcreek.com/python/example/93043/mysql.connector.Error
         try:
             insert_cursor.execute(session_info_insert_statement, input)
