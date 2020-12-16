@@ -32,22 +32,23 @@ def dump_query_results():
 
     # CHANGE QUERY HERE
     #    query = "select username, display_name, email, orcid, kb_internal_user, institution, country, signup_date, last_signin_date from user_info order by signup_date"
-    #    Query for Adam:
+    #    Query for Adam Narratives dump of information:
     #    select wc.* from metrics.user_info ui inner join metrics_reporting.workspaces_current wc on ui.username = wc.username
     #    where ui.kb_internal_user = 0 and wc.narrative_version > 0 and is_deleted = 0 and is_temporary = 0;
     query = (
-        "select wc.* from metrics.user_info ui inner join metrics_reporting.workspaces_current wc on ui.username = wc.username "
-        "where ui.kb_internal_user = 0 and wc.narrative_version > 0 and is_deleted = 0 and is_temporary = 0"
+        "select * from metrics_reporting.narrative_app_flows"
     )
     # CHANGE COLUMN HEADERS HERE TO MATCH QUERY HEADERS
     #    print("username\temail\tlast_signin_date\tmax_last_seen\tHasBeenSeen")
     #    print("ws_id\tusername\tmod_date\tinitial_save_date\trecord_date\ttop_lvl_object_count\ttotal_object_count\tvisible_app_cells_count\tnarrative_version\thidden_object_count\tdeleted_object_count\ttotal_size\ttop_lvl_size\tis_public\tis_temporary\tnumber_of_shares")
-    #    Headers for Adam's narratives query
-    print(
-        "ws_id\tusername\tmod_date\tinitial_save_date\trecord_date\ttop_lvl_object_count\ttotal_object_count\tvisible_app_cells_count\tcode_cells_count\t"
-        "narrative_version\thidden_object_count\tdeleted_object_count\ttotal_size\ttop_lvl_size\tis_public\tis_temporary\tis_deleted\tnumber_of_shares\t"
-        "num_nar_obj_ids\tstatic_narratives_count"
-    )
+    #    Headers for Adam's narratives query (Note if more columns added, may need to update this
+    #    print(
+    #        "ws_id\tusername\tmod_date\tinitial_save_date\trecord_date\ttop_lvl_object_count\ttotal_object_count\tvisible_app_cells_count\tcode_cells_count\t"
+    #        "narrative_version\thidden_object_count\tdeleted_object_count\ttotal_size\ttop_lvl_size\tis_public\tis_temporary\tis_deleted\tnumber_of_shares\t"
+    #        "num_nar_obj_ids\tstatic_narratives_count"
+    #    )
+    #Header for Adam's narrative_app_flow
+    print("ws_id\tusername\tapp_name\tfunc_name\tstart_date\tfinish_date") 
 
     cursor.execute(query)
     row_values = list()

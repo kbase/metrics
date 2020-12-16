@@ -167,6 +167,23 @@ def make_reporting_tables():
     cursor.execute(app_category_run_hours_weekly_create_statement)
     print("app_category_run_hours_weekly created")
 
+
+    ################
+    narrative_app_flows_create_statement = (
+        "create or replace table metrics_reporting.narrative_app_flows as "
+        "select uau.ws_id, uau.username, uau.app_name, uau.func_name, uau.start_date, uau.finish_date "
+        "from metrics.user_info ui "
+        "inner join metrics.user_app_usage uau "
+        "on ui.username = uau.username "
+        "inner join metrics_reporting.workspaces_current wc "
+        "on wc.ws_id = uau.ws_id "
+        "where ui.kb_internal_user = 0 "
+        "and uau.is_error = 0 "
+        "and wc.narrative_version > 0 "
+        "order by ws_id, start_date"
+    )
+    cursor.execute(narrative_app_flows_create_statement)
+    print("narrative_app_flows created")
     
     return
 
