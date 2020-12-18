@@ -613,13 +613,13 @@ def upload_workspace_stats():
     for db_date in cursor:
         db_date_month = db_date[0]
 
-#    if db_date_month == current_month:
-#        print(
-#            "THE WORKSPACE and WS OBJECTS COUNTS UPLOADER HAS BEEN RUN THIS MONTH. THE PROGRAM WILL EXIT"
-#        )
-#        exit()
-#    else:
-#        print("IT HAS NOT BEEN RUN THIS MONTH, WE WILL RUN THE PROGRAM")
+    if db_date_month == current_month:
+        print(
+            "THE WORKSPACE and WS OBJECTS COUNTS UPLOADER HAS BEEN RUN THIS MONTH. THE PROGRAM WILL EXIT"
+        )
+        exit()
+    else:
+        print("IT HAS NOT BEEN RUN THIS MONTH, WE WILL RUN THE PROGRAM")
 
     client = MongoClient(mongoDB_metrics_connection + to_workspace)
     db = client.workspace
