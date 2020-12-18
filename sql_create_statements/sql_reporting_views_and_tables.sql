@@ -1186,3 +1186,21 @@ on siucc.session_count = siumcc.msession_count
 and siucc.username = siumcc.username
 group by siucc.username;
 
+
+#--------------------------
+# Custom Table  for Adam so he can look at app workflows of users.
+# This is done by cron job for making reporting tables.
+#--------------------------
+create or replace table metrics_reporting.narrative_app_flows as
+select uau.ws_id, uau.username, uau.app_name, uau.func_name, uau.start_date, uau.finish_date
+from metrics.user_info ui
+inner join metrics.user_app_usage uau
+on ui.username = uau.username
+inner join metrics_reporting.workspaces_current wc
+on wc.ws_id = uau.ws_id
+where ui.kb_internal_user = 0
+and uau.is_error = 0
+and wc.narrative_version > 0
+order by ws_id, start_date;
+
+

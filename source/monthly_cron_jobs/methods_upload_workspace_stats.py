@@ -1,6 +1,7 @@
 from pymongo import MongoClient
 from pymongo import ReadPreference
 from biokbase.workspace.client import Workspace
+from biokbase.service.Client import Client as ServiceClient
 import json as _json
 import os
 import mysql.connector as mysql
@@ -28,8 +29,19 @@ ws_url = os.environ["WS_URL"]
 ws_user_token = os.environ["METRICS_WS_USER_TOKEN"]
 to_workspace = os.environ["WRK_SUFFIX"]
 
+def get_static_narrative_counts():
+    """
+    returns a dict of ws_id to count of the nuber of static_workspaces made for it. 
+    """
+    service_wizard_url = os.environ["SERVICE_WIZARD_URL"]
+    wiz = ServiceClient(service_wizard_url, use_url_lookup=True)
+    stats = wiz.sync_call("StaticNarrative.list_static_narratives", [])
+    static_narrative_counts = dict()
+    for ws_id in stats[0]:
+        static_narrative_counts[int(ws_id)] = len(stats[0][ws_id])
+    return static_narrative_counts;
 
-def get_workspaces(db):
+def get_workspaces(db, static_narrative_counts):
     """
     gets narrative workspaces information for non temporary workspaces
     """
@@ -65,7 +77,11 @@ def get_workspaces(db):
                 "is_temporary": None,
                 "number_of_shares": 0,
                 "num_nar_obj_ids": 0,
+                "static_narrative_count": 0,
             }
+            #See if it has static narratives, populate if it does.
+            if record["ws"] in static_narrative_counts:
+                workspaces_dict[record["ws"]]["static_narrative_count"] = static_narrative_counts[record["ws"]]
 
     workspace_is_temporary_cursor = db.workspaces.find(
         {
@@ -251,6 +267,10 @@ def get_objects(db, workspaces_dict, kbase_staff):
     #temp_dict[19218] = workspaces_dict[19218]
     #temp_dict[52467] = workspaces_dict[52467]
     #temp_dict[52468] = workspaces_dict[52468]
+    #temp_dict[13644] = workspaces_dict[13644]
+    #temp_dict[30530] = workspaces_dict[30530]
+    #temp_dict[46033] = workspaces_dict[46033]
+    #temp_dict[46034] = workspaces_dict[46034]
     #workspaces_dict.clear()
     #workspaces_dict = temp_dict
     ###############
@@ -593,18 +613,19 @@ def upload_workspace_stats():
     for db_date in cursor:
         db_date_month = db_date[0]
 
-    if db_date_month == current_month:
-        print(
-            "THE WORKSPACE and WS OBJECTS COUNTS UPLOADER HAS BEEN RUN THIS MONTH. THE PROGRAM WILL EXIT"
-        )
-        exit()
-    else:
-        print("IT HAS NOT BEEN RUN THIS MONTH, WE WILL RUN THE PROGRAM")
+#    if db_date_month == current_month:
+#        print(
+#            "THE WORKSPACE and WS OBJECTS COUNTS UPLOADER HAS BEEN RUN THIS MONTH. THE PROGRAM WILL EXIT"
+#        )
+#        exit()
+#    else:
+#        print("IT HAS NOT BEEN RUN THIS MONTH, WE WILL RUN THE PROGRAM")
 
     client = MongoClient(mongoDB_metrics_connection + to_workspace)
     db = client.workspace
 
-    workspaces_dict = get_workspaces(db)
+    static_narrative_counts = get_static_narrative_counts()
+    workspaces_dict = get_workspaces(db, static_narrative_counts)
     get_ws_top_info_time = time.time() - start_time
     kbase_staff = get_kbase_staff(db_connection)
     db_connection.close()
@@ -640,8 +661,9 @@ def upload_workspace_stats():
         "visible_app_cells_count, code_cells_count, narrative_version, "
         "hidden_object_count, deleted_object_count, "
         "total_size, top_lvl_size, is_public, "
-        "is_temporary, is_deleted, number_of_shares, num_nar_obj_ids) "
-        "values(%s,%s, %s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+        "is_temporary, is_deleted, number_of_shares, "
+        "num_nar_obj_ids, static_narratives_count) "
+        "values(%s,%s, %s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
     )
 
     for ws_id in sorted(workspaces_dict.keys()):
@@ -664,6 +686,7 @@ def upload_workspace_stats():
             workspaces_dict[ws_id]["is_deleted"],
             workspaces_dict[ws_id]["number_of_shares"],
             workspaces_dict[ws_id]["num_nar_obj_ids"],
+            workspaces_dict[ws_id]["static_narrative_count"],
         )
         prep_cursor.execute(workspaces_insert_statement, input)
 

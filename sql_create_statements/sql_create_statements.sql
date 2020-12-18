@@ -347,11 +347,11 @@ CREATE INDEX idx_file_storage_stats_record_date ON metrics.file_storage_stats(re
 ##################################################
 # workspaces
 
-CREATE OR REPLACE TABLE `workspaces` (
+CREATE TABLE `workspaces` (
   `ws_id` int(11) NOT NULL,
   `username` varchar(255) NOT NULL,
   `mod_date` date NOT NULL,
-  `initial_save_date` date default NULL,
+  `initial_save_date` date DEFAULT NULL,
   `record_date` date NOT NULL,
   `top_lvl_object_count` int(11) NOT NULL,
   `total_object_count` int(11) NOT NULL,
@@ -364,9 +364,10 @@ CREATE OR REPLACE TABLE `workspaces` (
   `top_lvl_size` bigint(20) NOT NULL,
   `is_public` tinyint(1) NOT NULL DEFAULT '0',
   `is_temporary` tinyint(1) DEFAULT NULL,
-  `is_deleted` tinyint(1) NOT NULL DEFAULT '0',	
+  `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
   `number_of_shares` int(11) NOT NULL DEFAULT '0',
-  `num_nar_obj_ids` int(6) not null default 0,
+  `num_nar_obj_ids` int(6) NOT NULL DEFAULT '0',
+  `static_narratives_count` int(6) NOT NULL DEFAULT '0',
   UNIQUE KEY `uk_ws_user_rd_workspaces` (`ws_id`,`username`,`record_date`),
   KEY `idx_workspaces_ws_id` (`ws_id`),
   KEY `idx_workspaces_user` (`username`),
@@ -379,8 +380,9 @@ CREATE OR REPLACE TABLE `workspaces` (
   KEY `idx_workspaces_ip` (`is_public`),
   KEY `idx_workspaces_it` (`is_temporary`),
   KEY `idx_workspaces_id` (`is_deleted`),
+  KEY `idx_workspaces_snc` (`static_narratives_count`),
   CONSTRAINT `fk_workspace_narratives_username` FOREIGN KEY (`username`) REFERENCES `user_info` (`username`) ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
 
 
 ############################################
