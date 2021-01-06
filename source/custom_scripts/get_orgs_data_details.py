@@ -26,8 +26,11 @@ scp jkbaumohl@login1.berkeley.kbase.us:/homes/oakland/jkbaumohl/metrics/org_deta
 8	Format Date fields.
 9	Copy to Google Sheets
 
-It makes 3 Tables:
-ORGS TOP LEVEL INFORMATION				
+It makes 4 Tables:
+TOTAL PUBLIC ORGS: 75
+TOTAL PRIVATE ORGS: 75
+
+ORGS TOP LEVEL INFORMATION FOR ORGS WITH 5+ NARRATIVES				
 ORG ID	ORG Name	ORG Creation Date	ORG Last Modified Date	
 kbasegspdemoorg	KBase GSP Demo Org	1/23/19 9:37 PM	2/10/20 4:12 PM	
 northenlab	Northen Lab	1/15/19 6:14 PM	2/24/19 9:19 PM	
@@ -45,6 +48,31 @@ kbasegspdemoorg	39595	qzhang	1/18/19	2/21/19	2/24/19 9:18 PM	1	0	46	112
 kbasegspdemoorg	39686	chenry	1/22/19	3/14/19	2/15/19 7:19 PM	0	0	186	300
 """
 
+def get_pub_priv_org_counts():
+    """
+    RETURNS PUBLIC AND PRIVATE COUNTS FOR ORGS
+    Unfortunately normal counts do not workin pymongo. 
+    If need to determine this by hand do:
+    kbrs0:SECONDARY> db.groups.find({"priv" : true},{}).count();
+    75
+    kbrs0:SECONDARY> db.groups.find({"priv" : false},{}).count();
+    101
+    """
+    client = MongoClient(mongoDB_metrics_connection + to_groups)
+    db = client.groups
+    
+    public_counter = 0
+    public_query = db.groups.find({"priv" : False},{"id": 1,"name": 1})
+    for record in public_query:
+        public_counter += 1
+    
+    private_counter = 0
+    private_query = db.groups.find({"priv" : True},{"id": 1,"name": 1})
+    for record in private_query:
+        private_counter += 1
+
+    return (public_counter,private_counter)
+    
 
 def get_workspaces(db_connection):
     """
@@ -176,11 +204,17 @@ def get_orgs_details():
     query = "use " + query_on
     cursor.execute(query)
 
+    (public_org_count, private_org_count) = get_pub_priv_org_counts()
     workspaces_dict = get_workspaces(db_connection)
     orgs_dict = get_orgs(workspaces_dict)
 
+    # print out public provate org counts
+    print("PUBLIC ORGS COUNT\t"+str(public_org_count))
+    print("PRIVATE ORGS COUNT\t"+str(private_org_count))
+    print()
+    
     # print out ORGS top level information
-    print("ORGS TOP LEVEL INFORMATION")
+    print("ORGS TOP LEVEL INFORMATION FOR ORGS WITH 5+ NARRATIVES")
     print("ORG ID\tORG Name\tORG Creation Date\tORG Last Modified Date")
     for org_id in orgs_dict:
         print(
