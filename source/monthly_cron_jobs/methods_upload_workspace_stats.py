@@ -812,16 +812,21 @@ def upload_workspace_stats():
         # check if nar_ref_node combo exists:
         prep_cursor_ssn_exists.execute(ssn_exists_query, (nar_ref, node))
         exists_count_arr = prep_cursor_ssn_exists.fetchone()
-        if exists_count_arr[0] == 0:
-            # means a new problem narrative/node needs an insert
-            prep_cursor_ssn_insert.execute(
-                suspect_shock_node_insert_statement, (nar_ref, node, int(ws_id))
-            )
+        if node:
+            if exists_count_arr[0] == 0:
+                # means a new problem narrative/node needs an insert
+                prep_cursor_ssn_insert.execute(
+                    suspect_shock_node_insert_statement, (nar_ref, node, int(ws_id))
+                )
+            else:
+                # means the nar_ref node existed . Update the last seen date.
+                prep_cursor_ssn_insert.execute(
+                    suspect_shock_node_update_statement, (nar_ref, node)
+                )
         else:
-            # means the nar_ref node existed . Update the last seen date.
-            prep_cursor_ssn_insert.execute(
-                suspect_shock_node_update_statement, (nar_ref, node)
-            )
+            print("The object id " +
+                  str(nar_ref) +
+                  "has a suspect shock node behavior, but has no node")
 
     db_connection.commit()
 
