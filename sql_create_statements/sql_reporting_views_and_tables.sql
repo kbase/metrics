@@ -1204,3 +1204,14 @@ and wc.narrative_version > 0
 order by ws_id, start_date;
 
 
+#-------------------------------------------
+# USERS_OBJECT_CHANGES over time
+#-------------------------------------------
+create or replace view metrics_reporting.users_object_changes as
+select object_type, 
+DATE_FORMAT(`record_date`,'%Y-%m') as record_month,
+sum(total_object_count) as total_object_count, 
+round(sum(total_size)/1000000000,4) as total_size_GB
+from metrics.users_workspace_object_counts
+group by object_type, record_month
+order by object_type, record_month;
