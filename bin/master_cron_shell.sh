@@ -2,7 +2,7 @@
 
 python daily_cron_jobs/upload_user_stats.py
 
-#python daily_cron_jobs/upload_elasticsearch_usersmry_stats.py
+python daily_cron_jobs/upload_elasticsearch_usersmry_stats.py
 
 python daily_cron_jobs/upload_app_stats.py
 
