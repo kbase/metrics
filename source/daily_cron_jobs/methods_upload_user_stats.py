@@ -120,7 +120,7 @@ def get_internal_users(user_stats_dict):
     users_not_found_count = 0
     for line in lines:
         elements = line.split(",")
-        user = elements[0].strip()
+        user = elements[0][1:-1]
         if user in user_stats_dict:
             user_stats_dict[user]["kbase_internal_user"] = True
         else:
@@ -131,6 +131,7 @@ def get_internal_users(user_stats_dict):
             "NUMBER OF USERS FOUND IN KB_INTERNAL GOOGLE SHEET THAT WERE NOT FOUND IN THE AUTH2 RECORDS : "
             + str(users_not_found_count)
         )
+
     return user_stats_dict
 
 
