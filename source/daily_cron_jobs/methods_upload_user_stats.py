@@ -120,10 +120,11 @@ def get_internal_users(user_stats_dict):
     users_not_found_count = 0
     for line in lines:
         elements = line.split(",")
-        user = elements[0][1:-1]
+        user = elements[0].strip()
         if user in user_stats_dict:
             user_stats_dict[user]["kbase_internal_user"] = True
         else:
+            print("Username :" + user + ": was not found")
             users_not_found_count += 1
     if users_not_found_count > 0:
         print(

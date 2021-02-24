@@ -148,6 +148,37 @@ CREATE INDEX idx_user_app_usage_git_commit_hash ON metrics.user_app_usage (git_c
 
 CREATE INDEX idx_user_app_usage_func_name ON metrics.user_app_usage (func_name);
 
+
+#####################
+#EE2 with CPU
+CREATE TABLE `user_app_usage_ee2_cpu` (
+  `job_id` varchar(255) DEFAULT NULL,
+  `username` varchar(255) NOT NULL,
+  `app_name` varchar(255) DEFAULT NULL,
+  `start_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `finish_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `run_time` int(11) NOT NULL,
+  `queue_time` int(11) NOT NULL,
+  `is_error` tinyint(1) NOT NULL DEFAULT '0',
+  `git_commit_hash` varchar(255) NOT NULL,
+  `func_name` varchar(255) DEFAULT NULL,
+  `ws_id` int(11) DEFAULT NULL,
+  `reserved_cpu` int(4) DEFAULT NULL,
+  UNIQUE KEY `uk_jobid_user_app_usage_ee2_cpu` (`job_id`),
+  KEY `idx_user_app_usage_job_id_ee2_cpu` (`job_id`),
+  KEY `idx_user_app_usage_username_ee2_cpu` (`username`),
+  KEY `idx_user_app_usage_app_name_ee2_cpu` (`app_name`),
+  KEY `idx_user_app_usage_start_date_ee2_cpu` (`start_date`),
+  KEY `idx_user_app_usage_finish_date_ee2_cpu` (`finish_date`),
+  KEY `idx_user_app_usage_is_error_ee2_cpu` (`is_error`),
+  KEY `idx_user_app_usage_git_commit_hash_ee2_cpu` (`git_commit_hash`),
+  KEY `idx_user_app_usage_func_name_ee2_cpu` (`func_name`),
+  KEY `idx_user_app_usage_ws_id_ee2_cpu` (`ws_id`),
+  CONSTRAINT `fk_app_usage_username_ee2_cpu` FOREIGN KEY (`username`) REFERENCES `user_info` (`username`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+
+
 ######################
 #EE2 with CPU
 CREATE TABLE `user_app_usage_ee2_cpu` (
@@ -481,6 +512,47 @@ CREATE OR REPLACE TABLE `suspect_shock_nodes` (
   KEY `idx_ssn_wsid` (`ws_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+
+#################################################
+# OUTREACH EVENT TRACKING
+# OUTREACH_EVENTS
+CREATE  or replace TABLE`outreach_events` (
+  `outreach_event_name` varchar(255) NOT NULL,
+  `event_date` date NOT NULL,
+  `announcement_date` date DEFAULT NULL,
+  `attendee_list_url` varchar(255) DEFAULT NULL,
+  `event_type` enum('webinar','workshop','class') DEFAULT NULL,
+  `topic` varchar(255) DEFAULT NULL,
+  `presenters` varchar(255) NOT NULL,
+  `narrative_urls` varchar(255) DEFAULT NULL,
+  `duration_hours` int(3) DEFAULT NULL,
+  `app_categories` varchar(255) NOT NULL,
+  `estimated_attendance` int(6) DEFAULT NULL,
+  `location` varchar(255) DEFAULT NULL,
+  `point_of_contact` varchar(255) DEFAULT NULL,
+  `feedback_form_url` varchar(255) DEFAULT NULL,
+  `comments` varchar(255) DEFAULT NULL,
+  UNIQUE KEY `uk_oe_oe_name` (`outreach_event_name`),
+  KEY `idx_oe_edate` (`event_date`),
+  KEY `idx_oe_etype` (`event_type`),
+  KEY `idx_oe_presenters` (`presenters`),
+  KEY `idx_oe_acategories` (`app_categories`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+# OUTREACH_EVENT_USERS
+CREATE OR REPLACE TABLE	`outreach_event_users` (
+  `outreach_event_name` varchar(255) NOT NULL,
+  `username` varchar(255) NOT NULL,
+  UNIQUE KEY `uk_oue_oei_un` (`outreach_event_name`,`username`),
+  FOREIGN KEY fk_oeu_oevent_name(outreach_event_name)
+  REFERENCES outreach_events(outreach_event_name)
+  ON UPDATE CASCADE
+  ON DELETE RESTRICT,
+  FOREIGN KEY fk_oeu_username(username)
+  REFERENCES user_info(username)
+  ON UPDATE CASCADE
+  ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 ####################################################
 # User ORCID Counts
