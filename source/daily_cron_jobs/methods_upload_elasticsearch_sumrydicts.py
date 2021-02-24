@@ -1,7 +1,7 @@
 from methods_elasticquery import retrieve_elastic_response
 import warnings
 import time
-import pprint
+from pprint import pprint
 warnings.simplefilter(action="ignore", category=Warning)
 import pandas as pd
 import datetime
@@ -20,6 +20,7 @@ def results_to_formatted_dicts(query_results):
 
     # Initialize array and get data/'hits'
     data_formatted = []
+#    pprint(query_results)
     data = [doc for doc in query_results["hits"]["hits"]]
 
     entries_1 = ("type", "instance", "@version", "index", "geoip")
@@ -130,13 +131,13 @@ def elasticsearch_pull(start_date, end_date):
     except IndexError:
         sys.exit("Oops! Data array from Elasticsearch is empty. Please check Narrative Container logs in Kibana for input date range.")
     while check_timestamp == attempt_timestamp and (
-        (total_results + attempt_index) > 0
+        (len(total_results) + attempt_index) > 0
     ):
         attempt_index -= 1
         attempt_timestamp = [data_array[attempt_index]["epoch_timestamp"]]
     timestamp = attempt_timestamp
 
-    while size_results_pulled < total_results:
+    while size_results_pulled < len(total_results):
         results_sequential = retrieve_elastic_response(
             epoch_start, epoch_end, timestamp
         )

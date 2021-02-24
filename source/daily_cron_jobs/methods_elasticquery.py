@@ -1,8 +1,12 @@
 import requests
+from requests.auth import HTTPBasicAuth
 import json
 import os
 
 elasticsearch_url = os.environ["ELASTICSEARCH_URL"]
+elasticsearch_user = os.environ["ELASTICSEARCH_USER"]
+elasticsearch_pwd = os.environ["ELASTICSEARCH_PWD"]
+
 
 # Query Elastic for Narrative Data
 
@@ -87,10 +91,17 @@ def retrieve_elastic_response(epoch_intial, epoch_final, search_after_timestamp=
         },
     }
 
+
+#    headers = {'Content-type': 'content_type_value'}
+    headers = {'Content-type': 'application/json'}
+    
     if not search_after_timestamp:
         narrative_container_query_intial = json.dumps(elastic_query)
-        response = requests.get(
-            elasticsearch_url, data=narrative_container_query_intial
+        response = requests.get(elasticsearch_url,
+                                auth=HTTPBasicAuth(elasticsearch_user,elasticsearch_pwd),
+                                verify=False,
+                                headers=headers,
+                                data=narrative_container_query_intial,
         )
         results_initial = json.loads(response.text)
 
@@ -99,7 +110,11 @@ def retrieve_elastic_response(epoch_intial, epoch_final, search_after_timestamp=
     if search_after_timestamp:
         elastic_query["search_after"] = search_after_timestamp
         narrative_container_query_after = json.dumps(elastic_query)
-        response = requests.get(elasticsearch_url, data=narrative_container_query_after)
+        response = requests.get(elasticsearch_url,
+                                auth=HTTPBasicAuth(elasticsearch_user,elasticsearch_pwd),
+                                verify=False,
+                                headers=headers,
+                                data=narrative_container_query_after)
         results_after = json.loads(response.text)
 
         return results_after
