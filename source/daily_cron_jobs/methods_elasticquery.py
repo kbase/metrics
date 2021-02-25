@@ -4,8 +4,8 @@ import json
 import os
 
 elasticsearch_url = os.environ["ELASTICSEARCH_URL"]
-elasticsearch_user = os.environ["ELASTICSEARCH_USER"]
-elasticsearch_pwd = os.environ["ELASTICSEARCH_PWD"]
+elasticsearch_user = os.environ.get("ELASTICSEARCH_USER")
+elasticsearch_pwd = os.environ.get("ELASTICSEARCH_PWD")
 
 
 # Query Elastic for Narrative Data
