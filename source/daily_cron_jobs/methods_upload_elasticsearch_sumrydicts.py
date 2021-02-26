@@ -120,6 +120,7 @@ def elasticsearch_pull(start_date, end_date):
     
     # Get relative size of data and initiate values
     total_results = results["hits"]["total"]
+    total_results_length = len(total_results)
     size_results_pulled = len(results["hits"]["hits"])
     check_timestamp = 0
     attempt_timestamp = 1
@@ -131,13 +132,13 @@ def elasticsearch_pull(start_date, end_date):
     except IndexError:
         sys.exit("Oops! Data array from Elasticsearch is empty. Please check Narrative Container logs in Kibana for input date range.")
     while check_timestamp == attempt_timestamp and (
-        (len(total_results) + attempt_index) > 0
+        (total_results_length + attempt_index) > 0
     ):
         attempt_index -= 1
         attempt_timestamp = [data_array[attempt_index]["epoch_timestamp"]]
     timestamp = attempt_timestamp
 
-    while size_results_pulled < len(total_results):
+    while size_results_pulled < total_results_length:
         results_sequential = retrieve_elastic_response(
             epoch_start, epoch_end, timestamp
         )
