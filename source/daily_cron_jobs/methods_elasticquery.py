@@ -4,18 +4,19 @@ import json
 import os
 
 elasticsearch_url = os.environ["ELASTICSEARCH_URL"]
-elasticsearch_user = os.environ["ELASTICSEARCH_USER"]
-elasticsearch_pwd = os.environ["ELASTICSEARCH_PWD"]
+elasticsearch_user = os.environ.get("ELASTICSEARCH_USER")
+elasticsearch_pwd = os.environ.get("ELASTICSEARCH_PWD")
 
 
 # Query Elastic for Narrative Data
 
 
 def retrieve_elastic_response(epoch_intial, epoch_final, search_after_timestamp=[]):
-    """ Retrieve_elastic_response generates an elasticsearch query to pull narrative container information from Elasticsearch.
-           Given an initial epoch timestamp and final epoch timestamp the search pulls data from this range.
-           The 'search_after_timestamp' is given to the query after the initial pull. The search_after option in
-           the query instructs Elasticsearch to pull all data after the 'search_after' timestamp. """
+    """ Retrieve_elastic_response generates an elasticsearch query to pull narrative container
+        information from Elasticsearch. Given an initial epoch timestamp and final epoch timestamp
+        the search pulls data from this range. The 'search_after_timestamp' is given to the query
+        after the initial pull. The search_after option in
+        the query instructs Elasticsearch to pull all data after the 'search_after' timestamp. """
 
     elastic_query = {
         "query": {
@@ -94,15 +95,15 @@ def retrieve_elastic_response(epoch_intial, epoch_final, search_after_timestamp=
 
 #    headers = {'Content-type': 'content_type_value'}
     headers = {'Content-type': 'application/json'}
-    
+
     if not search_after_timestamp:
         narrative_container_query_intial = json.dumps(elastic_query)
         response = requests.get(elasticsearch_url,
-                                auth=HTTPBasicAuth(elasticsearch_user,elasticsearch_pwd),
+                                auth=HTTPBasicAuth(elasticsearch_user, elasticsearch_pwd),
                                 verify=False,
                                 headers=headers,
                                 data=narrative_container_query_intial,
-        )
+                                )
         results_initial = json.loads(response.text)
 
         return results_initial
@@ -111,7 +112,7 @@ def retrieve_elastic_response(epoch_intial, epoch_final, search_after_timestamp=
         elastic_query["search_after"] = search_after_timestamp
         narrative_container_query_after = json.dumps(elastic_query)
         response = requests.get(elasticsearch_url,
-                                auth=HTTPBasicAuth(elasticsearch_user,elasticsearch_pwd),
+                                auth=HTTPBasicAuth(elasticsearch_user, elasticsearch_pwd),
                                 verify=False,
                                 headers=headers,
                                 data=narrative_container_query_after)
