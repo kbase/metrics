@@ -668,7 +668,7 @@ group by month;
 
 #IN METRICS_REPORTING
 create or replace view metrics_reporting.monthly_file_stats as
-select kufs.month as month, 
+select kufs.month as month,
 IFNULL(nkfs.total_size,0) as non_kbstaff_total_size,
 IFNULL(kufs.total_size,0) as kbstaff_total_size,
 IFNULL(nkfs.file_count,0) as non_kbstaff_file_count,
@@ -676,6 +676,38 @@ IFNULL(kufs.file_count,0) as kbstaff_file_count
 from metrics.hv_kbuser_monthly_file_stats kufs
 left outer join metrics.hv_non_kbuser_monthly_file_stats nkfs
 on kufs.month = nkfs.month;
+
+# Blobstore Data (blobstore)
+
+#IN METRICS
+create or replace view metrics.hv_non_kbuser_monthly_blobstore_stats as
+select DATE_FORMAT(`record_date`,'%Y-%m') as month,
+sum(total_size) as total_size, sum(file_count) as file_count
+from metrics.blobstore_stats bss
+inner join metrics.user_info ui on ui.username = bss.username
+where ui.kb_internal_user = False
+group by month;
+
+#IN METRICS
+create or replace view metrics.hv_kbuser_monthly_blobstore_stats as
+select DATE_FORMAT(`record_date`,'%Y-%m') as month,
+sum(total_size) as total_size, sum(file_count) as file_count
+from metrics.blobstore_stats bss
+inner join metrics.user_info ui on ui.username = bss.username
+where ui.kb_internal_user = True
+group by month;
+
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.monthly_blobstore_stats as
+select kubs.month as month, 
+IFNULL(nkbs.total_size,0) as non_kbstaff_total_size,
+IFNULL(kubs.total_size,0) as kbstaff_total_size,
+IFNULL(nkbs.file_count,0) as non_kbstaff_file_count,
+IFNULL(kubs.file_count,0) as kbstaff_file_count
+from metrics.hv_kbuser_monthly_blobstore_stats kubs
+left outer join metrics.hv_non_kbuser_monthly_blobstore_stats nkbs
+on kubs.month = nkbs.month;
 
 --------------------------------------------
 #NEW APPS BEING RUN THE FIRST TIME (monthly counts)

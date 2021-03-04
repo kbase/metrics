@@ -375,6 +375,20 @@ CREATE INDEX idx_file_storage_stats_username ON metrics.file_storage_stats(usern
 
 CREATE INDEX idx_file_storage_stats_record_date ON metrics.file_storage_stats(record_date);
 
+################################################
+# Blobstore stats
+CREATE TABLE `blobstore_stats` (
+  `username` varchar(255) NOT NULL,
+  `record_date` date NOT NULL,
+  `total_size` bigint(20) NOT NULL,
+  `file_count` int(11) NOT NULL,
+  UNIQUE KEY `uk_blobstore_stats_user_date` (`username`,`record_date`),
+  KEY `idx_blobstore_stats_username` (`username`),
+  KEY `idx_blobstore_stats_record_date` (`record_date`),
+  CONSTRAINT `fk_sys_blobstore_stats_username` FOREIGN KEY (`username`) REFERENCES `user_info` (`username`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
 ##################################################
 # workspaces
 
