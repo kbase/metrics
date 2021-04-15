@@ -1250,6 +1250,235 @@ from metrics.users_workspace_object_counts
 group by object_type, record_month
 order by object_type, record_month;
 
+#********************************************************************************************************************************
+#-------------------------------
+#-------------------------------
+# VIEWS RELATED TO USER_SUPER_SUMMARY
+#-------------------------------
+#------------------------------
+
+#------------------------------
+# User Session summaries for user_super_summary
+#------------------------------
+create or replace view metrics.hv_user_session_count_all_time as
+select username, count(*) as session_count_all_time
+from metrics.session_info group by username;
+
+create or replace view metrics.hv_user_session_count_last_year as
+select username, count(*) as session_count_last_year
+from metrics.session_info 
+where record_date >= (NOW() - INTERVAL 365 DAY)
+group by username;
+
+create or replace view metrics.hv_user_session_count_last_90 as
+select username, count(*) as session_count_last_90
+from metrics.session_info 
+where record_date >= (NOW() - INTERVAL 90 DAY)
+group by username;
+
+create or replace view metrics.hv_user_session_count_last_30 as
+select username, count(*) as session_count_last_30
+from metrics.session_info 
+where record_date >= (NOW() - INTERVAL 30 DAY)
+group by username;
+
+#------------------------------
+# App stats for user_super_summary as well as user_app_counts and users_app_counts_periods
+#------------------------------
+
+# NEEDS A CRON JOB
+create or replace table metrics.hv_user_app_summaries as 
+select username, 
+min(finish_date) as first_app_run, 
+max(finish_date) as last_app_run,  
+count(*) as total_app_runs, 
+sum(is_error) as total_error_runs, 
+sum(run_time)/(3600) as total_run_time_hours, 
+sum(queue_time)/(3600) as total_queue_time_hours, 
+sum(reserved_cpu * run_time)/(3600) as total_CPU_hours 
+from metrics.user_app_usage 
+group by username;  
+
+# NEEDS A CRON JOB
+create or replace table metrics.hv_user_app_counts as 
+select func_name, username, 
+count(*) as user_app_count, 
+sum(is_error) as user_error_count, 
+min(finish_date) as first_app_run, 
+max(finish_date) as last_app_run
+from metrics.user_app_usage 
+group by  func_name, username;
+ 
+create or replace view metrics_reporting.user_app_counts as 
+select * from metrics.hv_user_app_counts; 
+
+create or replace view metrics.hv_user_max_used_app_count as 
+select  uac.username, max(uac.user_app_count) as user_app_count 
+from metrics.hv_user_app_counts uac 
+group by uac.username; 
+
+create or replace view metrics.hv_user_most_used_app as 
+select uac.username, min(uac.func_name) as mu_func_name 
+from metrics.hv_user_app_counts uac 
+inner join metrics.hv_user_max_used_app_count umuac 
+on uac.username = umuac.username 
+and uac.user_app_count = umuac.user_app_count 
+group by uac.username; 
+
+
+create or replace view metrics.hv_users_distinct_apps_used_count as 
+select username, count(*) as distinct_apps_used 
+from metrics.hv_user_app_counts 
+group by username; 
+
+# NEEDS A CRON JOB
+create or replace table metrics.hv_users_alltime_app_counts as 
+select username, count(*) as app_count_all_time 
+from metrics.user_app_usage uau_all 
+group by username; 
+
+# NEEDS A CRON JOB
+create or replace table metrics.hv_users_last365days_app_counts as 
+select username, count(*) as app_count_last_365 
+from metrics.user_app_usage uau_365 
+where finish_date >= (NOW() - INTERVAL 365 DAY) 
+group by username; 
+
+# NEEDS A CRON JOB
+create or replace table metrics.hv_users_last_90days_app_counts as 
+select username, count(*) as app_count_last_90 
+from metrics.user_app_usage uau_90 
+where finish_date >= (NOW() - INTERVAL 90 DAY) 
+group by username; 
+
+# NEEDS A CRON JOB
+create or replace table metrics.hv_users_last_30days_app_counts as 
+select username, count(*) as app_count_last_30 
+from metrics.user_app_usage uau_30 
+where finish_date >= (NOW() - INTERVAL 30 DAY) 
+group by username; 
+
+create or replace view metrics_reporting.users_app_counts_periods as 
+select uac_all.username, sum(uac_all.app_count_all_time) as total_apps_run_all_time, 
+sum(uac_365.app_count_last_365) as total_apps_run_last365, 
+sum(uac_90.app_count_last_90) as total_apps_run_last90, 
+sum(uac_30.app_count_last_30) as total_apps_run_last30 
+from metrics.user_info ui 
+inner join metrics.hv_users_alltime_app_counts uac_all 
+on ui.username = uac_all.username 
+left outer join metrics.hv_users_last365days_app_counts uac_365 
+on ui.username = uac_365.username 
+left outer join metrics.hv_users_last_90days_app_counts uac_90 
+on ui.username = uac_90.username 
+left outer join metrics.hv_users_last_30days_app_counts uac_30 
+on ui.username = uac_30.username 
+group by uac_all.username; 
+
+#------------------------------
+# Blob store summary stats for user_super_summary
+#------------------------------
+create or replace view metrics.hv_blobstore_user_summaries as 
+select username, 
+min(record_date) as first_file_date, 
+max(record_date) as last_file_date, 
+sum(total_size/1000000) as total_file_sizes_MB, 
+sum(file_count) as total_file_count 
+from blobstore_stats 
+group by username; 
+
+#------------------------------
+# Narrative summaries - Will need to be done in a CRON job.
+#------------------------------
+
+# NEEDS A CRON JOB
+create or replace table metrics_reporting.users_narratives_summary as 
+select wc.username, 
+ui.kb_internal_user, 
+min(initial_save_date) as first_narrative_made_date, 
+max(initial_save_date) as last_narrative_made_date,
+max(mod_date) as last_narrative_modified_date,
+sum(total_object_count) as total_narrative_objects_count, 
+sum(top_lvl_object_count) as top_lvl_narrative_objects_count, 
+sum(total_size) as total_narrative_objects_size, 
+sum(top_lvl_size) as top_lvl_narrative_objects_size, 
+count(*) as total_narrative_count, 
+sum(is_public) as total_public_narrative_count, 
+sum(ceiling(static_narratives_count/(static_narratives_count + .00000000000000000000001))) as distinct_static_narratives_count, 
+sum(static_narratives_count) as static_narratives_created_count, 
+sum(visible_app_cells_count) as total_visible_app_cells, 
+sum(code_cells_count) as total_code_cells_count 
+from metrics_reporting.workspaces_current wc 
+inner join metrics.user_info ui 
+on wc.username = ui.username 
+where narrative_version > 0 
+and is_deleted = 0 
+and is_temporary = 0 
+group by wc.username, ui.kb_internal_user; 
+
+#------------------------------
+Final user_super_summary table
+#------------------------------
+
+# NEEDS A CRON JOB
+create or replace table metrics_reporting.user_super_summary as 
+select uip.username, uip.display_name, 
+uip.email, uip.kb_internal_user, uip.user_id, 
+uip.globus_login, uip.google_login, uip.orcid, 
+uip.session_info_country, uip.country, uip.state, 
+uip.institution, uip.department, uip.job_title, 
+uip.how_u_hear_selected, uip.how_u_hear_other,  
+uip.signup_date, uip.last_signin_date, 
+uip.days_signin_minus_signup, days_since_last_signin, 
+usssc.num_orgs, usssc.narrative_count,  
+usssc.shared_count, usssc.narratives_shared, 
+uns.first_narrative_made_date, uns.last_narrative_made_date, 
+uns.last_narrative_modified_date,
+uns.total_narrative_objects_count,uns.top_lvl_narrative_objects_count, 
+uns.total_narrative_objects_size, uns.top_lvl_narrative_objects_size, 
+uns.total_narrative_count, uns.total_public_narrative_count, 
+uns.distinct_static_narratives_count, uns.static_narratives_created_count, 
+uns.total_visible_app_cells, uns.total_code_cells_count, 
+bus.first_file_date, bus.last_file_date, 
+bus.total_file_sizes_MB, bus.total_file_count, 
+umua.mu_func_name as most_used_app,  
+udauc.distinct_apps_used, 
+uapc.total_apps_run_all_time, uapc.total_apps_run_last365, 
+uapc.total_apps_run_last90, uapc.total_apps_run_last30, 
+uas.total_error_runs as total_app_errors_all_time, 
+uas.first_app_run, uas.last_app_run,
+uas.total_run_time_hours, uas.total_queue_time_hours, 
+uas.total_CPU_hours, 
+uscat.session_count_all_time, 
+uscly.session_count_last_year, 
+usc90.session_count_last_90, 
+usc30.session_count_last_30
+from metrics_reporting.user_info_plus uip
+inner join metrics.user_system_summary_stats_current usssc 
+on uip.username = usssc.username
+left outer join metrics_reporting.users_narratives_summary uns
+on uip.username = uns.username
+left outer join metrics.hv_blobstore_user_summaries bus
+on uip.username = bus.username
+left outer join metrics_reporting.users_app_counts_periods uapc
+on uip.username = uapc.username
+left outer join metrics.hv_user_app_summaries uas
+on uip.username = uas.username
+left outer join metrics.hv_user_most_used_app umua 
+on uip.username = umua.username 
+left outer join metrics.hv_users_distinct_apps_used_count udauc 
+on uip.username = udauc.username 
+left outer join metrics.hv_user_session_count_all_time uscat
+on uip.username = uscat.username
+left outer join metrics.hv_user_session_count_last_year uscly
+on uip.username = uscly.username
+left outer join metrics.hv_user_session_count_last_90 usc90
+on uip.username = usc90.username
+left outer join metrics.hv_user_session_count_last_30 usc30
+on uip.username = usc30.username
+where uip.exclude != 1;
+
+# END OF USER_SUPER_SUMMARY
+#********************************************************************************************************************************
 
 
 
