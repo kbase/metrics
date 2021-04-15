@@ -8,9 +8,6 @@ python daily_cron_jobs/upload_app_stats.py
 
 python daily_cron_jobs/upload_blobstore_stats.py
 
-#the upload file stats will go away soom
-python daily_cron_jobs/upload_file_stats.py
-
 python daily_cron_jobs/upload_app_category_mappings.py
 
 python daily_cron_jobs/upload_public_narratives_count.py
