@@ -35,9 +35,8 @@ def dump_query_results():
     #    Query for Adam Narratives dump of information:
     #    select wc.* from metrics.user_info ui inner join metrics_reporting.workspaces_current wc on ui.username = wc.username
     #    where ui.kb_internal_user = 0 and wc.narrative_version > 0 and is_deleted = 0 and is_temporary = 0;
-    query = (
-        "select * from metrics_reporting.narrative_app_flows"
-    )
+    #query = ("select * from metrics_reporting.narrative_app_flows")
+    query = ("select * from metrics_reporting.user_super_summary")
     # CHANGE COLUMN HEADERS HERE TO MATCH QUERY HEADERS
     #    print("username\temail\tlast_signin_date\tmax_last_seen\tHasBeenSeen")
     #    print("ws_id\tusername\tmod_date\tinitial_save_date\trecord_date\ttop_lvl_object_count\ttotal_object_count\tvisible_app_cells_count\tnarrative_version\thidden_object_count\tdeleted_object_count\ttotal_size\ttop_lvl_size\tis_public\tis_temporary\tnumber_of_shares")
@@ -47,8 +46,20 @@ def dump_query_results():
     #        "narrative_version\thidden_object_count\tdeleted_object_count\ttotal_size\ttop_lvl_size\tis_public\tis_temporary\tis_deleted\tnumber_of_shares\t"
     #        "num_nar_obj_ids\tstatic_narratives_count"
     #    )
+    #    HEADERS FOR user_super_summary
+    print(
+        "username\tdisplay_name\temail\tkb_internal_user\tuser_id\tglobus_login\tgoogle_login\torcid\tsession_info_country\tcountry\tstate\t"
+        "institution\tdepartment\tjob_title\thow_u_hear_selected\thow_u_hear_other\tsignup_date\tlast_signin_date\tdays_signin_minus_signup\t"
+        "days_since_last_signin\tnum_orgs\tnarrative_count\tshared_count\tnarratives_shared\tfirst_narrative_made_date\tlast_narrative_made_date\t"
+        "last_narrative_modified_date\ttotal_narrative_objects_count\ttop_lvl_narrative_objects_count\ttotal_narrative_objects_size\t"
+        "top_lvl_narrative_objects_size\ttotal_narrative_count\ttotal_public_narrative_count\tdistinct_static_narratives_count\t"
+        "static_narratives_created_count\ttotal_visible_app_cells\ttotal_code_cells_count\tfirst_file_date\tlast_file_date\t"
+        "total_file_sizes_MB\ttotal_file_count\tmost_used_app\tdistinct_apps_used\ttotal_apps_run_all_time\ttotal_apps_run_last365\t"
+        "total_apps_run_last90\ttotal_apps_run_last30\ttotal_app_errors_all_time\tfirst_app_run\tlast_app_run\ttotal_run_time_hours\t"
+        "total_queue_time_hours\ttotal_CPU_hours\tsession_count_all_time\tsession_count_last_year\tsession_count_last_90\tsession_count_last_30"
+    )
     #Header for Adam's narrative_app_flow
-    print("ws_id\tusername\tapp_name\tfunc_name\tstart_date\tfinish_date") 
+    #print("ws_id\tusername\tapp_name\tfunc_name\tstart_date\tfinish_date") 
 
     cursor.execute(query)
     row_values = list()
