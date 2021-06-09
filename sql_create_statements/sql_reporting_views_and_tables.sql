@@ -1480,6 +1480,23 @@ where uip.exclude != 1;
 # END OF USER_SUPER_SUMMARY
 #********************************************************************************************************************************
 
+# public_narratives_app_use
+
+create or replace view metrics_reporting.public_narratives_app_use as
+select ui.username, ua.ws_id, DATE_FORMAT(`mod_date`,'%Y') as narrative_last_modified_year, 
+finish_date, DATE_FORMAT(`finish_date`,'%Y') as app_year, 
+DATE_FORMAT(`finish_date`,'%Y-%m') as app_month,
+ua.app_name, ua.func_name
+from metrics.user_info ui
+inner join metrics_reporting.workspaces_current wc
+on ui.username = wc.username
+inner join metrics.user_app_usage ua
+on ua.ws_id = wc.ws_id
+where wc.is_public = 1
+and wc.is_deleted = 0
+and ui.kb_internal_user = 0
+and ua.is_error = 0;
+
 
 
 
