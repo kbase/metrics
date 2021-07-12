@@ -10,7 +10,7 @@ ARG BRANCH
 RUN apt-get update -y && \
     apt-get install -y wget && \
     rm -rf /var/lib/apt/lists/* && \
-    pip install mysql-connector-python-rf pymongo
+    pip install mysql-connector-python-rf pymongo setuptools
 
 RUN mkdir -p /kb/runtime
 
