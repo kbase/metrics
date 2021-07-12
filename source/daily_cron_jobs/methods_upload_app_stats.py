@@ -21,13 +21,10 @@ requests.packages.urllib3.disable_warnings()
 ##########################
 
 
+ee2_url = os.environ["EE2_URL"]
 # GetEE2AppStats
 ee2 = execution_engine2(
-    # CHANGE URL to production: https://kbase.us/services/ee2
-    # CHANGE URL for CI: https://ci.kbase.us/services/ee2 (Need to change token in .env as well)
-    # CHANGE URL for APPDEV: https://appdev.kbase.us/services/ee2
-    # OLD ONE   url="https://kbase.us/services/ee2",
-    url="https://kbase.us/services/ee2-nr",
+    url=ee2_url,
     token=os.environ["METRICS_USER_TOKEN"],
 )
 
