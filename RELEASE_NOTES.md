@@ -1,3 +1,12 @@
+#2020-06-19
+    * Added user_id to user info, backfilling and uploading
+
+#2020-06-15
+    * Added user orcid count tracking
+
+#2020-06-09
+    * Moved EE2 to active spot instead of app catalog. Created old_app_catalog_equivalent
+
 #2020-05-27
     * Making code to use EE2 for app stats active
 

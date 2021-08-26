@@ -1,6 +1,7 @@
 from pymongo import MongoClient
 from pymongo import ReadPreference
 from biokbase.workspace.client import Workspace
+from biokbase.service.Client import Client as ServiceClient
 import json as _json
 import os
 import mysql.connector as mysql
@@ -28,8 +29,19 @@ ws_url = os.environ["WS_URL"]
 ws_user_token = os.environ["METRICS_WS_USER_TOKEN"]
 to_workspace = os.environ["WRK_SUFFIX"]
 
+def get_static_narrative_counts():
+    """
+    returns a dict of ws_id to count of the nuber of static_workspaces made for it. 
+    """
+    service_wizard_url = os.environ["SERVICE_WIZARD_URL"]
+    wiz = ServiceClient(service_wizard_url, use_url_lookup=True)
+    stats = wiz.sync_call("StaticNarrative.list_static_narratives", [])
+    static_narrative_counts = dict()
+    for ws_id in stats[0]:
+        static_narrative_counts[int(ws_id)] = len(stats[0][ws_id])
+    return static_narrative_counts;
 
-def get_workspaces(db):
+def get_workspaces(db, static_narrative_counts):
     """
     gets narrative workspaces information for non temporary workspaces
     """
@@ -42,7 +54,7 @@ def get_workspaces(db):
         {"owner": 1, "ws": 1, "moddate": 1, "del": 1, "_id": 0},
     )
     for record in workspaces_cursor:
-        if record["ws"] != 615:
+        if record["ws"] != 615:   ## and record['ws'] != 19217 :
             is_deleted_ws = 0
             if record["del"] == True:
                 is_deleted_ws = 1
@@ -65,7 +77,11 @@ def get_workspaces(db):
                 "is_temporary": None,
                 "number_of_shares": 0,
                 "num_nar_obj_ids": 0,
+                "static_narrative_count": 0,
             }
+            #See if it has static narratives, populate if it does.
+            if record["ws"] in static_narrative_counts:
+                workspaces_dict[record["ws"]]["static_narrative_count"] = static_narrative_counts[record["ws"]]
 
     workspace_is_temporary_cursor = db.workspaces.find(
         {
@@ -236,7 +252,7 @@ def get_objects(db, workspaces_dict, kbase_staff):
     #            del workspaces_dict[ws_id]
     ###########################
     # debugging lines to minimal Workspaces - these workspaces test different edge cases
-    #    temp_dict = dict()
+    #temp_dict = dict()
     #    temp_dict[49114] = workspaces_dict[49114]
     #    temp_dict[3] = workspaces_dict[3]
     #    temp_dict[5009] = workspaces_dict[5009]
@@ -246,8 +262,17 @@ def get_objects(db, workspaces_dict, kbase_staff):
     #    temp_dict[2777] = workspaces_dict[2777]
     #    temp_dict[6964] = workspaces_dict[6964]
     #    temp_dict[56261] = workspaces_dict[56261]
-    #    workspaces_dict.clear()
-    #    workspaces_dict = temp_dict
+    #temp_dict[19216] = workspaces_dict[19216]
+    #temp_dict[19217] = workspaces_dict[19217]   # THIS IS THE REFERENCE REFSEQ WS
+    #temp_dict[19218] = workspaces_dict[19218]
+    #temp_dict[52467] = workspaces_dict[52467]
+    #temp_dict[52468] = workspaces_dict[52468]
+    #temp_dict[13644] = workspaces_dict[13644]
+    #temp_dict[30530] = workspaces_dict[30530]
+    #temp_dict[46033] = workspaces_dict[46033]
+    #temp_dict[46034] = workspaces_dict[46034]
+    #workspaces_dict.clear()
+    #workspaces_dict = temp_dict
     ###############
     for ws_id in sorted(workspaces_dict.keys()):
         min_save_date = None
@@ -300,6 +325,9 @@ def get_objects(db, workspaces_dict, kbase_staff):
             object_type_full = ws_obj_ver["type"]
             (object_type, object_spec_version) = object_type_full.split("-")
             obj_id = ws_obj_ver["id"]
+            if obj_id not in top_level_lookup_dict:
+                #FOR Workspaces growing in size while processing the workspace
+                continue
             obj_ver = ws_obj_ver["ver"]
             obj_size = ws_obj_ver["size"]
             top_obj_size = 0
@@ -577,6 +605,9 @@ def upload_workspace_stats():
     today = date.today()
     current_month = str(today.year) + "-" + today.strftime("%m")
 
+    # NOTE THIS IS ONE OF THREE TABLES THAT NEED TO BE DELETED FROM IS RAN ON A SMALL SAMPLE OF WORKSPACES
+    # SO DO NOT HAVE DOUBLE ENTRIES IN THE SAME MONTH
+    # metrics.users_workspace_object_counts, metrics.workspace_object_counts, metrics.workspaces
     query = "select DATE_FORMAT(max(record_date),'%Y-%m') from metrics.users_workspace_object_counts"
     cursor.execute(query)
     for db_date in cursor:
@@ -593,7 +624,8 @@ def upload_workspace_stats():
     client = MongoClient(mongoDB_metrics_connection + to_workspace)
     db = client.workspace
 
-    workspaces_dict = get_workspaces(db)
+    static_narrative_counts = get_static_narrative_counts()
+    workspaces_dict = get_workspaces(db, static_narrative_counts)
     get_ws_top_info_time = time.time() - start_time
     kbase_staff = get_kbase_staff(db_connection)
     db_connection.close()
@@ -629,8 +661,9 @@ def upload_workspace_stats():
         "visible_app_cells_count, code_cells_count, narrative_version, "
         "hidden_object_count, deleted_object_count, "
         "total_size, top_lvl_size, is_public, "
-        "is_temporary, is_deleted, number_of_shares, num_nar_obj_ids) "
-        "values(%s,%s, %s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+        "is_temporary, is_deleted, number_of_shares, "
+        "num_nar_obj_ids, static_narratives_count) "
+        "values(%s,%s, %s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
     )
 
     for ws_id in sorted(workspaces_dict.keys()):
@@ -653,6 +686,7 @@ def upload_workspace_stats():
             workspaces_dict[ws_id]["is_deleted"],
             workspaces_dict[ws_id]["number_of_shares"],
             workspaces_dict[ws_id]["num_nar_obj_ids"],
+            workspaces_dict[ws_id]["static_narrative_count"],
         )
         prep_cursor.execute(workspaces_insert_statement, input)
 
@@ -778,16 +812,21 @@ def upload_workspace_stats():
         # check if nar_ref_node combo exists:
         prep_cursor_ssn_exists.execute(ssn_exists_query, (nar_ref, node))
         exists_count_arr = prep_cursor_ssn_exists.fetchone()
-        if exists_count_arr[0] == 0:
-            # means a new problem narrative/node needs an insert
-            prep_cursor_ssn_insert.execute(
-                suspect_shock_node_insert_statement, (nar_ref, node, int(ws_id))
-            )
+        if node:
+            if exists_count_arr[0] == 0:
+                # means a new problem narrative/node needs an insert
+                prep_cursor_ssn_insert.execute(
+                    suspect_shock_node_insert_statement, (nar_ref, node, int(ws_id))
+                )
+            else:
+                # means the nar_ref node existed . Update the last seen date.
+                prep_cursor_ssn_insert.execute(
+                    suspect_shock_node_update_statement, (nar_ref, node)
+                )
         else:
-            # means the nar_ref node existed . Update the last seen date.
-            prep_cursor_ssn_insert.execute(
-                suspect_shock_node_update_statement, (nar_ref, node)
-            )
+            print("The object id " +
+                  str(nar_ref) +
+                  "has a suspect shock node behavior, but has no node")
 
     db_connection.commit()
 

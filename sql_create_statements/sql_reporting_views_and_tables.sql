@@ -47,7 +47,7 @@ group by username;
 
 #IN METRICS_REPORTING
 create or replace view metrics_reporting.user_info_plus as
-select ui.* ,
+select ui.* , sifc.country as session_info_country,
 round((UNIX_TIMESTAMP(ui.last_signin_date) - UNIX_TIMESTAMP(ui.signup_date))/86400,2) as days_signin_minus_signup,
 ceil((UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(last_signin_date))/86400) as days_since_last_signin,
 IFNULL(uac.total_app_count,0) as total_app_count,
@@ -57,14 +57,23 @@ left outer join
 metrics.hv_user_app_count uac on ui.username = uac.username
 left outer join   
 metrics.hv_user_app_error_count uec on ui.username = uec.username
+left outer join
+metrics_reporting.session_info_frequent_country sifc on ui.username = sifc.username
 where exclude = False
 order by signup_date;
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.anonymize_user_info_plus as
+select user_id, kb_internal_user, institution, country, signup_date, last_signin_date, 
+days_signin_minus_signup, days_since_last_signin, total_app_count, total_app_err_count
+from metrics_reporting.user_info_plus
+where exclude = 0;
 
 
 #IN METRICS_REPORTING
 create or replace view metrics_reporting.user_info_summary_stats as
 select ui.username, ui.display_name, ui.email, ui.orcid,
-ui.kb_internal_user, ui.institution, ui.country,
+ui.user_id, ui.kb_internal_user, ui.institution, ui.country,
 ui.signup_date, ui.last_signin_date, 
 round((UNIX_TIMESTAMP(ui.last_signin_date) - UNIX_TIMESTAMP(ui.signup_date))/86400,2) as days_signin_minus_signup,
 ceil((NOW() - last_signin_date)/86400) as days_since_last_signin,
@@ -88,6 +97,8 @@ where kb_internal_user = False
 and exclude = False
 group by signup_month;
 
+#NOTE THIS VIEW MUST BE MADE HAND AFTER AN RESTORING DB FROM BACKUP
+#BECAUSE METRICS IS RELYING METRICS_REPORTING (WHICH WILL NOT EXIST YET)
 #IN METRICS
 create or replace view metrics.hv_user_monthly_signups_still_active as
 select 
@@ -99,6 +110,8 @@ and days_since_last_signin < 90
 and exclude = False
 group by signup_month;
 
+#NOTE THIS VIEW MUST BE MADE HAND AFTER AN RESTORING DB FROM BACKUP
+#BECAUSE METRICS IS RELYING METRICS_REPORTING (WHICH WILL NOT EXIST YET)
 #IN METRICS
 create or replace view metrics.hv_user_monthly_signups_that_returned as
 select 
@@ -110,6 +123,8 @@ and days_signin_minus_signup >= 1
 and exclude = False
 group by signup_month;
 
+#NOTE THIS VIEW MUST BE MADE HAND AFTER AN RESTORING DB FROM BACKUP
+#BECAUSE METRICS IS RELYING METRICS_REPORTING (WHICH WILL NOT EXIST YET)
 #IN METRICS_REPORTING
 create or replace view metrics_reporting.user_monthly_signups_retention as
 select us.signup_month, us.total_signups, 
@@ -154,10 +169,13 @@ group by app_name, func_name, git_commit_hash;
 
 #IN METRICS
 create or replace view metrics.hv_total_exec_app_function_git as
-select count(*) as tot_cnt, IFNULL(app_name,"None") as app_name, 
-func_name, git_commit_hash 
+select count(*) as tot_cnt, IFNULL(app_name,"None") as app_name,
+func_name, git_commit_hash, 
+round(avg(queue_time),1) as avg_queue_time, 
+round(avg(reserved_cpu),1) as avg_reserved_cpu
 from metrics.user_app_usage
 group by app_name, func_name, git_commit_hash;
+
 
 #IN METRICS
 create or replace view metrics.hv_fail_exec_app_function_git as
@@ -170,7 +188,8 @@ group by app_name, func_name, git_commit_hash;
 #IN METRICS
 create or replace view metrics.hv_fail_pct_app_function_git_combo as
 select (IFNULL(fe.err_cnt,0)/te.tot_cnt) * 100 as fail_pct, 
-te.tot_cnt, te.app_name, te.func_name, te.git_commit_hash
+te.tot_cnt, te.app_name, te.func_name, te.git_commit_hash,
+te.avg_queue_time, te.avg_reserved_cpu
 from metrics.hv_total_exec_app_function_git as te left outer join
 metrics.hv_fail_exec_app_function_git as fe
 on te.app_name = fe.app_name
@@ -193,7 +212,8 @@ art.app_count as success_app_count,
 art.avg_run_time, art.stdev_run_time, 
 art.last_finish_date,
 fpa.fail_pct, fpa.tot_cnt as all_app_run_count, 
-nuu.all_users_count, non_kb_user_count
+nuu.all_users_count, non_kb_user_count,
+fpa.avg_queue_time, fpa.avg_reserved_cpu
 from metrics.hv_app_run_time_app_function_git_combo art inner join
 metrics.hv_fail_pct_app_function_git_combo fpa on 
 art.app_name = fpa.app_name
@@ -236,14 +256,17 @@ and ui.exclude = False;
 
 #IN METRICS
 create or replace view metrics.hv_number_nonKB_users_using_function_git_combo as
-select count(*)as non_kb_user_count, func_name, git_commit_hash 
+select count(*) as non_kb_user_count, func_name, git_commit_hash 
 from metrics.hv_distinct_nonKB_users_using_func_git
 group by func_name, git_commit_hash;
 
 #IN METRICS
 create or replace view metrics.hv_total_exec_function_git as
 select count(*) as tot_cnt,  
-func_name, git_commit_hash from metrics.user_app_usage
+func_name, git_commit_hash, 
+round(avg(queue_time),1) as avg_queue_time, 
+round(avg(reserved_cpu),1) as avg_reserved_cpu
+from metrics.user_app_usage
 group by func_name, git_commit_hash;
 
 #IN METRICS
@@ -256,7 +279,8 @@ group by func_name, git_commit_hash;
 #IN METRICS
 create or replace view metrics.hv_fail_pct_function_git_combo as
 select (IFNULL(fe.err_cnt,0)/te.tot_cnt) * 100 as fail_pct, 
-te.tot_cnt, te.func_name, te.git_commit_hash
+te.tot_cnt, te.func_name, te.git_commit_hash,
+te.avg_queue_time, te.avg_reserved_cpu
 from metrics.hv_total_exec_function_git as te left outer join
 metrics.hv_fail_exec_function_git as fe
 on te.func_name = fe.func_name
@@ -277,7 +301,8 @@ art.app_count as success_app_count,
 art.avg_run_time, art.stdev_run_time, 
 art.last_finish_date,
 fpa.fail_pct, fpa.tot_cnt as all_app_run_count, 
-nuu.all_users_count, non_kb_user_count
+nuu.all_users_count, non_kb_user_count,
+fpa.avg_queue_time, fpa.avg_reserved_cpu
 from metrics.hv_app_run_time_function_git_combo art inner join
 metrics.hv_fail_pct_function_git_combo fpa on 
 art.func_name = fpa.func_name
@@ -324,7 +349,9 @@ group by func_name;
 
 #IN METRICS
 create or replace view metrics.hv_total_exec_function as
-select count(*) as tot_cnt, func_name 
+select count(*) as tot_cnt, func_name,
+round(avg(queue_time),1) as avg_queue_time,
+round(avg(reserved_cpu),1) as avg_reserved_cpu
 from metrics.user_app_usage
 group by func_name;
 
@@ -338,7 +365,8 @@ group by func_name;
 #IN METRICS REPORTING
 create or replace view metrics_reporting.fail_pct_function as
 select (IFNULL(fe.err_cnt,0)/te.tot_cnt) * 100 as fail_pct, 
-te.tot_cnt, te.func_name
+te.tot_cnt, te.func_name,
+te.avg_queue_time, te.avg_reserved_cpu
 from metrics.hv_total_exec_function as te left outer join
 metrics.hv_fail_exec_function as fe
 on te.func_name = fe.func_name;
@@ -358,7 +386,8 @@ art.app_count as success_app_count,
 art.avg_run_time, art.stdev_run_time, 
 art.last_finish_date,
 fpa.fail_pct, fpa.tot_cnt as all_app_run_count, 
-nuu.all_users_count, non_kb_user_count
+nuu.all_users_count, non_kb_user_count,
+fpa.avg_queue_time, fpa.avg_reserved_cpu
 from metrics.hv_app_run_time_function art inner join
 metrics_reporting.fail_pct_function fpa on 
 art.func_name = fpa.func_name
@@ -373,7 +402,8 @@ art.func_name = nnu.func_name;
 #IN METRICS
 create or replace view metrics.hv_app_usage_by_month as
 select DATE_FORMAT(`finish_date`,'%Y-%m') as finish_month,
-count(*) as number_app_runs
+count(*) as number_app_runs,
+round(avg(queue_time),1) as avg_queue_time
 from metrics.user_app_usage
 group by finish_month;
 
@@ -411,7 +441,8 @@ create or replace view metrics_reporting.app_usage_stats_by_month as
 select apm.finish_month, apm.number_app_runs as num_all_app_runs,
 nkapm.number_app_runs as non_kbase_user_app_runs,
 aepm.number_app_runs as num_all_error_app_runs,
-nkaepm.number_app_runs as non_kbase_user_error_app_runs
+nkaepm.number_app_runs as non_kbase_user_error_app_runs,
+apm.avg_queue_time
 from metrics.hv_app_usage_by_month apm
 left outer join metrics.hv_non_kbase_users_app_usage_by_month nkapm
 on apm.finish_month = nkapm.finish_month
@@ -532,7 +563,7 @@ on aac.app_category = nkbc.app_category;
 create or replace view metrics_reporting.app_category_run_counts_by_user as
 select count(*) as total_app_run_cnt, 
 IFNULL(acm.app_category,'unable to determine') as app_category,
-uau.username, ui.kb_internal_user
+uau.username, ui.user_id, ui.kb_internal_user
 from metrics.user_info ui 
 inner join metrics.user_app_usage uau
 on ui.username = uau.username
@@ -584,7 +615,7 @@ create or replace view metrics_reporting.app_name_run_counts_by_user as
 select count(*) as total_app_run_cnt, 
 IFNULL(uau.app_name,'not specified') as app_name,
 uau.func_name,
-uau.username, ui.kb_internal_user
+uau.username, ui.user_id, ui.kb_internal_user
 from metrics.user_info ui 
 inner join metrics.user_app_usage uau
 on ui.username = uau.username
@@ -614,10 +645,6 @@ where ui.exclude = False
 group by ui.institution, app_category, app_run_month;
 
 
-
-
-
-
 ---------------------------------------------
 # File Storage Data (SHOCK)
 
@@ -641,7 +668,7 @@ group by month;
 
 #IN METRICS_REPORTING
 create or replace view metrics_reporting.monthly_file_stats as
-select kufs.month as month, 
+select kufs.month as month,
 IFNULL(nkfs.total_size,0) as non_kbstaff_total_size,
 IFNULL(kufs.total_size,0) as kbstaff_total_size,
 IFNULL(nkfs.file_count,0) as non_kbstaff_file_count,
@@ -649,6 +676,38 @@ IFNULL(kufs.file_count,0) as kbstaff_file_count
 from metrics.hv_kbuser_monthly_file_stats kufs
 left outer join metrics.hv_non_kbuser_monthly_file_stats nkfs
 on kufs.month = nkfs.month;
+
+# Blobstore Data (blobstore)
+
+#IN METRICS
+create or replace view metrics.hv_non_kbuser_monthly_blobstore_stats as
+select DATE_FORMAT(`record_date`,'%Y-%m') as month,
+sum(total_size) as total_size, sum(file_count) as file_count
+from metrics.blobstore_stats bss
+inner join metrics.user_info ui on ui.username = bss.username
+where ui.kb_internal_user = False
+group by month;
+
+#IN METRICS
+create or replace view metrics.hv_kbuser_monthly_blobstore_stats as
+select DATE_FORMAT(`record_date`,'%Y-%m') as month,
+sum(total_size) as total_size, sum(file_count) as file_count
+from metrics.blobstore_stats bss
+inner join metrics.user_info ui on ui.username = bss.username
+where ui.kb_internal_user = True
+group by month;
+
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.monthly_blobstore_stats as
+select kubs.month as month, 
+IFNULL(nkbs.total_size,0) as non_kbstaff_total_size,
+IFNULL(kubs.total_size,0) as kbstaff_total_size,
+IFNULL(nkbs.file_count,0) as non_kbstaff_file_count,
+IFNULL(kubs.file_count,0) as kbstaff_file_count
+from metrics.hv_kbuser_monthly_blobstore_stats kubs
+left outer join metrics.hv_non_kbuser_monthly_blobstore_stats nkbs
+on kubs.month = nkbs.month;
 
 --------------------------------------------
 #NEW APPS BEING RUN THE FIRST TIME (monthly counts)
@@ -805,7 +864,10 @@ count(run_time) as count, avg(run_time) as avg_run_time,
 max(run_time) as max_run_time, min(run_time) as min_run_time, 
 stddev(run_time) as run_time_std_dev, 
 max(finish_date) as max_finish_date,
-min(finish_date) as min_finish_date
+min(finish_date) as min_finish_date,
+round(avg(queue_time),1) as avg_queue_time,
+min(queue_time) as min_queue_time,
+max(queue_time) as max_queue_time
 from metrics.user_app_usage 
 where is_error = 0 
 group by func_name, git_commit_hash;
@@ -821,7 +883,10 @@ count(run_time) as count, avg(run_time) as avg_run_time,
 max(run_time) as max_run_time, min(run_time) as min_run_time, 
 stddev(run_time) as run_time_std_dev, 
 max(finish_date) as max_finish_date,
-min(finish_date) as min_finish_date
+min(finish_date) as min_finish_date,
+round(avg(queue_time),1) as avg_queue_time,
+min(queue_time) as min_queue_time,
+max(queue_time) as max_queue_time
 from metrics.user_app_usage 
 where is_error = 0 
 group by func_name;
@@ -997,7 +1062,8 @@ group by record_month, object_type;
 # USER CODE CELLS COUNTS AND DISTRIBUTIONS
 #IN MEtrics Reporting
 create or replace view metrics_reporting.user_code_cell_counts as
-select wc.username, sum(code_cells_count) as user_code_cells_count
+select wc.username, ui.user_id,
+sum(code_cells_count) as user_code_cells_count
 from metrics_reporting.workspaces_current wc
 inner join metrics.user_info ui on ui.username = wc.username
 where ui.kb_internal_user = 0
@@ -1020,7 +1086,8 @@ group by code_cells_count;
 #APP RUNS BY USERS AND WORKSPACES
 #IN METRICS REPORTING
 create or replace view metrics_reporting.user_app_runs as
-select uau.username, count(*) as app_runs_count
+select uau.username, ui.user_id,
+count(*) as app_runs_count
 from metrics.user_app_usage uau
 inner join metrics.user_info ui on ui.username = uau.username
 where ui.kb_internal_user = 0
@@ -1031,10 +1098,9 @@ select app_runs_count, count(*) as user_count
 from metrics_reporting.user_app_runs
 group by app_runs_count;
 
-#NOTE THESE ARE AGAINST EE2 TEMP TABLE CURRENTLY
 create or replace view metrics_reporting.workspace_user_app_runs as
 select uau.ws_id, count(*) as app_runs_count
-from metrics.user_app_usage_ee2 uau
+from metrics.user_app_usage uau
 inner join metrics.user_info ui on ui.username = uau.username
 where ui.kb_internal_user = 0
 group by uau.ws_id;
@@ -1045,3 +1111,392 @@ from metrics_reporting.workspace_user_app_runs
 group by app_runs_count;
 
 ----------------------------
+
+#------------------------------
+# USER ORCID COUNT VIEWS.
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.user_orcid_count_daily as
+select 
+DATE_FORMAT(`record_date`,'%Y-%m-%d') as date_daily,
+max(user_orcid_count) as max_user_orcid_count
+from metrics.user_orcid_count
+group by date_daily;
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.user_orcid_count_weekly as
+select 
+concat(substring(YEARWEEK(record_date),1,4),"-",substring(YEARWEEK(record_date),5,2)) as date_weekly,
+max(user_orcid_count) as max_user_orcid_count
+from metrics.user_orcid_count
+group by date_weekly;
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.user_orcid_count_monthly as
+select 
+DATE_FORMAT(`record_date`,'%Y-%m') as date_monthly,
+max(user_orcid_count) as max_user_orcid_count
+from metrics.user_orcid_count
+group by date_monthly;
+
+
+#----------------------------------
+# Weekly App Category Users
+# NOTE THESE ARE TABLES NOT VIEWS, made by the CRON JOB
+
+create or replace table metrics.hv_weekly_app_category_unique_users as
+select distinct DATE_FORMAT(`finish_date`,'%Y-%u') as week_run, 
+IFNULL(app_category,'None') as app_category, uau.username
+from metrics.user_app_usage uau inner join 
+metrics.user_info ui on uau.username = ui.username
+left outer join
+metrics.app_name_category_map anc on uau.app_name = anc.app_name
+where ui.kb_internal_user = 0
+and func_name != 'kb_gtdbtk/run_kb_gtdbtk';
+
+create or replace table metrics_reporting.app_category_unique_users_weekly as
+select week_run, app_category, count(*) as unique_users
+from metrics.hv_app_category_unique_users_weekly
+group by week_run, app_category;
+
+
+#------------------------------
+# App reserved cpus for success and failures.
+#
+
+create view metrics_reporting.app_reserved_cpu_success as
+select func_name, DATE_FORMAT(`finish_date`,'%Y-%m') as finish_month,
+count(*) as run_count, 
+round(avg(run_time),1) as avg_run_time_secs, round((sum(run_time)/3600) * reserved_cpu,1) as total_reserved_cpu_hours
+from metrics.user_app_usage 
+where is_error = 0
+group by func_name, finish_month;
+
+create view metrics_reporting.app_reserved_cpu_failure as
+select func_name, DATE_FORMAT(`finish_date`,'%Y-%m') as finish_month,
+count(*) as run_count, 
+round(avg(run_time),1) as avg_run_time_secs, round((sum(run_time)/3600) * reserved_cpu,1) as total_reserved_cpu_hours
+from metrics.user_app_usage 
+where is_error = 1
+group by func_name, finish_month;
+
+
+#---------------------
+# App_queue_times_by_month
+#
+
+create view metrics_reporting.app_queue_times_by_month as
+select func_name, DATE_FORMAT(`finish_date`,'%Y-%m') as finish_month,
+count(*) as run_count, 
+round(avg(queue_time),1) as avg_queue_time_secs, round(sum(queue_time)/3600,1) as total_queue_time_hours
+from metrics.user_app_usage 
+group by func_name, finish_month;
+
+
+#---------------------
+# Users most common country from session info
+#
+
+create or replace view metrics_reporting.hv_session_info_user_country_count as
+select count(*) as session_count, si.username, si.country_name
+from metrics.session_info si
+group by si.username, si.country_name;
+
+
+create or replace view metrics_reporting.hv_session_info_user_max_country_count as
+select max(siuccm.session_count) as msession_count, siuccm.username 
+from metrics_reporting.hv_session_info_user_country_count siuccm 
+group by siuccm.username;
+
+
+create or replace view metrics_reporting.session_info_frequent_country as
+select siucc.username, min(siucc.country_name) as country
+from metrics_reporting.hv_session_info_user_country_count siucc
+inner join 
+metrics_reporting.hv_session_info_user_max_country_count siumcc
+on siucc.session_count = siumcc.msession_count
+and siucc.username = siumcc.username
+group by siucc.username;
+
+
+#--------------------------
+# Custom Table  for Adam so he can look at app workflows of users.
+# This is done by cron job for making reporting tables.
+#--------------------------
+create or replace table metrics_reporting.narrative_app_flows as
+select uau.ws_id, uau.username, uau.app_name, uau.func_name, uau.start_date, uau.finish_date
+from metrics.user_info ui
+inner join metrics.user_app_usage uau
+on ui.username = uau.username
+inner join metrics_reporting.workspaces_current wc
+on wc.ws_id = uau.ws_id
+where ui.kb_internal_user = 0
+and uau.is_error = 0
+and wc.narrative_version > 0
+order by ws_id, start_date;
+
+
+#-------------------------------------------
+# USERS_OBJECT_CHANGES over time
+#-------------------------------------------
+create or replace view metrics_reporting.users_object_changes as
+select object_type, 
+DATE_FORMAT(`record_date`,'%Y-%m') as record_month,
+sum(total_object_count) as total_object_count, 
+round(sum(total_size)/1000000000,4) as total_size_GB,
+sum(top_lvl_object_count) as top_lvl_object_count, 
+round(sum(top_lvl_size)/1000000000,4) as top_lvl_size_GB
+from metrics.users_workspace_object_counts
+group by object_type, record_month
+order by object_type, record_month;
+
+#********************************************************************************************************************************
+#-------------------------------
+#-------------------------------
+# VIEWS RELATED TO USER_SUPER_SUMMARY
+#-------------------------------
+#------------------------------
+
+#------------------------------
+# User Session summaries for user_super_summary
+#------------------------------
+create or replace view metrics.hv_user_session_count_all_time as
+select username, count(*) as session_count_all_time
+from metrics.session_info group by username;
+
+create or replace view metrics.hv_user_session_count_last_year as
+select username, count(*) as session_count_last_year
+from metrics.session_info 
+where record_date >= (NOW() - INTERVAL 365 DAY)
+group by username;
+
+create or replace view metrics.hv_user_session_count_last_90 as
+select username, count(*) as session_count_last_90
+from metrics.session_info 
+where record_date >= (NOW() - INTERVAL 90 DAY)
+group by username;
+
+create or replace view metrics.hv_user_session_count_last_30 as
+select username, count(*) as session_count_last_30
+from metrics.session_info 
+where record_date >= (NOW() - INTERVAL 30 DAY)
+group by username;
+
+#------------------------------
+# App stats for user_super_summary as well as user_app_counts and users_app_counts_periods
+#------------------------------
+
+# NEEDS A CRON JOB
+create or replace table metrics.hv_user_app_summaries as 
+select username, 
+min(finish_date) as first_app_run, 
+max(finish_date) as last_app_run,  
+count(*) as total_app_runs, 
+sum(is_error) as total_error_runs, 
+sum(run_time)/(3600) as total_run_time_hours, 
+sum(queue_time)/(3600) as total_queue_time_hours, 
+sum(reserved_cpu * run_time)/(3600) as total_CPU_hours 
+from metrics.user_app_usage 
+group by username;  
+
+# NEEDS A CRON JOB
+create or replace table metrics.hv_user_app_counts as 
+select func_name, username, 
+count(*) as user_app_count, 
+sum(is_error) as user_error_count, 
+min(finish_date) as first_app_run, 
+max(finish_date) as last_app_run
+from metrics.user_app_usage 
+group by  func_name, username;
+ 
+create or replace view metrics_reporting.user_app_counts as 
+select * from metrics.hv_user_app_counts; 
+
+create or replace view metrics.hv_user_max_used_app_count as 
+select  uac.username, max(uac.user_app_count) as user_app_count 
+from metrics.hv_user_app_counts uac 
+group by uac.username; 
+
+create or replace view metrics.hv_user_most_used_app as 
+select uac.username, min(uac.func_name) as mu_func_name 
+from metrics.hv_user_app_counts uac 
+inner join metrics.hv_user_max_used_app_count umuac 
+on uac.username = umuac.username 
+and uac.user_app_count = umuac.user_app_count 
+group by uac.username; 
+
+
+create or replace view metrics.hv_users_distinct_apps_used_count as 
+select username, count(*) as distinct_apps_used 
+from metrics.hv_user_app_counts 
+group by username; 
+
+# NEEDS A CRON JOB
+create or replace table metrics.hv_users_alltime_app_counts as 
+select username, count(*) as app_count_all_time 
+from metrics.user_app_usage uau_all 
+group by username; 
+
+# NEEDS A CRON JOB
+create or replace table metrics.hv_users_last365days_app_counts as 
+select username, count(*) as app_count_last_365 
+from metrics.user_app_usage uau_365 
+where finish_date >= (NOW() - INTERVAL 365 DAY) 
+group by username; 
+
+# NEEDS A CRON JOB
+create or replace table metrics.hv_users_last_90days_app_counts as 
+select username, count(*) as app_count_last_90 
+from metrics.user_app_usage uau_90 
+where finish_date >= (NOW() - INTERVAL 90 DAY) 
+group by username; 
+
+# NEEDS A CRON JOB
+create or replace table metrics.hv_users_last_30days_app_counts as 
+select username, count(*) as app_count_last_30 
+from metrics.user_app_usage uau_30 
+where finish_date >= (NOW() - INTERVAL 30 DAY) 
+group by username; 
+
+create or replace view metrics_reporting.users_app_counts_periods as 
+select uac_all.username, sum(uac_all.app_count_all_time) as total_apps_run_all_time, 
+sum(uac_365.app_count_last_365) as total_apps_run_last365, 
+sum(uac_90.app_count_last_90) as total_apps_run_last90, 
+sum(uac_30.app_count_last_30) as total_apps_run_last30 
+from metrics.user_info ui 
+inner join metrics.hv_users_alltime_app_counts uac_all 
+on ui.username = uac_all.username 
+left outer join metrics.hv_users_last365days_app_counts uac_365 
+on ui.username = uac_365.username 
+left outer join metrics.hv_users_last_90days_app_counts uac_90 
+on ui.username = uac_90.username 
+left outer join metrics.hv_users_last_30days_app_counts uac_30 
+on ui.username = uac_30.username 
+group by uac_all.username; 
+
+#------------------------------
+# Blob store summary stats for user_super_summary
+#------------------------------
+create or replace view metrics.hv_blobstore_user_summaries as 
+select username, 
+min(record_date) as first_file_date, 
+max(record_date) as last_file_date, 
+sum(total_size/1000000) as total_file_sizes_MB, 
+sum(file_count) as total_file_count 
+from blobstore_stats 
+group by username; 
+
+#------------------------------
+# Narrative summaries - Will need to be done in a CRON job.
+#------------------------------
+
+# NEEDS A CRON JOB
+create or replace table metrics_reporting.users_narratives_summary as 
+select wc.username, 
+ui.kb_internal_user, 
+min(initial_save_date) as first_narrative_made_date, 
+max(initial_save_date) as last_narrative_made_date,
+max(mod_date) as last_narrative_modified_date,
+sum(total_object_count) as total_narrative_objects_count, 
+sum(top_lvl_object_count) as top_lvl_narrative_objects_count, 
+sum(total_size) as total_narrative_objects_size, 
+sum(top_lvl_size) as top_lvl_narrative_objects_size, 
+count(*) as total_narrative_count, 
+sum(is_public) as total_public_narrative_count, 
+sum(ceiling(static_narratives_count/(static_narratives_count + .00000000000000000000001))) as distinct_static_narratives_count, 
+sum(static_narratives_count) as static_narratives_created_count, 
+sum(visible_app_cells_count) as total_visible_app_cells, 
+sum(code_cells_count) as total_code_cells_count 
+from metrics_reporting.workspaces_current wc 
+inner join metrics.user_info ui 
+on wc.username = ui.username 
+where narrative_version > 0 
+and is_deleted = 0 
+and is_temporary = 0 
+group by wc.username, ui.kb_internal_user; 
+
+#------------------------------
+Final user_super_summary table
+#------------------------------
+
+# NEEDS A CRON JOB
+create or replace table metrics_reporting.user_super_summary as 
+select uip.username, uip.display_name, 
+uip.email, uip.kb_internal_user, uip.user_id, 
+uip.globus_login, uip.google_login, uip.orcid, 
+uip.session_info_country, uip.country, uip.state, 
+uip.institution, uip.department, uip.job_title, 
+uip.how_u_hear_selected, uip.how_u_hear_other,  
+uip.signup_date, uip.last_signin_date, 
+uip.days_signin_minus_signup, days_since_last_signin, 
+usssc.num_orgs, usssc.narrative_count,  
+usssc.shared_count, usssc.narratives_shared, 
+uns.first_narrative_made_date, uns.last_narrative_made_date, 
+uns.last_narrative_modified_date,
+uns.total_narrative_objects_count,uns.top_lvl_narrative_objects_count, 
+uns.total_narrative_objects_size, uns.top_lvl_narrative_objects_size, 
+uns.total_narrative_count, uns.total_public_narrative_count, 
+uns.distinct_static_narratives_count, uns.static_narratives_created_count, 
+uns.total_visible_app_cells, uns.total_code_cells_count, 
+bus.first_file_date, bus.last_file_date, 
+bus.total_file_sizes_MB, bus.total_file_count, 
+umua.mu_func_name as most_used_app,  
+udauc.distinct_apps_used, 
+uapc.total_apps_run_all_time, uapc.total_apps_run_last365, 
+uapc.total_apps_run_last90, uapc.total_apps_run_last30, 
+uas.total_error_runs as total_app_errors_all_time, 
+uas.first_app_run, uas.last_app_run,
+uas.total_run_time_hours, uas.total_queue_time_hours, 
+uas.total_CPU_hours, 
+uscat.session_count_all_time, 
+uscly.session_count_last_year, 
+usc90.session_count_last_90, 
+usc30.session_count_last_30
+from metrics_reporting.user_info_plus uip
+inner join metrics.user_system_summary_stats_current usssc 
+on uip.username = usssc.username
+left outer join metrics_reporting.users_narratives_summary uns
+on uip.username = uns.username
+left outer join metrics.hv_blobstore_user_summaries bus
+on uip.username = bus.username
+left outer join metrics_reporting.users_app_counts_periods uapc
+on uip.username = uapc.username
+left outer join metrics.hv_user_app_summaries uas
+on uip.username = uas.username
+left outer join metrics.hv_user_most_used_app umua 
+on uip.username = umua.username 
+left outer join metrics.hv_users_distinct_apps_used_count udauc 
+on uip.username = udauc.username 
+left outer join metrics.hv_user_session_count_all_time uscat
+on uip.username = uscat.username
+left outer join metrics.hv_user_session_count_last_year uscly
+on uip.username = uscly.username
+left outer join metrics.hv_user_session_count_last_90 usc90
+on uip.username = usc90.username
+left outer join metrics.hv_user_session_count_last_30 usc30
+on uip.username = usc30.username
+where uip.exclude != 1;
+
+# END OF USER_SUPER_SUMMARY
+#********************************************************************************************************************************
+
+# public_narratives_app_use
+
+create or replace view metrics_reporting.public_narratives_app_use as
+select ui.username, ua.ws_id, DATE_FORMAT(`mod_date`,'%Y') as narrative_last_modified_year, 
+finish_date, DATE_FORMAT(`finish_date`,'%Y') as app_year, 
+DATE_FORMAT(`finish_date`,'%Y-%m') as app_month,
+ua.app_name, ua.func_name
+from metrics.user_info ui
+inner join metrics_reporting.workspaces_current wc
+on ui.username = wc.username
+inner join metrics.user_app_usage ua
+on ua.ws_id = wc.ws_id
+where wc.is_public = 1
+and wc.is_deleted = 0
+and ui.kb_internal_user = 0
+and ua.is_error = 0;
+
+
+
+
