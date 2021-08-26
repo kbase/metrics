@@ -10,7 +10,7 @@ ARG BRANCH
 RUN apt-get update -y && \
     apt-get install -y wget && \
     rm -rf /var/lib/apt/lists/* && \
-    pip install mysql-connector-python-rf pymongo
+    pip install mysql-connector-python-rf pymongo setuptools
 
 RUN mkdir -p /kb/runtime
 
@@ -25,7 +25,7 @@ RUN cd /root/bin && \
     wget https://github.com/kbase/dockerize/raw/master/dockerize-linux-amd64-v0.6.1.tar.gz && \
     tar xzf dockerize-linux-amd64-v0.6.1.tar.gz && \
     rm dockerize-linux-amd64-v0.6.1.tar.gz && \
-    easy_install --no-deps /tmp/biokbase-0.0.1-py3.6.egg
+    python /usr/local/lib/python3.6/site-packages/setuptools/command/easy_install.py --no-deps /tmp/biokbase-0.0.1-py3.6.egg
 
 COPY source /root/source
 WORKDIR /root/source
