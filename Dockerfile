@@ -29,7 +29,6 @@ COPY --from=narrative /kb/dev_container/narrative/src/dist/biokbase-0.0.1-py3.6.
 # python interpreter
 ENV PYTHONPATH=/kb/runtime/lib/python3.6/site-packages/
 
-#RUN export PYTHONPATH=/kb/runtime/lib/python3.6/site-packages/
 RUN python -m pip install --upgrade pip
 RUN pip install --no-cache-dir --upgrade six 
 
