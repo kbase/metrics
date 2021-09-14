@@ -7,10 +7,12 @@ ARG BUILD_DATE
 ARG COMMIT
 ARG BRANCH
 
+
 RUN apt-get update -y && \
     apt-get install -y wget && \
     rm -rf /var/lib/apt/lists/* && \
     pip install mysql-connector-python-rf pymongo setuptools
+
 
 RUN mkdir -p /kb/runtime
 
@@ -20,22 +22,27 @@ RUN mkdir -p /kb/runtime
 COPY --from=narrative /kb/runtime/lib /kb/runtime/lib
 COPY --from=narrative /kb/dev_container/narrative/src/dist/biokbase-0.0.1-py3.6.egg /tmp/biokbase-0.0.1-py3.6.egg
 
-COPY bin /root/bin
-RUN cd /root/bin && \
-    wget https://github.com/kbase/dockerize/raw/master/dockerize-linux-amd64-v0.6.1.tar.gz && \
-    tar xzf dockerize-linux-amd64-v0.6.1.tar.gz && \
-    rm dockerize-linux-amd64-v0.6.1.tar.gz && \
-    python /usr/local/lib/python3.6/site-packages/setuptools/command/easy_install.py --no-deps /tmp/biokbase-0.0.1-py3.6.egg
-
-COPY source /root/source
-WORKDIR /root/source
-
 # The *.egg directories in /kb/runtime/lib/python3.7/site-packages didn't come
 # through the installer, so they aren't automatically added to sys.path. Put a
 # modified version of the narrative containers easy-install.pth file into the
 # the default search path so that the eggs are picked up by this container's
 # python interpreter
 ENV PYTHONPATH=/kb/runtime/lib/python3.6/site-packages/
+
+RUN python -m pip install --upgrade pip
+RUN pip install --no-cache-dir --upgrade six 
+
+
+COPY bin /root/bin
+RUN cd /root/bin && \
+    wget https://github.com/kbase/dockerize/raw/master/dockerize-linux-amd64-v0.6.1.tar.gz && \
+    tar xzf dockerize-linux-amd64-v0.6.1.tar.gz && \
+    rm dockerize-linux-amd64-v0.6.1.tar.gz && \
+    python /kb/runtime/lib/python3.6/site-packages/setuptools/command/easy_install.py --no-deps /tmp/biokbase-0.0.1-py3.6.egg
+
+COPY source /root/source
+WORKDIR /root/source
+
 ENV PATH="/root/bin:/root/source:${PATH}"
 
 LABEL org.label-schema.build-date=$BUILD_DATE \
