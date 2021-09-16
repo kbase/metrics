@@ -38,8 +38,10 @@ RUN cd /root/bin && \
     wget https://github.com/kbase/dockerize/raw/master/dockerize-linux-amd64-v0.6.1.tar.gz && \
     tar xzf dockerize-linux-amd64-v0.6.1.tar.gz && \
     rm dockerize-linux-amd64-v0.6.1.tar.gz && \
-    python /kb/runtime/lib/python3.6/site-packages/setuptools/command/easy_install.py --no-deps /tmp/biokbase-0.0.1-py3.6.egg
-
+    python /kb/runtime/lib/python3.6/site-packages/setuptools/command/easy_install.py --no-deps /tmp/biokbase-0.0.1-py3.6.egg  && \
+    cd /kb/runtime/lib/python3.6/site-packages && \
+    mv biokbase-0.0.1-py3.6.egg biokbase
+    
 COPY source /root/source
 WORKDIR /root/source
 
