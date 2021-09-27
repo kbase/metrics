@@ -23,4 +23,4 @@ jobs:
         SHA: "${{ github.event.pull_request.head.sha }}"
         DOCKER_ACTOR: "jsfillman"
         DOCKER_TOKEN: "${{ secrets.GHCR_TOKEN }}"
-      run: "./.github/workflows/scripts/tag_test_latest.sh\n"
+      run: "./.github/workflows/scripts/tag_test_latest.sh"
