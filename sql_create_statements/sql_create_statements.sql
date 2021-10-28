@@ -323,7 +323,7 @@ CREATE or replace TABLE metrics.session_info (
         estimated_hrs_active DECIMAL(6,4) NOT NULL,
         first_seen TIMESTAMP NOT NULL default 0,
         last_seen TIMESTAMP NOT NULL default 0,
-        proxy_target VARCHAR(30) NOT NULL,
+        proxy_target VARCHAR(30) NULL,
         FOREIGN KEY fk_session_user_info_username(username)
         REFERENCES metrics.user_info(username)
         ON UPDATE CASCADE
