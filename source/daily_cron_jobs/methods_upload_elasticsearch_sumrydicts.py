@@ -103,6 +103,8 @@ def elasticsearch_pull(start_date, end_date):
         end_date = datetime.datetime.strptime(end_date, "%m-%d-%Y")
         end_date = datetime.datetime.combine(end_date, datetime.datetime.max.time())
 
+        print("Start date : " + str(start_date))
+        print("End date : " + str(end_date))
         # datetime to epoch. Epoch format needed for elastic query
         epoch_start = int(start_date.strftime("%s")) * 1000
         epoch_end = int(end_date.strftime("%s")) * 1000
@@ -110,7 +112,11 @@ def elasticsearch_pull(start_date, end_date):
         # datetime to epoch. Epoch format needed for elastic query
         epoch_start = int(start_date.strftime("%s")) * 1000
         epoch_end = int(end_date.strftime("%s")) * 1000
-        
+
+    print("Epoch start : " + str(epoch_start))
+    print("Epoch end : " + str(epoch_end))
+    
+    
     # Return results of elastic query and format data to dictionary structures
     results = retrieve_elastic_response(epoch_start, epoch_end)
     #    import pprint
@@ -186,6 +192,7 @@ def make_user_activity_dict(data, ip, user):
     if user[-2:] == "-0":
         user = user[:-2]+"_"
     user = user.replace("-", "_")
+    user_activity_dictionary = dict()
     # If an Ip error tag appears in the data, we need to separate the dictionaries to data without ip errors and those with
     if "tags" in data.columns:
 
@@ -250,6 +257,16 @@ def make_user_activity_dict(data, ip, user):
             "longitude": list(data["longitude"])[0],
             "host_ip": list(data["host"])[0],
         }
+
+    # deal with fields that often come back as nan (not a number is tyoe float)
+    if isinstance(user_activity_dictionary["city"], float):
+        user_activity_dictionary["city"] = '0'
+    if isinstance(user_activity_dictionary["region_name"], float):
+        user_activity_dictionary["region_name"] = '0'
+    if isinstance(user_activity_dictionary["region_code"], float):
+        user_activity_dictionary["region_code"] = '0'
+    if isinstance(user_activity_dictionary["postal_code"], float):
+        user_activity_dictionary["postal_code"] = '0'
 
     # print("Elasticsearch dictionaries took ", time.time() - start_time, " seconds to create")
     return user_activity_dictionary
