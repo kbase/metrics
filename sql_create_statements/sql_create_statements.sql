@@ -577,3 +577,14 @@ CREATE TABLE `user_orcid_count` (
   UNIQUE KEY `uk_user_orcid_count_oid_record_date` (`user_orcid_count`,`record_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+#############################################################
+#  DOI PUBLICATION METRICS
+#############################################################
+
+CREATE TABLE `doi_ws_map` (
+  `doi_url` varchar(255)  NOT NULL,
+  `ws_id` int(11) NOT NULL,
+  `title` varchar(255) DEFAULT NULL,
+  `is_parent_ws` tinyint(1) NOT NULL DEFAULT '0',
+  UNIQUE KEY `uk_dwm_doi_ws` (`doi_url`,`ws_id`)
+  )  ENGINE=InnoDB DEFAULT CHARSET=utf8;
