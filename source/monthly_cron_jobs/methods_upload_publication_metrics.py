@@ -87,15 +87,30 @@ def get_dois_and_narratives(cursor):
         is_parent = row_values[2]
         if doi not in doi_results_map:
             doi_results_map[doi] = dict()
-        doi_results_map[doi][ws_id] = dict()
-        doi_results_map[doi][ws_id]["is_parent"] = is_parent
-        doi_results_map[doi][ws_id]["unique_users"] = set()
-        doi_results_map[doi][ws_id]["unique_workspaces"] = set()
+            doi_results_map[doi]["doi_owners"] = set()
+            doi_results_map[doi]["ws_ids"] = dict()
+        doi_results_map[doi]["ws_ids"][ws_id] = dict()
+        doi_results_map[doi]["ws_ids"][ws_id]["is_parent"] = is_parent
+        doi_results_map[doi]["ws_ids"][ws_id]["unique_users"] = set()
+        doi_results_map[doi]["ws_ids"][ws_id]["unique_workspaces"] = set()
 
     print(str(doi_results_map))
     return doi_results_map
 
-
+def get_dois_participant_usernames(db, doi_results_map):
+    """
+    creates a set of unique usernames associated with the DOI
+    Any copies and usernames will not be counted if they are part of that list.
+    """
+    for doi in doi_results_map:
+        for ws_id in doi_results_map[doi]["ws_ids"]:
+            ws_perm_cursor = db.workspaceACLs.find({"id":ws_id},{"user":1, "perm":1, "_id":0})
+            for ws_perm in ws_perm_cursor:
+                if ws_perm["perm"] > 10:
+                    doi_results_map[doi]["doi_owners"].add(ws_perm["user"])
+    print(str(doi_results_map))
+    return doi_results_map
+                    
 def get_publication_metrics():
     client = MongoClient(mongoDB_metrics_connection + to_workspace)
     db = client.workspace
@@ -114,7 +129,8 @@ def get_publication_metrics():
     query = "use " + query_on
     cursor.execute(query)
 
-    get_dois_and_narratives(cursor)
+    doi_results_map = get_dois_and_narratives(cursor)
+    doi_results_map = get_dois_participant_usernames(db, doi_results_map)
     
 get_publication_metrics()
 
