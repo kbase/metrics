@@ -110,7 +110,41 @@ def get_dois_participant_usernames(db, doi_results_map):
                     doi_results_map[doi]["doi_owners"].add(ws_perm["user"])
     print(str(doi_results_map))
     return doi_results_map
-                    
+
+def get_genomes_for_ws(db, ws_id):
+    """
+    gets a list of ws_references from the passed WS_ID
+    """
+    genomes_to_check_copies_list = list()
+    ws_objs_cursor = db.workspaceObjVersions.find({"ws":ws_id},{"type":1, "id":1, "ver":1,"_id":0})
+    for ws_obj in ws_objs_cursor:
+        full_obj_type = ws_obj["type"]
+        core_type,obj_type_ver = full_obj_type.split('-',1)
+        if core_type == "KBaseGenomes.Genome":
+            obj_id = str(ws_id) + "/" + str(ws_obj["id"]) + "/" + str(ws_obj["ver"])
+            genomes_to_check_copies_list.append(obj_id)
+    return genomes_to_check_copies_list
+
+def quick_parent_lookup(doi_results_map):
+    """
+    returns lookup of children WS to find the parent WS
+    """
+    child_parent_ws_id_lookup = dict()
+    for doi in doi_results_map:
+        parent_ws_id = None
+        child_ws_list = list()
+        for ws_id in doi_results_map[doi]["ws_ids"]:
+            if doi_results_map[doi]["ws_ids"][ws_id]["is_parent"] == 1:
+                parent_ws_id =ws_id
+            else:
+                child_ws_list.append(ws_id)
+        if parent_ws_id is None:
+            # Raise an error should not be the case.  Means the WS data is incorrect
+            i = 1
+        for child_ws_id in child_ws_list:
+            child_parent_ws_id_lookup[child_ws_id] = parent_ws_id
+    return child_parent_ws_id_lookup
+
 def get_publication_metrics():
     client = MongoClient(mongoDB_metrics_connection + to_workspace)
     db = client.workspace
@@ -131,7 +165,21 @@ def get_publication_metrics():
 
     doi_results_map = get_dois_and_narratives(cursor)
     doi_results_map = get_dois_participant_usernames(db, doi_results_map)
+
+    child_parent_ws_id_lookup = quick_parent_lookup(doi_results_map)
     
+    ws_genomes_to_track = dict()
+    for doi in doi_results_map:
+        for ws_id in doi_results_map[doi]["ws_ids"]:
+            print("WS ID BEING USED:" + str(ws_id))
+            ws_genomes_to_track[ws_id] = get_genomes_for_ws(db, ws_id)
+    print()
+    print("Genomes to check")
+    print(str(ws_genomes_to_track))
+
+    print(str(child_parent_ws_id_lookup))
+            
+            
 get_publication_metrics()
 
     
