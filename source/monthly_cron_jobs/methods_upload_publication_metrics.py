@@ -97,7 +97,7 @@ def get_dois_and_narratives(cursor):
     print(str(doi_results_map))
     return doi_results_map
 
-def get_dois_participant_usernames(db, doi_results_map):
+def get_doi_owners_usernames(db, doi_results_map):
     """
     creates a set of unique usernames associated with the DOI
     Any copies and usernames will not be counted if they are part of that list.
@@ -125,6 +125,7 @@ def get_genomes_for_ws(db, ws_id):
             genomes_to_check_copies_list.append(obj_id)
     return genomes_to_check_copies_list
 
+
 def quick_parent_lookup(doi_results_map):
     """
     returns lookup of children WS to find the parent WS
@@ -145,6 +146,66 @@ def quick_parent_lookup(doi_results_map):
             child_parent_ws_id_lookup[child_ws_id] = parent_ws_id
     return child_parent_ws_id_lookup
 
+def grow_copied_list(copied_to_lookup_dict, master_list, last_iteration_list):
+    """
+    grows the list of copied genomes for a WS
+    returns the master_list and next iteration list
+    """
+    next_iteration_list = list()
+    print("Last Iteration LIST:" + str(last_iteration_list))
+    for genome_ws_obj_id in last_iteration_list:
+        print("Result of copied lookup for " + str(genome_ws_obj_id) + " : " + str(copied_to_lookup_dict.get(genome_ws_obj_id)))
+        if genome_ws_obj_id in copied_to_lookup_dict:
+            next_iteration_list = next_iteration_list + copied_to_lookup_dict[genome_ws_obj_id]
+    print("Next Iteration LIST:" + str(next_iteration_list))
+    if len(next_iteration_list) > 0:
+        print("master list pre append: " + str(master_list))
+        master_list = master_list + next_iteration_list
+        print("master list post append: " + str(master_list))
+        master_list = grow_copied_list(copied_to_lookup_dict, master_list, next_iteration_list)
+        print("master list post function call: " + str(master_list))
+    return master_list
+#    else:
+        # no new copies time to return master list
+#        print("master list in else: " + str(master_list))
+#        return master_list
+            
+
+def determine_publication_unique_users_and_ws_ids(db, doi_results_map, copied_to_lookup_dict, ws_owners_lookup):
+    """
+    Populates the doi_results_map with the 
+    unique set of users to ws_ids 
+    """
+    child_parent_ws_id_lookup = quick_parent_lookup(doi_results_map)
+    #ws_genomes_to_track = dict()
+    for doi in doi_results_map:
+        #if doi != 'https://doi.org/10.25982/44746.21/1635640' and doi != "https://doi.org/10.25982/54100.27/1635639":
+        if doi != 'pretned_doi':
+            continue
+        doi_owners_usernames = doi_results_map[doi]["doi_owners"]
+        for ws_id in doi_results_map[doi]["ws_ids"]:
+            print("WS ID BEING USED:" + str(ws_id))
+            ws_genomes_to_track = dict()
+            ws_genomes_to_track = get_genomes_for_ws(db, ws_id)
+            print("WS_GENOMES_TO_TRACK: " + str(ws_genomes_to_track))
+            parent_ws_id = None
+            if ws_id in child_parent_ws_id_lookup:
+                parent_ws_id = child_parent_ws_id_lookup[ws_id]
+
+            print("DOI: " + doi)
+            print("ws_id: " + str(ws_id))          
+            all_copied_genomes_from_ws_list = grow_copied_list(copied_to_lookup_dict, [], ws_genomes_to_track)
+            print("ALL COPIED GENOMES LIST: " + str(all_copied_genomes_from_ws_list))
+
+
+                
+#    print()
+#    print("Genomes to check")
+#    print(str(ws_genomes_to_track))
+
+#    print(str(child_parent_ws_id_lookup))
+    
+                                 
 def get_publication_metrics():
     client = MongoClient(mongoDB_metrics_connection + to_workspace)
     db = client.workspace
@@ -164,20 +225,13 @@ def get_publication_metrics():
     cursor.execute(query)
 
     doi_results_map = get_dois_and_narratives(cursor)
-    doi_results_map = get_dois_participant_usernames(db, doi_results_map)
+    doi_results_map = get_doi_owners_usernames(db, doi_results_map)
+    doi_results_map = determine_publication_unique_users_and_ws_ids(db, doi_results_map, copied_to_lookup_dict, ws_owners_lookup)
 
-    child_parent_ws_id_lookup = quick_parent_lookup(doi_results_map)
     
-    ws_genomes_to_track = dict()
-    for doi in doi_results_map:
-        for ws_id in doi_results_map[doi]["ws_ids"]:
-            print("WS ID BEING USED:" + str(ws_id))
-            ws_genomes_to_track[ws_id] = get_genomes_for_ws(db, ws_id)
-    print()
-    print("Genomes to check")
-    print(str(ws_genomes_to_track))
 
-    print(str(child_parent_ws_id_lookup))
+
+
             
             
 get_publication_metrics()
