@@ -1498,5 +1498,16 @@ and ui.kb_internal_user = 0
 and ua.is_error = 0;
 
 
-
+#*********************************************************
+#
+# Publication narratives
+CREATE OR REPLACE VIEW metrics_reporting.publication_metrics_current as
+select pm.*
+from (
+select max(m_rdate.record_date) as maxdate, m_rdate.ws_id as max_rdate_ws_id
+from metrics.publication_metrics m_rdate
+group by m_rdate.ws_id) as max_date_ws_id
+inner join metrics.publication_metrics pm
+on pm.record_date = max_date_ws_id.maxdate
+and pm.record_date = max_date_ws_id.max_rdate_ws_id;
 

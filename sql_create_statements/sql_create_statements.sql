@@ -581,6 +581,7 @@ CREATE TABLE `user_orcid_count` (
 #  DOI PUBLICATION METRICS
 #############################################################
 
+# IN METRICS
 CREATE TABLE `doi_ws_map` (
   `doi_url` varchar(255)  NOT NULL,
   `ws_id` int(11) NOT NULL,
@@ -588,3 +589,13 @@ CREATE TABLE `doi_ws_map` (
   `is_parent_ws` tinyint(1) NOT NULL DEFAULT '0',
   UNIQUE KEY `uk_dwm_doi_ws` (`doi_url`,`ws_id`)
   )  ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+# IN METRICS
+CREATE TABLE `publication_metrics` (
+  `ws_id` int(11) NOT NULL,
+  `record_date` timestamp NOT NULL DEFAULT current_timestamp(),
+  `unique_users_count` int(11) NOT NULL,
+  `unique_ws_ids_count` int(11) NOT NULL,
+  UNIQUE KEY `uk_publication_metrics_ws_record_date` (`ws_id`,`record_date`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
+
