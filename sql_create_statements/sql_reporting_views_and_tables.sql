@@ -1509,5 +1509,4 @@ from metrics.publication_metrics m_rdate
 group by m_rdate.ws_id) as max_date_ws_id
 inner join metrics.publication_metrics pm
 on pm.record_date = max_date_ws_id.maxdate
-and pm.record_date = max_date_ws_id.max_rdate_ws_id;
-
+and pm.ws_id = max_date_ws_id.max_rdate_ws_id;

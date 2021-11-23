@@ -47,8 +47,8 @@ def build_copy_lookup(db):
             copied_to_lookup_dict[ws_obj_ver["copied"]] = list()
         copied_to_lookup_dict[ws_obj_ver["copied"]].append(full_obj_id_of_copy)
 #    print(str(copied_to_lookup_dict))
-    print("Total genome sources copied: " + str(len(copied_to_lookup_dict)))
-    print("Total resulting copies: " + str(copied_genome_count))
+#    print("Total genome sources copied: " + str(len(copied_to_lookup_dict)))
+#    print("Total resulting copies: " + str(copied_genome_count))
 #    copy_count_dict = dict()
 #    for copied_genome in copied_to_lookup_dict:
 #        temp_length = str(len(copied_to_lookup_dict[copied_genome]))
@@ -108,7 +108,7 @@ def get_doi_owners_usernames(db, doi_results_map):
             for ws_perm in ws_perm_cursor:
                 if ws_perm["perm"] > 10:
                     doi_results_map[doi]["doi_owners"].add(ws_perm["user"])
-    print(str(doi_results_map))
+#    print(str(doi_results_map))
     return doi_results_map
 
 def get_genomes_for_ws(db, ws_id):
@@ -141,7 +141,7 @@ def quick_parent_lookup(doi_results_map):
                 child_ws_list.append(ws_id)
         if parent_ws_id is None:
             # Raise an error should not be the case.  Means the WS data is incorrect
-            i = 1
+            raise ValueError("The data in doi_ws_map is not set up properly every doi must have 1 parent ws (even if no children).")
         for child_ws_id in child_ws_list:
             child_parent_ws_id_lookup[child_ws_id] = parent_ws_id
     return child_parent_ws_id_lookup
@@ -184,17 +184,17 @@ def determine_publication_unique_users_and_ws_ids(db, doi_results_map, copied_to
 #            continue
         doi_owners_usernames = doi_results_map[doi]["doi_owners"]
         for ws_id in doi_results_map[doi]["ws_ids"]:
-            print("DOI: " + doi)
-            print("WS ID BEING USED:" + str(ws_id))
+#            print("DOI: " + doi)
+#            print("WS ID BEING USED:" + str(ws_id))
             ws_genomes_to_track = dict()
             ws_genomes_to_track = get_genomes_for_ws(db, ws_id)
-            print("WS_GENOMES_TO_TRACK: " + str(ws_genomes_to_track))
+#            print("WS_GENOMES_TO_TRACK: " + str(ws_genomes_to_track))
             parent_ws_id = None
             if ws_id in child_parent_ws_id_lookup:
                 parent_ws_id = child_parent_ws_id_lookup[ws_id]
 
             all_copied_genomes_from_ws_list = grow_copied_list(copied_to_lookup_dict, [], ws_genomes_to_track)
-            print("ALL COPIED GENOMES LIST: " + str(all_copied_genomes_from_ws_list))
+#            print("ALL COPIED GENOMES LIST: " + str(all_copied_genomes_from_ws_list))
             for genome_copied in all_copied_genomes_from_ws_list:
                 (temp_copied_object_ws_id, temp) = genome_copied.split("/",1)
                 copied_object_ws_id = int(temp_copied_object_ws_id)
@@ -213,13 +213,26 @@ def determine_publication_unique_users_and_ws_ids(db, doi_results_map, copied_to
 
 #    print(str(child_parent_ws_id_lookup))
     return doi_results_map
-                                 
+
+def upload_publications_data(db_connection,doi_results_map):
+    prep_cursor = db_connection.cursor(prepared=True)
+    publication_metrics_insert_statement = (
+        "insert into metrics.publication_metrics "
+        "(ws_id, record_date, unique_users_count, unique_ws_ids_count) "
+        "values(%s, now(), %s, %s);"
+    )
+
+    for doi in doi_results_map:
+        for ws_id in doi_results_map[doi]["ws_ids"]:
+            unique_users_count = len(doi_results_map[doi]["ws_ids"][ws_id]["unique_users"])
+            unique_workspaces_count = len(doi_results_map[doi]["ws_ids"][ws_id]["unique_workspaces"])
+            input = (ws_id, unique_users_count, unique_workspaces_count)
+            prep_cursor.execute(publication_metrics_insert_statement, input)
+    db_connection.commit()
+    
 def get_publication_metrics():
     client = MongoClient(mongoDB_metrics_connection + to_workspace)
     db = client.workspace
-
-    copied_to_lookup_dict = build_copy_lookup(db)
-    ws_owners_lookup = get_workspace_owners(db)
 
     db_connection = mysql.connect(
         host=sql_host,  # "mysql1", #"localhost",
@@ -232,15 +245,38 @@ def get_publication_metrics():
     query = "use " + query_on
     cursor.execute(query)
 
+    # CHECK IF THIS WAS DONE THIS MONTH ALREADY. IT IS MEANT TO BE RUN ONCE PER MONTH (IDEALLY THE FIRST OF THE MONTH)
+    today = date.today()
+    current_month = str(today.year) + "-" + today.strftime("%m")
+
+    # NOTE THIS IS ONE OF THREE TABLES THAT NEED TO BE DELETED FROM IS RAN ON A SMALL SAMPLE OF WORKSPACES
+    # SO DO NOT HAVE DOUBLE ENTRIES IN THE SAME MONTH
+    # metrics.users_workspace_object_counts, metrics.workspace_object_counts, metrics.workspaces
+    query = "select DATE_FORMAT(max(record_date),'%Y-%m') from metrics.publication_metrics"
+    cursor.execute(query)
+    for db_date in cursor:
+        db_date_month = db_date[0]
+        if db_date_month == current_month:
+            print(
+                "THE PUBLICATION METRICS HAS BEEN RUN THIS MONTH. THE PROGRAM WILL EXIT"
+            )
+            exit()
+        else:
+            print("IT HAS NOT BEEN RUN THIS MONTH, WE WILL RUN THE PROGRAM")
+
+    copied_to_lookup_dict = build_copy_lookup(db)
+    ws_owners_lookup = get_workspace_owners(db)
+                                                                            
+    cursor = db_connection.cursor()
+    query = "use " + query_on
+    cursor.execute(query)
+
     doi_results_map = get_dois_and_narratives(cursor)
     doi_results_map = get_doi_owners_usernames(db, doi_results_map)
     doi_results_map = determine_publication_unique_users_and_ws_ids(db, doi_results_map, copied_to_lookup_dict, ws_owners_lookup)
-
-    print("FINAL MAP: " + str(doi_results_map))
-
-
-
-            
+    upload_publications_data(db_connection, doi_results_map)
+    
+#    print("FINAL MAP: " + str(doi_results_map))
             
 get_publication_metrics()
 
