@@ -169,7 +169,6 @@ def grow_copied_list(copied_to_lookup_dict, master_list, last_iteration_list):
         # no new copies time to return master list
 #        print("master list in else: " + str(master_list))
 #        return master_list
-            
 
 def determine_publication_unique_users_and_ws_ids(db, doi_results_map, copied_to_lookup_dict, ws_owners_lookup):
     """
@@ -214,20 +213,88 @@ def determine_publication_unique_users_and_ws_ids(db, doi_results_map, copied_to
 #    print(str(child_parent_ws_id_lookup))
     return doi_results_map
 
+def get_existing_unique_copied_workspaces(db_connection):
+    """
+    makes list of existing copied workspaces
+    """
+    publication_ws_copied_workspaces_map = dict()
+    cursor = db_connection.cursor()
+    get_publication_unique_workspaces_statement = ("select published_ws_id, copied_ws_id from metrics.publication_unique_workspaces;")
+    cursor.execute(get_publication_unique_workspaces_statement)
+    for row_values in cursor:
+        published_ws  = row_values[0]
+        copied_ws  = row_values[1]
+        if published_ws not in publication_ws_copied_workspaces_map:
+            publication_ws_copied_workspaces_map[published_ws] = list()
+        publication_ws_copied_workspaces_map[published_ws].append(copied_ws)
+    return publication_ws_copied_workspaces_map
+
+def get_existing_unique_copied_usernames(db_connection):
+    """
+    makes list of existing usernames that copied data
+    """
+    publication_ws_copied_usernames_map = dict()
+    cursor = db_connection.cursor()
+    get_publication_unique_usernames_statement = ("select published_ws_id, copied_username from metrics.publication_unique_usernames;")
+    cursor.execute(get_publication_unique_usernames_statement)
+    for row_values in cursor:
+        published_ws  = row_values[0]
+        copied_username  = row_values[1]
+        if published_ws not in publication_ws_copied_usernames_map:
+            publication_ws_copied_usernames_map[published_ws] = list()
+            publication_ws_copied_usernames_map[published_ws].append(copied_username)
+    return publication_ws_copied_usernames_map
+
 def upload_publications_data(db_connection,doi_results_map):
-    prep_cursor = db_connection.cursor(prepared=True)
+    """
+    performs inserts into 3 tables : publication_metrics, publication_unique_usernames, publication_unique_workspaces
+    """
+    exitsting_workpsaces_lookup = get_existing_unique_copied_workspaces(db_connection)
+    exitsting_usernames_lookup = get_existing_unique_copied_usernames(db_connection)
+
+    pm_prep_cursor = db_connection.cursor(prepared=True)
     publication_metrics_insert_statement = (
         "insert into metrics.publication_metrics "
         "(ws_id, record_date, unique_users_count, unique_ws_ids_count) "
         "values(%s, now(), %s, %s);"
     )
 
+    puw_prep_cursor = db_connection.cursor(prepared=True)
+    publications_unique_workspaces_insert_statement = (
+        "insert into metrics.publication_unique_workspaces "
+        "(published_ws_id, copied_ws_id, first_seen_date) "
+        "values( %s, %s, now()) ")
+
+    puu_prep_cursor = db_connection.cursor(prepared=True)
+    publications_unique_usernames_insert_statement = (
+        "insert into metrics.publication_unique_usernames "
+        "(published_ws_id, copied_username, first_seen_date) "
+        "values( %s, %s, now()) ")
+        
     for doi in doi_results_map:
         for ws_id in doi_results_map[doi]["ws_ids"]:
             unique_users_count = len(doi_results_map[doi]["ws_ids"][ws_id]["unique_users"])
             unique_workspaces_count = len(doi_results_map[doi]["ws_ids"][ws_id]["unique_workspaces"])
-            input = (ws_id, unique_users_count, unique_workspaces_count)
-            prep_cursor.execute(publication_metrics_insert_statement, input)
+            pm_input = (ws_id, unique_users_count, unique_workspaces_count)
+            pm_prep_cursor.execute(publication_metrics_insert_statement, pm_input)
+            for copied_ws_id in doi_results_map[doi]["ws_ids"][ws_id]["unique_workspaces"]:
+                needs_an_insert = False
+                if ws_id not in exitsting_workpsaces_lookup:
+                    needs_an_insert = True
+                elif copied_ws_id not in exitsting_workpsaces_lookup[ws_id]:
+                    needs_an_insert = True
+                if needs_an_insert:
+                    puw_input = (ws_id, copied_ws_id)
+                    puw_prep_cursor.execute(publications_unique_workspaces_insert_statement, puw_input)
+            for copied_username in doi_results_map[doi]["ws_ids"][ws_id]["unique_users"]:
+                needs_an_insert = False
+                if ws_id not in exitsting_usernames_lookup:
+                    needs_an_insert = True
+                elif copied_ws_id not in exitsting_usernames_lookup[ws_id]:
+                    needs_an_insert = True
+                if needs_an_insert:
+                    puu_input = (ws_id, copied_username)
+                    puu_prep_cursor.execute(publications_unique_usernames_insert_statement, puu_input)
     db_connection.commit()
     
 def get_publication_metrics():
