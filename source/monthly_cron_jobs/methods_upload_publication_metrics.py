@@ -135,10 +135,8 @@ def quick_parent_lookup(doi_results_map):
     return child_parent_ws_id_lookup
 
 def grow_copied_list(copied_to_lookup_dict, master_list, last_iteration_list):
-    """
-    grows the list of copied genomes for a WS
-    returns the master_list and next iteration list
-    """
+    #grows the list of copied genomes for a WS
+    #returns the master_list and next iteration list
     next_iteration_list = list()
 #    print("Last Iteration LIST:" + str(last_iteration_list))
     for genome_ws_obj_id in last_iteration_list:
@@ -159,10 +157,8 @@ def grow_copied_list(copied_to_lookup_dict, master_list, last_iteration_list):
 #        return master_list
 
 def determine_publication_unique_users_and_ws_ids(db, doi_results_map, copied_to_lookup_dict, ws_owners_lookup):
-    """
-    Populates the doi_results_map with the
-    unique set of users to ws_ids
-    """
+    #Populates the doi_results_map with the
+    #unique set of users to ws_ids
     child_parent_ws_id_lookup = quick_parent_lookup(doi_results_map)
     #ws_genomes_to_track = dict()
     for doi in doi_results_map:
@@ -202,9 +198,8 @@ def determine_publication_unique_users_and_ws_ids(db, doi_results_map, copied_to
     return doi_results_map
 
 def get_existing_unique_copied_workspaces(db_connection):
-    """
-    makes list of existing copied workspaces
-    """
+    #makes list of existing copied workspaces
+    
     publication_ws_copied_workspaces_map = dict()
     cursor = db_connection.cursor()
     get_publication_unique_workspaces_statement = ("select published_ws_id, copied_ws_id from metrics.publication_unique_workspaces;")
@@ -218,9 +213,7 @@ def get_existing_unique_copied_workspaces(db_connection):
     return publication_ws_copied_workspaces_map
 
 def get_existing_unique_copied_usernames(db_connection):
-    """
-    makes list of existing usernames that copied data
-    """
+    #makes list of existing usernames that copied data
     publication_ws_copied_usernames_map = dict()
     cursor = db_connection.cursor()
     get_publication_unique_usernames_statement = ("select published_ws_id, copied_username from metrics.publication_unique_usernames;")
@@ -234,9 +227,7 @@ def get_existing_unique_copied_usernames(db_connection):
     return publication_ws_copied_usernames_map
 
 def upload_publications_data(db_connection,doi_results_map):
-    """
-    performs inserts into 3 tables : publication_metrics, publication_unique_usernames, publication_unique_workspaces
-    """
+    #performs inserts into 3 tables : publication_metrics, publication_unique_usernames, publication_unique_workspaces
     exitsting_workpsaces_lookup = get_existing_unique_copied_workspaces(db_connection)
     exitsting_usernames_lookup = get_existing_unique_copied_usernames(db_connection)
 
