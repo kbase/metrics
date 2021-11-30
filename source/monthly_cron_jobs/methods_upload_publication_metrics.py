@@ -116,9 +116,8 @@ def get_genomes_for_ws(db, ws_id):
 
 
 def quick_parent_lookup(doi_results_map):
-    """
-    returns lookup of children WS to find the parent WS
-    """
+    #returns lookup of children WS to find the parent WS
+
     child_parent_ws_id_lookup = dict()
     for doi in doi_results_map:
         parent_ws_id = None
