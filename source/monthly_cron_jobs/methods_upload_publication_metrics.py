@@ -25,6 +25,7 @@ to_workspace = os.environ["WRK_SUFFIX"]
 def build_copy_lookup(db):
     """
     builds a dict of keys of source_object_id and values of set of copied_object_ids
+    This is the most time consuming part
     """
     copied_genome_count = 0
     copied_to_lookup_dict = dict()
@@ -33,8 +34,7 @@ def build_copy_lookup(db):
     for ws_obj_ver in ws_obj_vers_cursor:
         # check if it is a genome type
         object_type_full = ws_obj_ver["type"]
-        (object_type, object_spec_version) = object_type_full.split("-")
-        object_spec_version = "don nothing with this"
+        object_type = object_type_full.split("-")[0]
         if object_type != "KBaseGenomes.Genome":
             continue
         copied_genome_count += 1
@@ -115,8 +115,7 @@ def get_genomes_for_ws(db, ws_id):
     ws_objs_cursor = db.workspaceObjVersions.find({"ws":ws_id},{"type":1, "id":1, "ver":1,"_id":0})
     for ws_obj in ws_objs_cursor:
         full_obj_type = ws_obj["type"]
-        core_type,obj_type_ver = full_obj_type.split('-',1)
-        obj_type_ver = "Do nothing with this"
+        core_type = full_obj_type.split('-',1)[0]
         if core_type == "KBaseGenomes.Genome":
             obj_id = str(ws_id) + "/" + str(ws_obj["id"]) + "/" + str(ws_obj["ver"])
             genomes_to_check_copies_list.append(obj_id)
@@ -192,8 +191,7 @@ def determine_publication_unique_users_and_ws_ids(db, doi_results_map, copied_to
             all_copied_genomes_from_ws_list = grow_copied_list(copied_to_lookup_dict, [], ws_genomes_to_track)
 #            print("ALL COPIED GENOMES LIST: " + str(all_copied_genomes_from_ws_list))
             for genome_copied in all_copied_genomes_from_ws_list:
-                (temp_copied_object_ws_id, temp) = genome_copied.split("/",1)
-                temp = "Do nothing with this"
+                temp_copied_object_ws_id = genome_copied.split("/",1)[0]
                 copied_object_ws_id = int(temp_copied_object_ws_id)
 #                print("copied WS : " + str( copied_object_ws_id) + "  The copied owner lookup: " + str(ws_owners_lookup[copied_object_ws_id]))
                 if ws_owners_lookup[copied_object_ws_id] not in doi_owners_usernames:
@@ -294,7 +292,7 @@ def upload_publications_data(db_connection,doi_results_map):
                     puu_input = (ws_id, copied_username)
                     puu_prep_cursor.execute(publications_unique_usernames_insert_statement, puu_input)
     db_connection.commit()
-    
+
 def get_publication_metrics():
     client = MongoClient(mongoDB_metrics_connection + to_workspace)
     db = client.workspace

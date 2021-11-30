@@ -583,7 +583,7 @@ CREATE TABLE `user_orcid_count` (
 --#############################################################
 
 --# IN METRICS
-CREATE TABLE `doi_ws_map` (
+CREATE TABLE doi_ws_map (
   `doi_url` varchar(255) NOT NULL,
   `ws_id` int(11) NOT NULL,
   `title` varchar(255) DEFAULT NULL,
@@ -593,7 +593,7 @@ CREATE TABLE `doi_ws_map` (
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
 
 --# IN METRICS
-CREATE TABLE `publication_metrics` (
+CREATE TABLE publication_metrics (
   `ws_id` int(11) NOT NULL,
   `record_date` timestamp NOT NULL DEFAULT current_timestamp(),
   `unique_users_count` int(11) NOT NULL,
@@ -603,7 +603,7 @@ CREATE TABLE `publication_metrics` (
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
 --# IN METRICS
-CREATE TABLE `publication_unique_workspaces` (
+CREATE TABLE publication_unique_workspaces (
   `published_ws_id` int(11) NOT NULL,
   `copied_ws_id` int(11) NOT NULL,
   `first_seen_date` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -612,7 +612,7 @@ CREATE TABLE `publication_unique_workspaces` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
 --# IN METRICS
-CREATE TABLE `publication_unique_usernames` (
+CREATE TABLE publication_unique_usernames (
   `published_ws_id` int(11) NOT NULL,
   `copied_username` varchar(255) NOT NULL,
   `first_seen_date` timestamp NOT NULL DEFAULT current_timestamp(),
