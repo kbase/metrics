@@ -585,7 +585,7 @@ CREATE TABLE `user_orcid_count` (
 --# IN METRICS
 CREATE TABLE doi_ws_map (
   doi_url varchar(255) NOT NULL,
-  `ws_id` int(11) NOT NULL,
+  ws_id integer(11) NOT NULL,
   title varchar(255) DEFAULT NULL,
   is_parent_ws tinyint(1) NOT NULL DEFAULT 0,
   UNIQUE KEY uk_dwm_doi_ws (doi_url,ws_id),
@@ -604,7 +604,7 @@ CREATE TABLE publication_metrics (
 
 --# IN METRICS
 CREATE TABLE publication_unique_workspaces (
-  `published_ws_id` int(11) NOT NULL,
+  published_ws_id integer(11) NOT NULL,
   copied_ws_id int(11) NOT NULL,
   first_seen_date timestamp NOT NULL DEFAULT current_timestamp(),
   UNIQUE KEY uk_publication_metrics_ws_record_date (published_ws_id,copied_ws_id),

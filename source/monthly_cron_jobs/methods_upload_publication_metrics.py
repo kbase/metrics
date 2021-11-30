@@ -24,7 +24,6 @@ to_workspace = os.environ["WRK_SUFFIX"]
 
 def build_copy_lookup(db):
     """Build source to copy lookup
-
     builds a dict of keys of source_object_id and values of set of copied_object_ids
     #This is the most time consuming part
     """
@@ -67,7 +66,8 @@ def get_workspace_owners(db):
     return ws_owners_lookup
 
 def get_dois_and_narratives(cursor):
-    """creates a dict of DOIs as keys to values of a list of WS_IDS to look at.
+    """
+    creates a dict of DOIs as keys to values of a list of WS_IDS to look at.
     If the ws_id value list is a single element the DOI is associated with the WS_ID
     If the ws_id value list has multiple ws_ids the first ws_id is the parent organizining ws_id,
     the remainder in the list are childredn ws_ids.
@@ -105,9 +105,7 @@ def get_doi_owners_usernames(db, doi_results_map):
     return doi_results_map
 
 def get_genomes_for_ws(db, ws_id):
-    """
-    gets a list of ws_references from the passed WS_ID
-    """
+    #gets a list of ws_references from the passed WS_ID
     genomes_to_check_copies_list = list()
     ws_objs_cursor = db.workspaceObjVersions.find({"ws":ws_id},{"type":1, "id":1, "ver":1,"_id":0})
     for ws_obj in ws_objs_cursor:
