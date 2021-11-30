@@ -28,7 +28,6 @@ def build_copy_lookup(db):
     builds a dict of keys of source_object_id and values of set of copied_object_ids
     #This is the most time consuming part
     """
-
     copied_genome_count = 0
     copied_to_lookup_dict = dict()
 #    ws_obj_vers_cursor = db.workspaceObjVersions.find( {"copied" : {"$ne": null}},{"copied":1, "ws":1, "id":1, "ver":1, "type":1,"_id":0})
@@ -59,10 +58,7 @@ def build_copy_lookup(db):
     return copied_to_lookup_dict
 
 def get_workspace_owners(db):
-    """builds a dict of keys of ws_id and values of usernames who own that ws.
-
-    lookup is ws_id value is the owner username
-    """
+    #builds a dict of keys of ws_id and values of usernames who own that ws.
     ws_owners_lookup = dict()
     ws_cursor = db.workspaces.find({},{"ws":1, "owner":1, "_id":0})
     for ws_item in ws_cursor:
@@ -72,7 +68,6 @@ def get_workspace_owners(db):
 
 def get_dois_and_narratives(cursor):
     """creates a dict of DOIs as keys to values of a list of WS_IDS to look at.
-
     If the ws_id value list is a single element the DOI is associated with the WS_ID
     If the ws_id value list has multiple ws_ids the first ws_id is the parent organizining ws_id,
     the remainder in the list are childredn ws_ids.
@@ -97,10 +92,9 @@ def get_dois_and_narratives(cursor):
     return doi_results_map
 
 def get_doi_owners_usernames(db, doi_results_map):
-    """
-    creates a set of unique usernames associated with the DOI
-    Any copies and usernames will not be counted if they are part of that list.
-    """
+    #creates a set of unique usernames associated with the DOI
+    #Any copies and usernames will not be counted if they are part of that list.
+
     for doi in doi_results_map:
         for ws_id in doi_results_map[doi]["ws_ids"]:
             ws_perm_cursor = db.workspaceACLs.find({"id":ws_id},{"user":1, "perm":1, "_id":0})
@@ -345,5 +339,3 @@ def get_publication_metrics():
 #    print("FINAL MAP: " + str(doi_results_map))
 
 get_publication_metrics()
-
-    

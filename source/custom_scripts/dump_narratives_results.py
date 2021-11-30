@@ -9,8 +9,8 @@ metrics = os.environ["QUERY_ON"]
 
 
 def dump_narratives_results():
-    """Dumps the results from current narratives:
-    
+    """Dumps the results from current narratives
+
     It is a simple SQL table dump of a given query so we can supply users with custom tables.
     Note that the SQL query itself and column headers portion need to be changed if you want to change
     the query/results. Otherwise it is good to go.
