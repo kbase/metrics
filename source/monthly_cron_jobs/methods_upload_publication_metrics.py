@@ -23,7 +23,6 @@ query_on = os.environ["QUERY_ON"]
 to_workspace = os.environ["WRK_SUFFIX"]
 
 def build_copy_lookup(db):
-
     """Build source to copy lookup
 
     builds a dict of keys of source_object_id and values of set of copied_object_ids
@@ -60,8 +59,9 @@ def build_copy_lookup(db):
     return copied_to_lookup_dict
 
 def get_workspace_owners(db):
-    """
-    builds a dict of keys of ws_id and values of usernames who own that ws.
+    """builds a dict of keys of ws_id and values of usernames who own that ws.
+
+    lookup is ws_id value is the owner username
     """
     ws_owners_lookup = dict()
     ws_cursor = db.workspaces.find({},{"ws":1, "owner":1, "_id":0})
@@ -71,8 +71,8 @@ def get_workspace_owners(db):
     return ws_owners_lookup
 
 def get_dois_and_narratives(cursor):
-    """
-    creates a dict of DOIs as keys to values of a list of WS_IDS to look at.
+    """creates a dict of DOIs as keys to values of a list of WS_IDS to look at.
+
     If the ws_id value list is a single element the DOI is associated with the WS_ID
     If the ws_id value list has multiple ws_ids the first ws_id is the parent organizining ws_id,
     the remainder in the list are childredn ws_ids.
@@ -343,7 +343,7 @@ def get_publication_metrics():
     upload_publications_data(db_connection, doi_results_map)
 
 #    print("FINAL MAP: " + str(doi_results_map))
-            
+
 get_publication_metrics()
 
     
