@@ -23,10 +23,10 @@ query_on = os.environ["QUERY_ON"]
 to_workspace = os.environ["WRK_SUFFIX"]
 
 def build_copy_lookup(db):
-    """
-    builds a dict of keys of source_object_id and values of set of copied_object_ids
-    This is the most time consuming part
-    """
+
+    #builds a dict of keys of source_object_id and values of set of copied_object_ids
+    #This is the most time consuming part
+
     copied_genome_count = 0
     copied_to_lookup_dict = dict()
 #    ws_obj_vers_cursor = db.workspaceObjVersions.find( {"copied" : {"$ne": null}},{"copied":1, "ws":1, "id":1, "ver":1, "type":1,"_id":0})
@@ -338,7 +338,7 @@ def get_publication_metrics():
     doi_results_map = get_doi_owners_usernames(db, doi_results_map)
     doi_results_map = determine_publication_unique_users_and_ws_ids(db, doi_results_map, copied_to_lookup_dict, ws_owners_lookup)
     upload_publications_data(db_connection, doi_results_map)
-    
+
 #    print("FINAL MAP: " + str(doi_results_map))
             
 get_publication_metrics()

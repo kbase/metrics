@@ -10,14 +10,13 @@ metrics = os.environ["QUERY_ON"]
 
 def dump_narratives_results():
 
-    """
-    It is a simple SQL table dump of a given query so we can supply users with custom tables.
-    Note that the SQL query itself and column headers portion need to be changed if you want to change
-    the query/results. Otherwise it is good to go.
-    It can be called simply with the bin shell script.
-    Read the README at the top level for an example.
-    docker-compose run --rm metrics ../bin/custom_scripts/dump_query_results.sh > query_results.txt
-    """
+#    It is a simple SQL table dump of a given query so we can supply users with custom tables.
+#    Note that the SQL query itself and column headers portion need to be changed if you want to change
+#    the query/results. Otherwise it is good to go.
+#    It can be called simply with the bin shell script.
+#    Read the README at the top level for an example.
+#    docker-compose run --rm metrics ../bin/custom_scripts/dump_query_results.sh > query_results.txt
+
     # connect to mysql
     db_connection = mysql.connect(
         host=sql_host,  # "mysql1", #"localhost",
