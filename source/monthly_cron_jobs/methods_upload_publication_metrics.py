@@ -1,8 +1,5 @@
 from pymongo import MongoClient
 from pymongo import ReadPreference
-from biokbase.workspace.client import Workspace
-from biokbase.service.Client import Client as ServiceClient
-import json as _json
 import os
 import mysql.connector as mysql
 import requests
@@ -23,8 +20,6 @@ mongoDB_metrics_connection = os.environ["MONGO_PATH"]
 sql_host = os.environ["SQL_HOST"]
 query_on = os.environ["QUERY_ON"]
 
-ws_url = os.environ["WS_URL"]
-ws_user_token = os.environ["METRICS_WS_USER_TOKEN"]
 to_workspace = os.environ["WRK_SUFFIX"]
 
 def build_copy_lookup(db):
