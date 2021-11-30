@@ -329,7 +329,7 @@ def get_publication_metrics():
 
     copied_to_lookup_dict = build_copy_lookup(db)
     ws_owners_lookup = get_workspace_owners(db)
-                                                                            
+
     cursor = db_connection.cursor()
     query = "use " + query_on
     cursor.execute(query)
