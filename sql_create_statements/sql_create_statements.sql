@@ -1,5 +1,5 @@
-######################
-# user_info table create and indices.
+--######################
+--# user_info table create and indices.
 
 CREATE TABLE `user_info` (
   `username` varchar(255) NOT NULL,
@@ -51,8 +51,8 @@ CREATE INDEX idx_user_info_exclude ON metrics.user_info (exclude);
 
 
 
-######################
-# user_system_summary_stats table create, indices, unique constraint, and trigger
+--######################
+--# user_system_summary_stats table create, indices, unique constraint, and trigger
 
 CREATE TABLE user_system_summary_stats (
 	username VARCHAR(255) NOT NULL,  
@@ -66,7 +66,7 @@ CREATE TABLE user_system_summary_stats (
 	ON UPDATE CASCADE
 	ON DELETE RESTRICT) ENGINE=InnoDB DEFAULT CHARSET=utf8; 
 
-#	record_date DATE,
+--#	record_date DATE,
 
 CREATE UNIQUE INDEX uk_user_system_summary_stats_record_date
 ON user_system_summary_stats(username,record_date);
@@ -75,8 +75,8 @@ CREATE INDEX idx_user_system_summary_stats_username ON user_system_summary_stats
 
 CREATE INDEX idx_user_system_summary_stats_record_date ON user_system_summary_stats (record_date);
 
-#PROBABLY DONT NEED THIS SWITCHING RECORD DATE TO TIMESTAMP I THINK
-# Trigger that will put in current date for record date for any insert without a record_date (should be default insert behavior).
+--#PROBABLY DONT NEED THIS SWITCHING RECORD DATE TO TIMESTAMP I THINK
+--# Trigger that will put in current date for record date for any insert without a record_date (should be default insert behavior).
 DELIMITER $$
 CREATE TRIGGER `user_system_summary_stats_record_date_trigger` BEFORE INSERT ON `user_system_summary_stats` FOR EACH ROW
 if ( isnull(new.record_date) ) then
@@ -85,8 +85,8 @@ end if;
 $$
 delimiter ;
 
-######################
-#user_app_usage
+--######################
+--#user_app_usage
 
 
 CREATE TABLE `user_app_usage` (
@@ -149,8 +149,8 @@ CREATE INDEX idx_user_app_usage_git_commit_hash ON metrics.user_app_usage (git_c
 CREATE INDEX idx_user_app_usage_func_name ON metrics.user_app_usage (func_name);
 
 
-#####################
-#EE2 with CPU
+--#####################
+--#EE2 with CPU
 CREATE TABLE `user_app_usage_ee2_cpu` (
   `job_id` varchar(255) DEFAULT NULL,
   `username` varchar(255) NOT NULL,
@@ -179,8 +179,8 @@ CREATE TABLE `user_app_usage_ee2_cpu` (
 
 
 
-######################
-#EE2 with CPU
+--######################
+--#EE2 with CPU
 CREATE TABLE `user_app_usage_ee2_cpu` (
   `job_id` varchar(255) DEFAULT NULL,
   `username` varchar(255) NOT NULL,
@@ -208,7 +208,7 @@ CREATE TABLE `user_app_usage_ee2_cpu` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 
 
-# TABLE AFTER EE2 swap pver
+--# TABLE AFTER EE2 swap pver
 CREATE TABLE `user_app_usage` (
   `job_id` varchar(255) DEFAULT NULL,
   `username` varchar(255) NOT NULL,
@@ -237,18 +237,18 @@ CREATE TABLE `user_app_usage` (
 
 
 
-#################################
-# user_app_usage_old_app_catalog
-# THE OLD TABLE DATA THAT CAME FROM APP CATALOG. NOTE IT INCLUDES APP_DEV jobs.
-#
-# populated with
-# insert into metrics.user_app_usage_old_app_catalog
-# (job_id, username, app_name, start_date, finish_date,
-# run_time, queue_time, is_error, git_commit_hash, func_name)
-# select job_id, username, app_name, start_date, finish_date,
-# run_time, queue_time, is_error, git_commit_hash, func_name
-# from user_app_usage;
-#
+--#################################
+--# user_app_usage_old_app_catalog
+--# THE OLD TABLE DATA THAT CAME FROM APP CATALOG. NOTE IT INCLUDES APP_DEV jobs.
+--#
+--# populated with
+--# insert into metrics.user_app_usage_old_app_catalog
+--# (job_id, username, app_name, start_date, finish_date,
+--# run_time, queue_time, is_error, git_commit_hash, func_name)
+--# select job_id, username, app_name, start_date, finish_date,
+--# run_time, queue_time, is_error, git_commit_hash, func_name
+--# from user_app_usage;
+--#
 
 CREATE TABLE `user_app_usage_old_app_catalog` (
   `job_id` varchar(255) DEFAULT NULL,
@@ -274,8 +274,8 @@ CREATE TABLE `user_app_usage_old_app_catalog` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 
 
-######################
-#app_name_category_map
+--######################
+--#app_name_category_map
 
 CREATE TABLE app_name_category_map (
 	app_name VARCHAR(255) NOT NULL,
@@ -291,8 +291,8 @@ CREATE INDEX idx_app_name_category_map_app_name ON app_name_category_map (app_na
 CREATE INDEX idx_app_name_category_map_app_category ON app_name_category_map (app_category);
 
 
-#########################
-#public_narrative_count
+--#########################
+--#public_narrative_count
 
 CREATE TABLE public_narrative_count (
        public_narrative_count INTEGER NOT NULL,
@@ -304,8 +304,8 @@ ON public_narrative_count(public_narrative_count,record_date);
 
 
 
-#########################
-#session_info
+--#########################
+--#session_info
 
 CREATE or replace TABLE metrics.session_info (
         username VARCHAR(255) NOT NULL,
@@ -355,8 +355,8 @@ CREATE INDEX idx_session_info_estimated_hrs_active ON metrics.session_info(estim
 
 
 
-################################################
-# file_storage_stats
+--################################################
+--# file_storage_stats
 
 CREATE TABLE file_storage_stats (
     username VARCHAR(255) NOT NULL,
@@ -375,8 +375,8 @@ CREATE INDEX idx_file_storage_stats_username ON metrics.file_storage_stats(usern
 
 CREATE INDEX idx_file_storage_stats_record_date ON metrics.file_storage_stats(record_date);
 
-################################################
-# Blobstore stats
+--################################################
+--# Blobstore stats
 CREATE TABLE `blobstore_stats` (
   `username` varchar(255) NOT NULL,
   `record_date` date NOT NULL,
@@ -389,8 +389,8 @@ CREATE TABLE `blobstore_stats` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
-##################################################
-# workspaces
+--##################################################
+--# workspaces
 
 CREATE TABLE `workspaces` (
   `ws_id` int(11) NOT NULL,
@@ -430,8 +430,8 @@ CREATE TABLE `workspaces` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 
 
-############################################
-# workspace_object_types
+--############################################
+--# workspace_object_types
 
 CREATE OR REPLACE TABLE metrics.workspace_object_counts (
     object_type VARCHAR(255) NOT NULL,
@@ -471,8 +471,8 @@ CREATE INDEX idx_workspace_object_counts_proc ON metrics.workspace_object_counts
 
 
 
-############################################
-# users_workspace_object_types
+--############################################
+--# users_workspace_object_types
 
 CREATE OR REPLACE TABLE metrics.users_workspace_object_counts (
     object_type VARCHAR(255) NOT NULL,
@@ -511,8 +511,8 @@ CREATE INDEX idx_uworkspace_object_counts_puoc ON metrics.users_workspace_object
 CREATE INDEX idx_uworkspace_object_counts_proc ON metrics.users_workspace_object_counts (private_object_count);
 
 
-##################################################
-# Suspect shock nodes (initially for narratives, may have other objects down the line)
+--##################################################
+--# Suspect shock nodes (initially for narratives, may have other objects down the line)
 
 CREATE OR REPLACE TABLE `suspect_shock_nodes` (
   `ws_obj_reference` varchar(255) NOT NULL,
@@ -527,9 +527,9 @@ CREATE OR REPLACE TABLE `suspect_shock_nodes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
-#################################################
-# OUTREACH EVENT TRACKING
-# OUTREACH_EVENTS
+--#################################################
+--# OUTREACH EVENT TRACKING
+--# OUTREACH_EVENTS
 CREATE  or replace TABLE`outreach_events` (
   `outreach_event_name` varchar(255) NOT NULL,
   `event_date` date NOT NULL,
@@ -553,7 +553,7 @@ CREATE  or replace TABLE`outreach_events` (
   KEY `idx_oe_acategories` (`app_categories`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-# OUTREACH_EVENT_USERS
+--# OUTREACH_EVENT_USERS
 CREATE OR REPLACE TABLE	`outreach_event_users` (
   `outreach_event_name` varchar(255) NOT NULL,
   `username` varchar(255) NOT NULL,
@@ -568,8 +568,8 @@ CREATE OR REPLACE TABLE	`outreach_event_users` (
   ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-####################################################
-# User ORCID Counts
+--####################################################
+--# User ORCID Counts
 
 CREATE TABLE `user_orcid_count` (
   `user_orcid_count` int(11) NOT NULL,
@@ -577,11 +577,12 @@ CREATE TABLE `user_orcid_count` (
   UNIQUE KEY `uk_user_orcid_count_oid_record_date` (`user_orcid_count`,`record_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-#############################################################
-#  DOI PUBLICATION METRICS
-#############################################################
 
-# IN METRICS
+--#############################################################
+--#  DOI PUBLICATION METRICS
+--#############################################################
+
+--# IN METRICS
 CREATE TABLE `doi_ws_map` (
   `doi_url` varchar(255) NOT NULL,
   `ws_id` int(11) NOT NULL,
@@ -591,7 +592,7 @@ CREATE TABLE `doi_ws_map` (
   UNIQUE KEY `uk_doi_ws_map_ws_id` (`ws_id`)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
 
-# IN METRICS
+--# IN METRICS
 CREATE TABLE `publication_metrics` (
   `ws_id` int(11) NOT NULL,
   `record_date` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -601,7 +602,7 @@ CREATE TABLE `publication_metrics` (
   CONSTRAINT `fk_pubmet_ws_id` FOREIGN KEY (`ws_id`) REFERENCES `doi_ws_map` (`ws_id`) ON UPDATE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
-# IN METRICS
+--# IN METRICS
 CREATE TABLE `publication_unique_workspaces` (
   `published_ws_id` int(11) NOT NULL,
   `copied_ws_id` int(11) NOT NULL,
@@ -610,7 +611,7 @@ CREATE TABLE `publication_unique_workspaces` (
   CONSTRAINT `fk_puw_published_ws_id_id` FOREIGN KEY (`published_ws_id`) REFERENCES `doi_ws_map` (`ws_id`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
-# IN METRICS
+--# IN METRICS
 CREATE TABLE `publication_unique_usernames` (
   `published_ws_id` int(11) NOT NULL,
   `copied_username` varchar(255) NOT NULL,

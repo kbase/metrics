@@ -1,11 +1,11 @@
 from pymongo import MongoClient
-from pymongo import ReadPreference
+#from pymongo import ReadPreference
 import os
 import mysql.connector as mysql
 import requests
-import time
+#import time
 from datetime import date
-from datetime import datetime
+#from datetime import datetime
 
 # import pprint
 requests.packages.urllib3.disable_warnings()
@@ -25,7 +25,7 @@ to_workspace = os.environ["WRK_SUFFIX"]
 def build_copy_lookup(db):
     """
     builds a dict of keys of source_object_id and values of set of copied_object_ids
-    """    
+    """
     copied_genome_count = 0
     copied_to_lookup_dict = dict()
 #    ws_obj_vers_cursor = db.workspaceObjVersions.find( {"copied" : {"$ne": null}},{"copied":1, "ws":1, "id":1, "ver":1, "type":1,"_id":0})
@@ -34,10 +34,11 @@ def build_copy_lookup(db):
         # check if it is a genome type
         object_type_full = ws_obj_ver["type"]
         (object_type, object_spec_version) = object_type_full.split("-")
+        object_spec_version = "don nothing with this"
         if object_type != "KBaseGenomes.Genome":
             continue
         copied_genome_count += 1
-        full_obj_id_of_copy = str(ws_obj_ver["ws"]) + "/" + str(ws_obj_ver["id"]) + "/" + str(ws_obj_ver["ver"]) 
+        full_obj_id_of_copy = str(ws_obj_ver["ws"]) + "/" + str(ws_obj_ver["id"]) + "/" + str(ws_obj_ver["ver"])
         if ws_obj_ver["copied"] not in copied_to_lookup_dict:
             copied_to_lookup_dict[ws_obj_ver["copied"]] = list()
         copied_to_lookup_dict[ws_obj_ver["copied"]].append(full_obj_id_of_copy)
@@ -115,6 +116,7 @@ def get_genomes_for_ws(db, ws_id):
     for ws_obj in ws_objs_cursor:
         full_obj_type = ws_obj["type"]
         core_type,obj_type_ver = full_obj_type.split('-',1)
+        obj_type_ver = "Do nothing with this"
         if core_type == "KBaseGenomes.Genome":
             obj_id = str(ws_id) + "/" + str(ws_obj["id"]) + "/" + str(ws_obj["ver"])
             genomes_to_check_copies_list.append(obj_id)
@@ -167,8 +169,8 @@ def grow_copied_list(copied_to_lookup_dict, master_list, last_iteration_list):
 
 def determine_publication_unique_users_and_ws_ids(db, doi_results_map, copied_to_lookup_dict, ws_owners_lookup):
     """
-    Populates the doi_results_map with the 
-    unique set of users to ws_ids 
+    Populates the doi_results_map with the
+    unique set of users to ws_ids
     """
     child_parent_ws_id_lookup = quick_parent_lookup(doi_results_map)
     #ws_genomes_to_track = dict()
@@ -191,6 +193,7 @@ def determine_publication_unique_users_and_ws_ids(db, doi_results_map, copied_to
 #            print("ALL COPIED GENOMES LIST: " + str(all_copied_genomes_from_ws_list))
             for genome_copied in all_copied_genomes_from_ws_list:
                 (temp_copied_object_ws_id, temp) = genome_copied.split("/",1)
+                temp = "Do nothing with this"
                 copied_object_ws_id = int(temp_copied_object_ws_id)
 #                print("copied WS : " + str( copied_object_ws_id) + "  The copied owner lookup: " + str(ws_owners_lookup[copied_object_ws_id]))
                 if ws_owners_lookup[copied_object_ws_id] not in doi_owners_usernames:
@@ -265,7 +268,7 @@ def upload_publications_data(db_connection,doi_results_map):
         "insert into metrics.publication_unique_usernames "
         "(published_ws_id, copied_username, first_seen_date) "
         "values( %s, %s, now()) ")
-        
+
     for doi in doi_results_map:
         for ws_id in doi_results_map[doi]["ws_ids"]:
             unique_users_count = len(doi_results_map[doi]["ws_ids"][ws_id]["unique_users"])
