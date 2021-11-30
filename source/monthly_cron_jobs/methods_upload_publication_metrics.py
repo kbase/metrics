@@ -24,8 +24,11 @@ to_workspace = os.environ["WRK_SUFFIX"]
 
 def build_copy_lookup(db):
 
-    #builds a dict of keys of source_object_id and values of set of copied_object_ids
+    """Build source to copy lookup
+
+    builds a dict of keys of source_object_id and values of set of copied_object_ids
     #This is the most time consuming part
+    """
 
     copied_genome_count = 0
     copied_to_lookup_dict = dict()
