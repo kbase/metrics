@@ -1531,4 +1531,5 @@ on dwm.ws_id = pmc.ws_id
 left outer join metrics_reporting.unique_workspaces_with_pub_data uwp
 on  pmc.ws_id = uwp.published_ws_id
 left outer join metrics_reporting.unique_usernames_with_pub_data uup
-on  pmc.ws_id = uup.published_ws_id;
+on  pmc.ws_id = uup.published_ws_id
+order by dwm.doi_url, dwm.ws_id;
