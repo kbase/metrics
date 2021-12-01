@@ -1521,7 +1521,7 @@ select published_ws_id, group_concat(copied_username ORDER BY copied_username AS
 from metrics.publication_unique_usernames
 group by published_ws_id;
 
-create or replace view publication_metrics_current_full as
+create or replace view metrics_reporting.publication_metrics_current_full as
 select dwm.doi_url, dwm.ws_id, dwm.title, dwm.is_parent_ws,
 pmc.unique_users_count, pmc.unique_ws_ids_count,
 uup.usernames_using_data, uwp.ws_ids_using_data
