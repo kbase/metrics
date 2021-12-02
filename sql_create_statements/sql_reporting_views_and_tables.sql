@@ -1533,3 +1533,10 @@ on  pmc.ws_id = uwp.published_ws_id
 left outer join metrics_reporting.unique_usernames_with_pub_data uup
 on  pmc.ws_id = uup.published_ws_id
 order by dwm.doi_url, is_parent_ws desc, dwm.ws_id;
+
+create or replace view metrics.hv_doi_ws_with_children as
+select ws_id
+from metrics.doi_ws_map dwm inner join
+(select doi_url, count(*) as children_count from metrics.doi_ws_map group by doi_url having children_count > 1) as inner_map
+on dwm.doi_url = inner_map.doi_url
+where dwm.is_parent_ws = 1;
