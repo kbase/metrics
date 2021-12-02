@@ -303,12 +303,10 @@ def get_publication_metrics():
     for db_date in cursor:
         db_date_month = db_date[0]
         if db_date_month == current_month:
-            print(
-                "THE PUBLICATION METRICS HAS BEEN RUN THIS MONTH. THE PROGRAM WILL EXIT"
-            )
+            print("THE PUBLICATION METRICS HAS BEEN RUN THIS MONTH. THE PROGRAM WILL EXIT")
             exit()
         else:
-            print("IT HAS NOT BEEN RUN THIS MONTH, WE WILL RUN THE PROGRAM")
+            print("THE PUBLICATION METRICS HAS NOT BEEN RUN THIS MONTH, WE WILL RUN THE PROGRAM")
 
     copied_to_lookup_dict = build_copy_lookup(db)
     ws_owners_lookup = get_workspace_owners(db)

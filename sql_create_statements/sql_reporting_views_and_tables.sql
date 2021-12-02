@@ -1521,7 +1521,7 @@ select published_ws_id, group_concat(copied_username ORDER BY copied_username AS
 from metrics.publication_unique_usernames
 group by published_ws_id;
 
-create or replace view publication_metrics_current_full as
+create or replace view metrics_reporting.publication_metrics_current_full as
 select dwm.doi_url, dwm.ws_id, dwm.title, dwm.is_parent_ws,
 pmc.unique_users_count, pmc.unique_ws_ids_count,
 uup.usernames_using_data, uwp.ws_ids_using_data
@@ -1531,4 +1531,12 @@ on dwm.ws_id = pmc.ws_id
 left outer join metrics_reporting.unique_workspaces_with_pub_data uwp
 on  pmc.ws_id = uwp.published_ws_id
 left outer join metrics_reporting.unique_usernames_with_pub_data uup
-on  pmc.ws_id = uup.published_ws_id;
+on  pmc.ws_id = uup.published_ws_id
+order by dwm.doi_url, is_parent_ws desc, dwm.ws_id;
+
+create or replace view metrics.hv_doi_ws_with_children as
+select ws_id
+from metrics.doi_ws_map dwm inner join
+(select doi_url, count(*) as children_count from metrics.doi_ws_map group by doi_url having children_count > 1) as inner_map
+on dwm.doi_url = inner_map.doi_url
+where dwm.is_parent_ws = 1;
