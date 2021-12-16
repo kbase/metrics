@@ -593,30 +593,36 @@ CREATE TABLE doi_ws_map (
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
 
 --# IN METRICS
-CREATE TABLE publication_metrics (
+CREATE TABLE doi_metrics (
   ws_id int(11) NOT NULL,
   record_date timestamp NOT NULL DEFAULT current_timestamp(),
   unique_users_count int(11) NOT NULL,
   unique_ws_ids_count int(11) NOT NULL,
-  UNIQUE KEY uk_publication_metrics_ws_record_date (ws_id,record_date),
-  CONSTRAINT fk_pubmet_ws_id FOREIGN KEY (ws_id) REFERENCES doi_ws_map (ws_id) ON UPDATE CASCADE
+  UNIQUE KEY uk_doi_metrics_ws_record_date (ws_id,record_date),
+  CONSTRAINT fk_doimet_ws_id FOREIGN KEY (ws_id) REFERENCES doi_ws_map (ws_id) ON UPDATE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
 --# IN METRICS
-CREATE TABLE publication_unique_workspaces (
+CREATE TABLE doi_unique_workspaces (
   published_ws_id integer(11) NOT NULL,
   copied_ws_id int(11) NOT NULL,
   first_seen_date timestamp NOT NULL DEFAULT current_timestamp(),
-  UNIQUE KEY uk_publication_metrics_ws_record_date (published_ws_id,copied_ws_id),
-  CONSTRAINT fk_puw_published_ws_id_id FOREIGN KEY (published_ws_id) REFERENCES doi_ws_map (ws_id) ON UPDATE CASCADE
+  UNIQUE KEY uk_doi_metrics_ws_record_date (published_ws_id,copied_ws_id),
+  CONSTRAINT fk_duw_published_ws_id_id FOREIGN KEY (published_ws_id) REFERENCES doi_ws_map (ws_id) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
 --# IN METRICS
-CREATE TABLE publication_unique_usernames (
+CREATE TABLE doi_unique_usernames (
   `published_ws_id` int(11) NOT NULL,
   copied_username varchar(255) NOT NULL,
   first_seen_date timestamp NOT NULL DEFAULT current_timestamp(),
-  UNIQUE KEY uk_publication_metrics_un_record_date (published_ws_id,copied_username),
-  CONSTRAINT fk_puu_published_ws_id FOREIGN KEY (published_ws_id) REFERENCES doi_ws_map (ws_id) ON UPDATE CASCADE,
-  CONSTRAINT fk_puu_published_username FOREIGN KEY (copied_username) REFERENCES user_info (username) ON UPDATE CASCADE
+  UNIQUE KEY uk_doi_metrics_un_record_date (published_ws_id,copied_username),
+  CONSTRAINT fk_duu_published_ws_id FOREIGN KEY (published_ws_id) REFERENCES doi_ws_map (ws_id) ON UPDATE CASCADE,
+  CONSTRAINT fk_duu_published_username FOREIGN KEY (copied_username) REFERENCES user_info (username) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+--# IN METRICS
+CREATE TABLE metrics.downloader_apps (
+  downloader_app_name varchar(255) NOT NULL,
+  UNIQUE KEY uk_downloader_apps_name (downloader_app_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
