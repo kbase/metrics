@@ -1,8 +1,5 @@
 import os
-import requests
-import pandas as pd
 import mysql.connector as mysql
-from biokbase.catalog.Client import Catalog
 from biokbase.narrative_method_store.client import NarrativeMethodStore
 
 metrics_mysql_password = os.environ["METRICS_MYSQL_PWD"]
@@ -53,8 +50,8 @@ def upload_downloader_apps():
 
     for current_downloader_app in current_downloader_apps:
         if current_downloader_app not in existing_downloaders_list:
-            input = (current_downloader_app,)
-            insert_prep_cursor.execute(insert_statement, input)
+            input_args = (current_downloader_app,)
+            insert_prep_cursor.execute(insert_statement, input_args)
             insert_count += 1
     db_connection.commit()
     print("Existing_count : " + str(existing_count))
