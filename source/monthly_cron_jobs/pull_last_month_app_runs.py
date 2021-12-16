@@ -3,13 +3,11 @@
 import requests
 import os
 #import datetime, time, timedelta
-from datetime import date, timedelta, time
-import mysql.connector as mysql
+from datetime import date, timedelta, datetime
 
 from biokbase.narrative_method_store.client import NarrativeMethodStore
-import biokbase.narrative.clients as clients
-#import datetime
-from datetime import datetime
+#import biokbase.narrative.clients as clients
+#from datetime import datetime
 from installed_clients.execution_engine2Client import execution_engine2
 
 requests.packages.urllib3.disable_warnings()
