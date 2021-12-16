@@ -1500,37 +1500,37 @@ and ua.is_error = 0;
 
 #*********************************************************
 #
-# Publication narratives
-CREATE OR REPLACE VIEW metrics_reporting.publication_metrics_current as
+# DOI Metrics
+CREATE OR REPLACE VIEW metrics_reporting.doi_metrics_current as
 select pm.*
 from (
 select max(m_rdate.record_date) as maxdate, m_rdate.ws_id as max_rdate_ws_id
-from metrics.publication_metrics m_rdate
+from metrics.doi_metrics m_rdate
 group by m_rdate.ws_id) as max_date_ws_id
-inner join metrics.publication_metrics pm
+inner join metrics.doi_metrics pm
 on pm.record_date = max_date_ws_id.maxdate
 and pm.ws_id = max_date_ws_id.max_rdate_ws_id;
 
-create or replace view metrics_reporting.unique_workspaces_with_pub_data as
+create or replace view metrics_reporting.unique_workspaces_with_doi_data as
 select published_ws_id, group_concat(copied_ws_id ORDER BY copied_ws_id ASC SEPARATOR ', ') as ws_ids_using_data
-from metrics.publication_unique_workspaces
+from metrics.doi_unique_workspaces
 group by published_ws_id;
 
-create or replace view metrics_reporting.unique_usernames_with_pub_data as
+create or replace view metrics_reporting.unique_usernames_with_doi_data as
 select published_ws_id, group_concat(copied_username ORDER BY copied_username ASC SEPARATOR ', ') as usernames_using_data
-from metrics.publication_unique_usernames
+from metrics.doi_unique_usernames
 group by published_ws_id;
 
-create or replace view metrics_reporting.publication_metrics_current_full as
+create or replace view metrics_reporting.doi_metrics_current_full as
 select dwm.doi_url, dwm.ws_id, dwm.title, dwm.is_parent_ws,
 pmc.unique_users_count, pmc.unique_ws_ids_count,
 uup.usernames_using_data, uwp.ws_ids_using_data
 from metrics.doi_ws_map dwm inner join
-metrics_reporting.publication_metrics_current pmc
+metrics_reporting.doi_metrics_current pmc
 on dwm.ws_id = pmc.ws_id
-left outer join metrics_reporting.unique_workspaces_with_pub_data uwp
+left outer join metrics_reporting.unique_workspaces_with_doi_data uwp
 on  pmc.ws_id = uwp.published_ws_id
-left outer join metrics_reporting.unique_usernames_with_pub_data uup
+left outer join metrics_reporting.unique_usernames_with_doi_data uup
 on  pmc.ws_id = uup.published_ws_id
 order by dwm.doi_url, is_parent_ws desc, dwm.ws_id;
 
