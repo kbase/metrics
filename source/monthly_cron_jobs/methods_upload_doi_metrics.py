@@ -222,13 +222,13 @@ def get_existing_unique_copied_usernames(db_connection):
         copied_username  = row_values[1]
         if published_ws not in publication_ws_copied_usernames_map:
             publication_ws_copied_usernames_map[published_ws] = list()
-            publication_ws_copied_usernames_map[published_ws].append(copied_username)
+        publication_ws_copied_usernames_map[published_ws].append(copied_username)
     return publication_ws_copied_usernames_map
 
 def upload_publications_data(db_connection,doi_results_map):
     #performs inserts into 3 tables : publication_metrics, publication_unique_usernames, publication_unique_workspaces
-    exitsting_workpsaces_lookup = get_existing_unique_copied_workspaces(db_connection)
-    exitsting_usernames_lookup = get_existing_unique_copied_usernames(db_connection)
+    existing_workspaces_lookup = get_existing_unique_copied_workspaces(db_connection)
+    existing_usernames_lookup = get_existing_unique_copied_usernames(db_connection)
 
     pm_prep_cursor = db_connection.cursor(prepared=True)
     publication_metrics_insert_statement = (
@@ -257,18 +257,18 @@ def upload_publications_data(db_connection,doi_results_map):
             pm_prep_cursor.execute(publication_metrics_insert_statement, pm_input)
             for copied_ws_id in doi_results_map[doi]["ws_ids"][ws_id]["unique_workspaces"]:
                 needs_an_insert = False
-                if ws_id not in exitsting_workpsaces_lookup:
+                if ws_id not in existing_workspaces_lookup:
                     needs_an_insert = True
-                elif copied_ws_id not in exitsting_workpsaces_lookup[ws_id]:
+                elif copied_ws_id not in existing_workspaces_lookup[ws_id]:
                     needs_an_insert = True
                 if needs_an_insert:
                     puw_input = (ws_id, copied_ws_id)
                     puw_prep_cursor.execute(publications_unique_workspaces_insert_statement, puw_input)
             for copied_username in doi_results_map[doi]["ws_ids"][ws_id]["unique_users"]:
                 needs_an_insert = False
-                if ws_id not in exitsting_usernames_lookup:
+                if ws_id not in existing_usernames_lookup:
                     needs_an_insert = True
-                elif copied_ws_id not in exitsting_usernames_lookup[ws_id]:
+                elif copied_username not in existing_usernames_lookup[ws_id]:
                     needs_an_insert = True
                 if needs_an_insert:
                     puu_input = (ws_id, copied_username)
