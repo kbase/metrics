@@ -78,6 +78,7 @@ def get_workspaces(db, static_narrative_counts):
                 "number_of_shares": 0,
                 "num_nar_obj_ids": 0,
                 "static_narrative_count": 0,
+                "unique_object_types_count": 0,
             }
             #See if it has static narratives, populate if it does.
             if record["ws"] in static_narrative_counts:
@@ -280,7 +281,8 @@ def get_objects(db, workspaces_dict, kbase_staff):
         print("PROCESSING WS : " + str(ws_id) + " : " + str(datetime.now()))
         is_narrative = False
         narrative_object_id = None
-
+        unique_object_types = set()
+        
         if workspaces_dict[ws_id]["is_deleted"] == 0:
             # DOES ANOTHER CHECK SINCE JOB RUNS SO LONG TO INSURE WS is still NOT DELETED
             workspaces_cursor = db.workspaces.find({"ws": ws_id}, {"del": 1, "_id": 0})
@@ -324,6 +326,8 @@ def get_objects(db, workspaces_dict, kbase_staff):
         for ws_obj_ver in ws_obj_vers_cursor:
             object_type_full = ws_obj_ver["type"]
             (object_type, object_spec_version) = object_type_full.split("-")
+            if (object_tpe != "KBaseNarrative.Narrative" and object_type != "KBaseReport.Report"):
+                unique_object_types.add(object_type)
             obj_id = ws_obj_ver["id"]
             if obj_id not in top_level_lookup_dict:
                 #FOR Workspaces growing in size while processing the workspace
@@ -577,6 +581,7 @@ def get_objects(db, workspaces_dict, kbase_staff):
                             "private_object_count"
                         ] += 1
         workspaces_dict[ws_id]["num_nar_obj_ids"] = len(narr_obj_ids)
+        workspaces_dict[ws_id]["unique_object_types_count"] = len(unique_object_types)
         workspaces_dict[ws_id]["initial_save_date"] = min_save_date
     return (
         workspaces_dict,
@@ -662,8 +667,8 @@ def upload_workspace_stats():
         "hidden_object_count, deleted_object_count, "
         "total_size, top_lvl_size, is_public, "
         "is_temporary, is_deleted, number_of_shares, "
-        "num_nar_obj_ids, static_narratives_count) "
-        "values(%s,%s, %s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+        "num_nar_obj_ids, static_narratives_count,unique_object_types_count) "
+        "values(%s,%s, %s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
     )
 
     for ws_id in sorted(workspaces_dict.keys()):
@@ -687,6 +692,7 @@ def upload_workspace_stats():
             workspaces_dict[ws_id]["number_of_shares"],
             workspaces_dict[ws_id]["num_nar_obj_ids"],
             workspaces_dict[ws_id]["static_narrative_count"],
+            workspaces_dict[ws_id]["unique_object_types_count"],
         )
         prep_cursor.execute(workspaces_insert_statement, input)
 
