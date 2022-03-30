@@ -91,7 +91,7 @@ def pull_downloading_jobs(downloaders_set):
     print("End :" + str(end))
     print("Prev Month Begin :" + str(prev_month_begin))
     begin = prev_month_begin
-    
+
     # See if there new doi workspaces and get their minimum data
     min_new_doi_ws_date = get_minimum_date_for_new_doi_workspaces(cursor)
     print("Returned min_new_doi_ws_date : " + str(min_new_doi_ws_date))
