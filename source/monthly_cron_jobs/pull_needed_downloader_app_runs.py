@@ -62,9 +62,7 @@ def get_minimum_date_for_new_doi_workspaces(cursor):
         min_new_doi_ws_date = row_values[0]
     print("MIN NEW DOI WS DATE:" + str(min_new_doi_ws_date))
     return min_new_doi_ws_date
-    
 
-    
 def get_downloaders_set():
     #returns a set of downloadwer apps
     query = "select downloader_app_name, 1 from metrics.downloader_apps";
@@ -75,7 +73,6 @@ def get_downloaders_set():
     print(str(downloaders_set))
     return downloaders_set
 
-
 def pull_downloading_jobs(downloaders_set):
     # get first day of the month:
     # first_of_this_month = datetime.today().replace(day=1)
@@ -84,7 +81,7 @@ def pull_downloading_jobs(downloaders_set):
     print(str(first_of_this_month))
     last_day_of_prev_month = first_of_this_month.replace(day=1) - timedelta(days=1)
     first_of_previous_month = date.today().replace(day=1) - timedelta(days=last_day_of_prev_month.day)
-    first_of_previous_month_begin = int(first_of_previous_month.strftime("%s")) * 1000
+#    first_of_previous_month_begin = int(first_of_previous_month.strftime("%s")) * 1000
 
     #first_of_previous_month = datetime(first_of_previous_month).replace(hour=0, minute=0, second=0, microsecond=0)
     print(str(first_of_this_month))
@@ -133,7 +130,7 @@ def pull_downloading_jobs(downloaders_set):
                         for param in job["job_input"]['params']:
                             if "input_ref" in param:
                                 ws_obj_id = param["input_ref"]
-                    if ws_obj_id is not None: 
+                    if ws_obj_id is not None:
                         #job_id = job["job_id"]
                         username = job["user"]
                         if ws_obj_id not in downloader_results:
