@@ -102,7 +102,7 @@ def pull_downloading_jobs(downloaders_set):
             begin =  min_new_doi_ws_epoch
 #    begin = 0  # IF need to populate for all time.
     print("begin to be used : " + str(begin))
-    
+
     params = {"start_time": begin, "end_time": end, "ascending": 0, "limit": 1000000000}
     stats = ee2.check_jobs_date_range_for_all(params=params)
 
@@ -111,7 +111,7 @@ def pull_downloading_jobs(downloaders_set):
     downloaders_count = 0
     downloaders_with_ws_id_count = 0
     in_if_count = 0
-    
+
     downloader_results = dict()
     ws_ids_with_multiple = list()
     for job in stats["jobs"]:
