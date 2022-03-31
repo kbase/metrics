@@ -413,6 +413,7 @@ CREATE TABLE `workspaces` (
   `number_of_shares` int(11) NOT NULL DEFAULT '0',
   `num_nar_obj_ids` int(6) NOT NULL DEFAULT '0',
   `static_narratives_count` int(6) NOT NULL DEFAULT '0',
+  `unique_object_types_count` int(11) DEFAULT 0,
   UNIQUE KEY `uk_ws_user_rd_workspaces` (`ws_id`,`username`,`record_date`),
   KEY `idx_workspaces_ws_id` (`ws_id`),
   KEY `idx_workspaces_user` (`username`),

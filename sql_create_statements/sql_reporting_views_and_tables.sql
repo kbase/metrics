@@ -721,9 +721,43 @@ group by func_name);
 
 #IN METRICS_REPORTING
 create or replace view metrics_reporting.new_apps_first_run_month as
-(select DATE_FORMAT(`first_run`,'%Y-%m') as first_run_month, count(*)
+(select DATE_FORMAT(`first_run`,'%Y-%m') as first_run_month, count(*) as app_count
 from metrics.hv_new_apps_first_run
 group by first_run_month);
+
+#IN METRICS
+create or replace view metrics.hv_new_apps_categories_first_run as
+(select uau.app_name, IFNULL(app_category, "No Category Association") as app_cat, min(finish_date) as first_run
+from metrics.user_app_usage uau left outer join
+metrics.app_name_category_map anm on uau.app_name = anm.app_name
+group by uau.app_name, app_cat);
+
+#USERS ONLY VERSION:
+#IN METRICS
+create or replace view metrics.hv_new_apps_first_run_users_only as
+(select func_name, min(finish_date) as first_run
+from metrics.user_app_usage uau inner join 
+metrics.user_info ui on uau.username = ui.username
+where kb_internal_user = 0
+group by func_name);
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.new_apps_first_run_month_users_only as
+(select DATE_FORMAT(`first_run`,'%Y-%m') as first_run_month, count(*) as app_count
+from metrics.hv_new_apps_first_run_users_only
+group by first_run_month);
+
+#IN METRICS
+create or replace view metrics.hv_new_apps_categories_first_run_users_only as
+(select uau.app_name, IFNULL(app_category, "No Category Association") as app_cat, min(finish_date) as first_run
+from metrics.user_app_usage uau inner join 
+metrics.user_info ui on uau.username = ui.username
+left outer join 
+metrics.app_name_category_map anm on uau.app_name = anm.app_name
+where kb_internal_user = 0
+group by uau.app_name, app_cat);
+
+
 
 --------------------------------------------
 #NEW APPS GIT COMMIT HASH BEING RUN THE FIRST TIME (monthly counts)
