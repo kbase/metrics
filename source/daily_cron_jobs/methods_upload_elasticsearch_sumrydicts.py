@@ -218,50 +218,11 @@ def make_user_activity_dict(data, ip, user):
 
         
     # If an Ip error tag appears in the data, we need to separate the dictionaries to data without ip errors and those with
+    tag = "nan"
     if "tags" in data.columns:
         tag = str(list(data.tags)[0])
         
-        if tag == "nan":
-            user_activity_dictionary = {
-                "username": user,
-                "date": date,
-                "hours_on_system": hours,
-                "last_seen": latest_seen,
-                "first_seen": earliest_seen,
-                "ip_address": ip,
-                "country_name": list(data["country_name"])[0],
-                "country_code": list(data["country_code"])[0],
-                "region_name": region_name,
-                "region_code": region_code,
-                "city": city_name,
-                "postal_code": postal_code,
-                "timezone": list(data["timezone"])[0],
-                "latitude": list(data["latitude"])[0],
-                "longitude": list(data["longitude"])[0],
-                "host_ip": list(data["host"])[0],
-            }
-
-        else:
-            user_activity_dictionary = {
-                "username": user,
-                "date": date,
-                "hours_on_system": hours,
-                "last_seen": latest_seen,
-                "first_seen": earliest_seen,
-                "ip_address": tag,
-                "host_ip": list(data["host"])[0],
-                "country_name": tag,
-                "country_code": tag,
-                "region_name": tag,
-                "region_code": tag,
-                "city": tag,
-                "postal_code": tag,
-                "timezone": tag,
-                "latitude": None,
-                "longitude": None,
-            }
-
-    else:
+    if tag == "nan":
         user_activity_dictionary = {
             "username": user,
             "date": date,
@@ -279,6 +240,26 @@ def make_user_activity_dict(data, ip, user):
             "latitude": list(data["latitude"])[0],
             "longitude": list(data["longitude"])[0],
             "host_ip": list(data["host"])[0],
+        }
+
+    else:
+        user_activity_dictionary = {
+            "username": user,
+            "date": date,
+            "hours_on_system": hours,
+            "last_seen": latest_seen,
+            "first_seen": earliest_seen,
+            "ip_address": tag,
+            "host_ip": list(data["host"])[0],
+            "country_name": tag,
+            "country_code": tag,
+            "region_name": tag,
+            "region_code": tag,
+            "city": tag,
+            "postal_code": tag,
+            "timezone": tag,
+            "latitude": None,
+            "longitude": None,
         }
 
     # deal with fields that often come back as nan (not a number is tyoe float)
