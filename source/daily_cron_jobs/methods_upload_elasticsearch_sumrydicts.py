@@ -119,9 +119,11 @@ def elasticsearch_pull(start_date, end_date):
     
     # Return results of elastic query and format data to dictionary structures
     results = retrieve_elastic_response(epoch_start, epoch_end)
-    #    import pprint
-    #    pp = pprint.PrettyPrinter(indent=4)
-    #    pp.pprint(results)
+#################################
+#    import pprint
+#    pp = pprint.PrettyPrinter(indent=4)
+#    pp.pprint(results)
+#################################
     data_array = results_to_formatted_dicts(results)
     
     # Get relative size of data and initiate values
@@ -193,11 +195,32 @@ def make_user_activity_dict(data, ip, user):
         user = user[:-2]+"_"
     user = user.replace("-", "_")
     user_activity_dictionary = dict()
+
+    if "region_name" not in data:
+        region_name = "0"
+    else:
+        region_name = list(data["region_name"])[0]
+
+    if "region_code" not in data:
+        region_code = "0"
+    else:
+        region_code = list(data["region_code"])[0]
+
+    if "city_name" not in data:
+        city_name = "0"
+    else:
+        city_name = list(data["city_name"])[0]
+
+    if "postal_code" not in data:
+        postal_code = "0"
+    else:
+        postal_code = list(data["postal_code"])[0]
+
+        
     # If an Ip error tag appears in the data, we need to separate the dictionaries to data without ip errors and those with
     if "tags" in data.columns:
-
         tag = str(list(data.tags)[0])
-
+        
         if tag == "nan":
             user_activity_dictionary = {
                 "username": user,
@@ -208,10 +231,10 @@ def make_user_activity_dict(data, ip, user):
                 "ip_address": ip,
                 "country_name": list(data["country_name"])[0],
                 "country_code": list(data["country_code"])[0],
-                "region_name": list(data["region_name"])[0],
-                "region_code": list(data["region_code"])[0],
-                "city": list(data["city_name"])[0],
-                "postal_code": list(data["postal_code"])[0],
+                "region_name": region_name,
+                "region_code": region_code,
+                "city": city_name,
+                "postal_code": postal_code,
                 "timezone": list(data["timezone"])[0],
                 "latitude": list(data["latitude"])[0],
                 "longitude": list(data["longitude"])[0],
@@ -248,10 +271,10 @@ def make_user_activity_dict(data, ip, user):
             "ip_address": ip,
             "country_name": list(data["country_name"])[0],
             "country_code": list(data["country_code"])[0],
-            "region_name": list(data["region_name"])[0],
-            "region_code": list(data["region_code"])[0],
-            "city": list(data["city_name"])[0],
-            "postal_code": list(data["postal_code"])[0],
+            "region_name": region_name,
+            "region_code": region_code,
+            "city": city_name,
+            "postal_code": postal_code,
             "timezone": list(data["timezone"])[0],
             "latitude": list(data["latitude"])[0],
             "longitude": list(data["longitude"])[0],

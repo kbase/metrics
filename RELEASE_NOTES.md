@@ -1,3 +1,6 @@
+#2022-05-13
+    * Had to do default values for new session info issue where keys did not exist
+
 #2020-06-19
     * Added user_id to user info, backfilling and uploading
 
