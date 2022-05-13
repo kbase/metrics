@@ -43,6 +43,37 @@ source/upload_public_narratives_count.py
 source/make_reporting_tables.py
 
 
+-------------------
+
+CRON Jobs are run from mysql-metrics
+
+They are stored at: crontab -e on mysql-metrics
+
+There are nightly CRON jobs that get run are located in bin/master_cron_shell.sh
+which runs scripts from the source/daily directory
+
+Then there are also monthly CRON jobs that get run are located in bin/upload_workspace_stats.sh
+It used to be workspaces (user info needed first for FK potential issues), but now it also conatins scripts for
+DOI metrics.)
+Runs scripts from source/monthly directory
+
+
+These create Logs to keep track of (note nightly metrics is calling master_cron_shell
+01 17 * * * /root/metrics/nightly_metrics.sh >>/mnt/metrics_logs/crontab 2>&1
+01 0  1 * * /root/metrics/monthly_metrics.sh >>/mnt/metrics_logs/crontab_monthl 2>&1
+01 07 * * * /root/metrics/nightly_errorlogs.sh >>/mnt/metrics_logs/crontab_errorlogs 2>&1
+
+From Docker03 the logs can be checked by going doing the following. (Note no y at end of monthly)
+cat /mnt/nfs3/data1/metrics/crontab_logs/crontab
+cat /mnt/nfs3/data1/metrics/crontab_logs/crontab_monthl
+
+Can also confirm things ran by looking in the database (if not need to do backfills).
+Example: (should be first of each month)
+select DATE_FORMAT(`record_date`,'%Y-%m') as narrative_cron_month, count(*) as narrative_count from metrics.workspaces ws group by narrative_cron_month;
+
+For elastic Search session information: (this is daily numbers)
+select record_date, count(*) from session_info group by record_date;
+
 
 --------------------
 **Note on old contents**
