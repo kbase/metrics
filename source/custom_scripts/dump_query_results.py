@@ -49,7 +49,7 @@ def dump_query_results():
     #    HEADERS FOR user_super_summary
     print(
         "username\tdisplay_name\temail\tkb_internal_user\tuser_id\tglobus_login\tgoogle_login\torcid\tsession_info_country\tcountry\tstate\t"
-        "institution\tdepartment\tjob_title\thow_u_hear_selected\thow_u_hear_other\tsignup_date\tlast_signin_date\tdays_signin_minus_signup\t"
+        "institution\tdepartment\tjob_title\thow_u_hear_selected\thow_u_hear_other\tdev_token_first_seen\tsignup_date\tlast_signin_date\tdays_signin_minus_signup\t"
         "days_since_last_signin\tnum_orgs\tnarrative_count\tshared_count\tnarratives_shared\tfirst_narrative_made_date\tlast_narrative_made_date\t"
         "last_narrative_modified_date\ttotal_narrative_objects_count\ttop_lvl_narrative_objects_count\ttotal_narrative_objects_size\t"
         "top_lvl_narrative_objects_size\ttotal_narrative_count\ttotal_public_narrative_count\tdistinct_static_narratives_count\t"

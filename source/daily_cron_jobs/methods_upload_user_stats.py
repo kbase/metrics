@@ -27,6 +27,19 @@ _CT = "content-type"
 _AJ = "application/json"
 
 
+def get_dev_token_users_from_mongo():
+    """ get auth2 list of users with dev_tokens """
+
+    client_auth2 = MongoClient(mongoDB_metrics_connection + to_auth2)
+    db_auth2 = client_auth2.auth2
+
+    dev_users_list = list()
+    dev_token_users_query = db_auth2.users.find({"roles": "DevToken"},{"user":1, "email":1, "_id":0})
+    for record in dev_token_users_query:
+        dev_users_list.append(record["user"])
+    client_auth2.close()
+    return dev_users_list
+
 def get_user_info_from_auth2():
     """ get auth2 info and kbase_internal_users. Creates initial dict for the data. """
 
@@ -596,6 +609,39 @@ def upload_user_data(user_stats_dict):
     print("Number of new users info inserted:" + str(new_user_info_count))
     print("Number of users updated:" + str(users_info_updated_count))
 
+    dev_tokens_users = get_dev_token_users_from_mongo()
+    #print("dev_tokens_users: " + str(dev_tokens_users))
+
+    ####################
+    # TRIED DO UPDATE WITH PASSED LIST NONE OF THIS WORKED
+    # HAD To build up the entire string
+    #    update_new_dev_tokens_statement = (
+    #        "update user_info set dev_token_first_seen = now() "
+    #        "where dev_token_first_seen is null and "
+    #        "username in (%s)"
+    #        )
+    #    sql_params = ",".join(dev_tokens_users)
+    #    sql_params = (dev_tokens_users,)
+    #    sql_params = ([str(dev_tokens_users)])
+    #    cursor.execute(update_new_dev_tokens_statement, [sql_params])
+    #    cursor.execute("update user_info set dev_token_first_seen = now() "
+    #                   "where dev_token_first_seen is null and "
+    #                   "username in (%s)" % ', '.join('?' * len(dev_tokens_users)), dev_tokens_users)
+    #    update_new_dev_tokens_statement = (
+    #        "update user_info set dev_token_first_seen = now() "
+    #        "where dev_token_first_seen is null and "
+    #        "username in (%s)" % ', '.join('?' * len(dev_tokens_users)), dev_tokens_users
+    #        )
+    #    cursor.execute("SELECT foo.y FROM foo WHERE foo.x in (%s)" % ', '.join('?' * len(s)), s)
+    dev_tokens_string = "', '".join(dev_tokens_users)
+    update_new_dev_tokens_statement = (
+        "update user_info set dev_token_first_seen = now() "
+        "where dev_token_first_seen is null and "
+        "username in ('" + dev_tokens_string + "')"
+        )
+    cursor.execute(update_new_dev_tokens_statement)
+    db_connection.commit()
+    
     # NOW DO USER SUMMARY STATS
     user_summary_stats_insert_statement = (
         "insert into user_system_summary_stats "
