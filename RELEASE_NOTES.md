@@ -1,3 +1,6 @@
+#2022-05-20
+    * Added tracking of users with dev tokens by capturing the first time they were seen
+
 #2022-05-13
     * Had to do default values for new session info issue where keys did not exist
 
