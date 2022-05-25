@@ -615,7 +615,7 @@ def upload_user_data(user_stats_dict):
         "where dev_token_first_seen is null and "
         "username in (" + ("%s, " * (len(dev_tokens_users) - 1)) + "%s)"
         )
-#    print("update_new_dev_tokens_statement : " + update_new_dev_tokens_statement)
+    #    print("update_new_dev_tokens_statement : " + update_new_dev_tokens_statement)
     update_dev_tokens_prep_cursor = db_connection.cursor(prepared=True)
     update_dev_tokens_prep_cursor.execute(update_new_dev_tokens_statement, dev_tokens_users)
     db_connection.commit()
