@@ -627,3 +627,16 @@ CREATE TABLE metrics.downloader_apps (
   downloader_app_name varchar(255) NOT NULL,
   UNIQUE KEY uk_downloader_apps_name (downloader_app_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--# IN METRICS
+CREATE TABLE `doi_derived_objects`(
+`doi_ws_id` int(11) NOT NULL,
+`doi_object_id` varchar(255) NOT NULL,
+`derived_object_id` varchar(255) NOT NULL,
+`derived_is_copy_only` tinyint(1) NOT NULL DEFAULT 0,
+`first_seen_date` date DEFAULT NULL,
+`derived_object_owner` varchar(255) NOT NULL,
+UNIQUE KEY `uk_doi_derived_pair_ids` (`doi_object_id`,`derived_object_id`),
+CONSTRAINT `fk_doimet_ws_id_derived_objects` FOREIGN KEY (`doi_ws_id`) REFERENCES `doi_ws_map` (`ws_id`) ON UPDATE CASCADE,
+CONSTRAINT `fk_der_obj_owner_username` FOREIGN KEY (`derived_object_owner`) REFERENCES `user_info` (`username`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
