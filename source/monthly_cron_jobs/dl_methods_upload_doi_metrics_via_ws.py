@@ -476,7 +476,7 @@ def get_existing_derived_objects(db_connection):
 #    doi_do_prep_cursor = db_connection.cursor(prepared=True)
     doi_object_to_derived_objects_query = (
         "select doi_object_id, derived_object_id "
-        "from doi_derived_objects ")
+        "from doi_externally_derived_objects ")
 #        "where derived_is_copy_only = %s")
     cursor.execute(doi_object_to_derived_objects_query)
 #    doi_object_to_derived_objects_input = (copy_only)
@@ -516,8 +516,8 @@ def upload_doi_data(doi_results_map, ws_owners_lookup):
     dm_prep_cursor = db_connection.cursor(prepared=True)
     doi_metrics_insert_statement = (
         "insert into metrics.copy_doi_metrics "
-        "(ws_id,record_date , unique_users_count, unique_ws_ids_count, derived_object_count, copied_only_object_count) "
-        "values(%s, now(), %s, %s, %s, %s);"
+        "(ws_id,record_date , unique_users_count, unique_ws_ids_count, derived_object_count, copied_only_object_count, fully_derived_object_pair_counts) "
+        "values(%s, now(), %s, %s, %s, %s, %s);"
     )
 
     duw_prep_cursor = db_connection.cursor(prepared=True)
@@ -533,13 +533,20 @@ def upload_doi_data(doi_results_map, ws_owners_lookup):
         "values( %s, %s, now()) ")
 
     ddo_prep_cursor = db_connection.cursor(prepared=True)
-    doi_derived_object_insert_statement = (
-        "insert into metrics.doi_derived_objects "
+    doi_externally_derived_object_insert_statement = (
+        "insert into metrics.doi_externally_derived_objects "
         "(doi_ws_id, doi_object_id, derived_object_id, derived_is_copy_only,"
         "first_seen_date, derived_object_owner, derived_object_ws_id) "
         "values(%s, %s, %s, %s, now(), %s, %s) ")
 
-    print("doi_results_map : " + str(doi_results_map))
+    dtc_prep_cursor = db_connection.cursor(prepared=True)
+    doi_total_counts_select_statement = (
+        "select count(*) as cnt, copied_only "
+        "from metrics_reporting.doi_fully_derived_objects "
+        "where doi_ws_id = %s "
+        "group by copied_only ")
+
+#    print("doi_results_map : " + str(doi_results_map))
 
     for doi in doi_results_map:
         # do derived and copy counts
@@ -556,10 +563,6 @@ def upload_doi_data(doi_results_map, ws_owners_lookup):
         for ws_id in doi_results_map[doi]["ws_ids"]:
             unique_users_count = len(doi_results_map[doi]["ws_ids"][ws_id]["unique_users"])
             unique_workspaces_count = len(doi_results_map[doi]["ws_ids"][ws_id]["unique_workspaces"])
-
-            # doi_metrics_insert
-            dm_input = (ws_id, unique_users_count, unique_workspaces_count, object_derived_count, object_copy_count)
-            dm_prep_cursor.execute(doi_metrics_insert_statement, dm_input)
 
             # doi_unique_workspaces inserts
             for derived_ws_id in doi_results_map[doi]["ws_ids"][ws_id]["unique_workspaces"]:
@@ -583,7 +586,7 @@ def upload_doi_data(doi_results_map, ws_owners_lookup):
                     duu_input = (ws_id, derived_username)
                     duu_prep_cursor.execute(doi_unique_usernames_insert_statement, duu_input)
 
-            # doi_derived_objects for copied only inerts
+            # doi_externally_derived_objects for copied only inserts
             for doi_source_object in doi_results_map[doi]["ws_ids"][ws_id]["copied_only_objects"]:
                 for copied_only_object in doi_results_map[doi]["ws_ids"][ws_id]["copied_only_objects"][doi_source_object]:
                     needs_insert = False
@@ -599,9 +602,9 @@ def upload_doi_data(doi_results_map, ws_owners_lookup):
                         copied_ws_id = copied_only_object.split("/")[0]
                         copied_object_owner = ws_owners_lookup[int(copied_ws_id)]
                         ddo_input = (doi_ws_id, doi_source_object, copied_only_object,1,copied_object_owner,int(copied_ws_id))
-                        ddo_prep_cursor.execute(doi_derived_object_insert_statement, ddo_input)
+                        ddo_prep_cursor.execute(doi_externally_derived_object_insert_statement, ddo_input)
                         
-            # doi_derived_objects (some sort of input)
+            # doi_externally_derived_objects (some sort of input)
             for doi_source_object in doi_results_map[doi]["ws_ids"][ws_id]["derived_objects"]:
                 for derived_object in doi_results_map[doi]["ws_ids"][ws_id]["derived_objects"][doi_source_object]:
                     needs_insert = False
@@ -615,7 +618,24 @@ def upload_doi_data(doi_results_map, ws_owners_lookup):
                         derived_ws_id = derived_object.split("/")[0]
                         derived_object_owner = ws_owners_lookup[int(derived_ws_id)]
                         ddo_input = (doi_ws_id, doi_source_object, derived_object,0,derived_object_owner,int(derived_ws_id))
-                        ddo_prep_cursor.execute(doi_derived_object_insert_statement, ddo_input)
+                        ddo_prep_cursor.execute(doi_externally_derived_object_insert_statement, ddo_input)
+
+            # get fully derived object pair_count
+            dtc_input = (ws_id,)
+            dtc_prep_cursor.execute(doi_total_counts_select_statement, dtc_input)
+            temp_copy_only_count = 0
+            temp_full_derived_minus_copy_only_count = 0
+            for record in dtc_prep_cursor:
+                if record[1] == 1:
+                    temp_copy_only_count = record[0]
+                if record[1] == 0:
+                    temp_full_derived_minus_copy_only_count = record[0]
+            if(temp_copy_only_count !=  object_copy_count):
+                print("FOR WS : " + str(ws_id) + " the object_copy_count from this run (" + str(object_copy_count)  
+                      + ") does not equal the view copy count (" + str(temp_copy_only_count) + ")")  
+            # doi_metrics_insert
+            dm_input = (ws_id, unique_users_count, unique_workspaces_count, object_derived_count, object_copy_count,(temp_full_derived_minus_copy_only_count + temp_copy_only_count ))
+            dm_prep_cursor.execute(doi_metrics_insert_statement, dm_input)
             
     db_connection.commit()
 
@@ -668,6 +688,6 @@ def get_doi_metrics():
 print("############################################")
 start_time = time.time()
 get_doi_metrics()
-print("max_in_string_length : " + str(max_in_string_length))
-print("max_list_length : " + str(max_list_length))
+#print("max_in_string_length : " + str(max_in_string_length))
+#print("max_list_length : " + str(max_list_length))
 print("--- Total TIME %s seconds ---" % (time.time() - start_time))
