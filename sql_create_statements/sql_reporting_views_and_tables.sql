@@ -1546,26 +1546,27 @@ on pm.record_date = max_date_ws_id.maxdate
 and pm.ws_id = max_date_ws_id.max_rdate_ws_id;
 
 create or replace view metrics_reporting.unique_workspaces_with_doi_data as
-select published_ws_id, group_concat(copied_ws_id ORDER BY copied_ws_id ASC SEPARATOR ', ') as ws_ids_using_data
+select doi_ws_id, group_concat(derived_ws_id ORDER BY derived_ws_id ASC SEPARATOR ', ') as ws_ids_using_data
 from metrics.doi_unique_workspaces
-group by published_ws_id;
+group by doi_ws_id;
 
 create or replace view metrics_reporting.unique_usernames_with_doi_data as
-select published_ws_id, group_concat(copied_username ORDER BY copied_username ASC SEPARATOR ', ') as usernames_using_data
+select doi_ws_id, group_concat(derived_username ORDER BY derived_username ASC SEPARATOR ', ') as usernames_using_data
 from metrics.doi_unique_usernames
-group by published_ws_id;
+group by doi_ws_id;
 
 create or replace view metrics_reporting.doi_metrics_current_full as
 select dwm.doi_url, dwm.ws_id, dwm.title, dwm.is_parent_ws,
 pmc.unique_users_count, pmc.unique_ws_ids_count,
-uup.usernames_using_data, uwp.ws_ids_using_data
+uup.usernames_using_data, uwp.ws_ids_using_data,
+pmc.downloads_count, pmc.narrative_views_count, pmc.derived_object_count
 from metrics.doi_ws_map dwm inner join
 metrics_reporting.doi_metrics_current pmc
 on dwm.ws_id = pmc.ws_id
 left outer join metrics_reporting.unique_workspaces_with_doi_data uwp
-on  pmc.ws_id = uwp.published_ws_id
+on  pmc.ws_id = uwp.doi_ws_id
 left outer join metrics_reporting.unique_usernames_with_doi_data uup
-on  pmc.ws_id = uup.published_ws_id
+on  pmc.ws_id = uup.doi_ws_id
 order by dwm.doi_url, is_parent_ws desc, dwm.ws_id;
 
 create or replace view metrics.hv_doi_ws_with_children as
@@ -1574,3 +1575,17 @@ from metrics.doi_ws_map dwm inner join
 (select doi_url, count(*) as children_count from metrics.doi_ws_map group by doi_url having children_count > 1) as inner_map
 on dwm.doi_url = inner_map.doi_url
 where dwm.is_parent_ws = 1;
+
+CREATE or replace VIEW `metrics_reporting.doi_fully_derived_objects` AS
+(select distinct `dido`.`doi_ws_id` AS `doi_ws_id`,`dido`.`doi_object_input_id` AS `doi_object_id`,
+`dedo`.`derived_object_id` AS `derived_object_id`,`dedo`.`derived_object_owner` AS `derived_object_owner`,
+`dedo`.`derived_object_ws_id` AS `derived_object_ws_id`,
+case when `dido`.`steps_away` = 0 then `dedo`.`derived_is_copy_only` else 0 end AS `copied_only`
+from (`metrics`.`doi_internally_derived_objects` `dido` join `metrics`.`doi_externally_derived_objects` `dedo` on(`dido`.`doi_object_output_id` = `dedo`.`doi_object_id`)));
+
+CREATE or replace VIEW `metrics_reporting.doi_metrics_current_with_doi_info` AS
+(select dwm.*, dmc.record_date, dmc.unique_users_count, dmc.unique_ws_ids_count,
+dmc.derived_object_count, dmc.copied_only_object_count, dmc.fully_derived_object_pair_counts
+from metrics.doi_ws_map dwm inner join metrics_reporting.doi_metrics_current dmc
+on dwm.ws_id =dmc.ws_id
+order by dwm.doi_url, is_parent_ws desc);
