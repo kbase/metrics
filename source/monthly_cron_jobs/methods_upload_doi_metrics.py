@@ -217,19 +217,18 @@ def quick_parent_lookup(doi_results_map):
     # returns lookup of children WS to find the parent WS
     # Used when needing to figure out if need to apply the unique Username/Workpsace to the parent DOI or not
     child_parent_ws_id_lookup = dict()
-    for doi in doi_results_map:
-        parent_ws_id = None
-        child_ws_list = list()
-        for ws_id in doi_results_map["ws_ids"]:
-            if doi_results_map["ws_ids"][ws_id]["is_parent"] == 1:
-                parent_ws_id =ws_id
-            else:
-                child_ws_list.append(ws_id)
-        if parent_ws_id is None:
-            # Raise an error should not be the case.  Means the WS data is incorrect
-            raise ValueError("The data in doi_ws_map is not set up properly every doi must have 1 parent ws (even if no children).")
-        for child_ws_id in child_ws_list:
-            child_parent_ws_id_lookup[child_ws_id] = parent_ws_id
+    parent_ws_id = None
+    child_ws_list = list()
+    for ws_id in doi_results_map["ws_ids"]:
+        if doi_results_map["ws_ids"][ws_id]["is_parent"] == 1:
+            parent_ws_id =ws_id
+        else:
+            child_ws_list.append(ws_id)
+    if parent_ws_id is None:
+        # Raise an error should not be the case.  Means the WS data is incorrect
+        raise ValueError("The data in doi_ws_map is not set up properly every doi must have 1 parent ws (even if no children).")
+    for child_ws_id in child_ws_list:
+        child_parent_ws_id_lookup[child_ws_id] = parent_ws_id
     return child_parent_ws_id_lookup
 
 def grow_derived_dict_mongo(db, doi_ws_id, copied_to_lookup_dict, master_dict, last_iteration_dict, copy_only):
