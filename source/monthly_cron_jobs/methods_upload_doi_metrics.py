@@ -36,7 +36,7 @@ to_workspace = os.environ["WRK_SUFFIX"]
 #max_list_length = 0
 
 # GLOBAL VARS TO CHANGE IF RUNNING IN TEST MODE (GET AD HOC RECORDS) or IN PRODUCTION MODE
-in_test_mode = 0
+in_test_mode = 1
 
 def build_copy_lookup(db):
     #Build source to copy lookup
@@ -420,7 +420,7 @@ def determine_doi_statistics(db, doi_results_map, copied_to_lookup_dict, ws_owne
                 temp_copied_object_ws_id = object_copied.split("/",1)[0]
                 copied_object_ws_id = int(temp_copied_object_ws_id)
 #               print("copied WS : " + str( copied_object_ws_id) + "  The copied owner lookup: " + str(ws_owners_lookup[copied_object_ws_id]))
-                total_copy_count_pre_filter += 1
+#                total_copy_count_pre_filter += 1
                 # If ws_owner does not belong to the list of authors and is in lookup (meaning not a brand new WS made after this program started)
                 if copied_object_ws_id in ws_owners_lookup and ws_owners_lookup[copied_object_ws_id] not in doi_owners_usernames:
                     doi_results_map["ws_ids"][ws_id]["unique_users"].add(ws_owners_lookup[copied_object_ws_id])
@@ -428,7 +428,7 @@ def determine_doi_statistics(db, doi_results_map, copied_to_lookup_dict, ws_owne
                     if ws_object_to_track not in doi_results_map["ws_ids"][ws_id]["copied_only_objects"]:
                         doi_results_map["ws_ids"][ws_id]["copied_only_objects"][ws_object_to_track] = dict()
                     doi_results_map["ws_ids"][ws_id]["copied_only_objects"][ws_object_to_track][object_copied] = all_copied_only_objects_from_ws_object[object_copied]
-                    total_copy_count += 1
+ #                   total_copy_count += 1
 
                     if ws_id in child_parent_ws_id_lookup:
                         parent_ws_id = child_parent_ws_id_lookup[ws_id]
@@ -440,7 +440,7 @@ def determine_doi_statistics(db, doi_results_map, copied_to_lookup_dict, ws_owne
             for object_derived in all_derived_objects_from_ws_object:
                 temp_derived_object_ws_id = object_derived.split("/",1)[0]
                 derived_object_ws_id = int(temp_derived_object_ws_id)
-                total_derived_count_pre_filter += 1
+ #               total_derived_count_pre_filter += 1
 #               print("copied WS : " + str( copied_object_ws_id) + "  The copied owner lookup: " + str(ws_owners_lookup[copied_object_ws_id]))
                 # IF THE OBJECT IS HERE AND NOT IN COPIED ONLY (it become copied_onlly = 0), if in copied only, ignore it
                 # As it has been processed in the Copied_Only results
@@ -456,7 +456,7 @@ def determine_doi_statistics(db, doi_results_map, copied_to_lookup_dict, ws_owne
                         if ws_object_to_track not in doi_results_map["ws_ids"][ws_id]["derived_objects"]:
                             doi_results_map["ws_ids"][ws_id]["derived_objects"][ws_object_to_track] = dict()
                         doi_results_map["ws_ids"][ws_id]["derived_objects"][ws_object_to_track][object_derived] = all_derived_objects_from_ws_object[object_derived]
-                        total_derived_count += 1
+#                        total_derived_count += 1
                             
                         if ws_id in child_parent_ws_id_lookup:
                             parent_ws_id = child_parent_ws_id_lookup[ws_id]
@@ -850,11 +850,12 @@ def get_doi_metrics():
     for doi in master_doi_results_map:
         doi_start_time = time.time()
         print("############################################")
-        print("--- DOI : %s - containting workspaces %s  - starteded at %s-" % (doi, str(doi_results_map["ws_ids"].keys()), str(datetime.datetime.utcnow())))
+        print("--- DOI : %s - containting workspaces %s  - starteded at %s-" % (doi, str(master_doi_results_map[doi]["ws_ids"].keys()), str(datetime.datetime.utcnow())))
         #make local lookup for the DOIs part of the master_doi_results_map
         doi_results_map = dict()
         doi_results_map["doi_owners"] = master_doi_results_map[doi]["doi_owners"]
         doi_results_map["ws_ids"] = dict()
+
         for ws_id in master_doi_results_map[doi]["ws_ids"]:
             doi_results_map["ws_ids"][ws_id] = dict()
             doi_results_map["ws_ids"][ws_id]["is_parent"] = master_doi_results_map[doi]["ws_ids"][ws_id]["is_parent"]
@@ -883,7 +884,7 @@ def get_doi_metrics():
         #print("--- DOI : %s  finished statistics determination at %s-" % (doi, time.time() - doi_start_time))
         upload_doi_externally_derived_data(doi_results_map, ws_owners_lookup)
         #print("--- DOI : %s  finished externally derived_upload tooke  %s- seconds" % (doi, time.time() - doi_start_time))
-        print("--- DOI : %s took Total time %s seconds ---" % (doi, time.time() - doi_start_time))
+        print("--- DOI : %s - containting workspaces %s  -took Total time %s seconds ---" % (doi,str(doi_results_map["ws_ids"].keys()), time.time() - doi_start_time))
 
 print("\n\n############################################")
 print("############################################")
