@@ -376,12 +376,13 @@ def determine_doi_statistics(db, doi_results_map, copied_to_lookup_dict, ws_owne
 #    print("copied_to_lookup_dict: " + str(copied_to_lookup_dict))
     #ws_objectss_to_track = dict()
     doi_owners_usernames = doi_results_map["doi_owners"]
-    total_copy_count = 0
-    total_derived_count = 0
-    total_copy_count_pre_filter = 0
-    total_derived_count_pre_filter = 0
-    total_copy_direct_pre_filter = 0
-    total_derived_direct_pre_filter = 0
+    # debugging count lines        
+#    total_copy_count = 0
+#    total_derived_count = 0
+#    total_copy_count_pre_filter = 0
+#    total_derived_count_pre_filter = 0
+#    total_copy_direct_pre_filter = 0
+#    total_derived_direct_pre_filter = 0
     for ws_id in doi_results_map["ws_ids"]:
         #print("WS ID BEING USED:" + str(ws_id))
         ws_objects_to_track_dict = dict()
@@ -400,14 +401,14 @@ def determine_doi_statistics(db, doi_results_map, copied_to_lookup_dict, ws_owne
             #print("POST COPY ws_object_to_track_dict :: " + str(ws_object_to_track_dict))
             ws_object_to_track_dict2 = {ws_object_to_track : ws_objects_to_track_dict[ws_object_to_track]}
             #print("POST COPY ws_object_to_track_dict but reset it :: " + str(ws_object_to_track_dict))
-            total_copy_direct_pre_filter += len(all_copied_only_objects_from_ws_object)
+            #total_copy_direct_pre_filter += len(all_copied_only_objects_from_ws_object)
             #print("ALL COPIED ONLY _objects_from_ws_object length PRE: " + ws_object_to_track + ":::" + str(len(all_copied_only_objects_from_ws_object)))
             #print("ALL COPIED ONLY _objects_from_ws_object : " + ws_object_to_track + ":::" + str(all_copied_only_objects_from_ws_object))
             #print("all_copied_only_objects_from_ws_object : " + ws_object_to_track + ":::" + str(all_copied_only_objects_from_ws_object))
             #all_derived_objects_from_ws_object = list()
             all_derived_objects_from_ws_object = grow_derived_dict_mongo(db,ws_id, copied_to_lookup_dict, ws_object_to_track_dict2, ws_object_to_track_dict2,0)
             #print("POST DERIVED ws_object_to_track_dict :: " + str(ws_object_to_track_dict))
-            total_derived_direct_pre_filter+= len(all_derived_objects_from_ws_object)
+            #total_derived_direct_pre_filter+= len(all_derived_objects_from_ws_object)
             #print("ALL DERIVED OBJECT LIST from ws object: " + str(ws_object_to_track) + " :: " + str(all_derived_objects_from_ws_object))
             #print("ALL POST COPIED ONLY _objects_from_ws_object : " + ws_object_to_track + ":::" + str(all_copied_only_objects_from_ws_object))
             #print("ALL COPIED ONLY _objects_from_ws_object length POST: " + ws_object_to_track + ":::" + str(len(all_copied_only_objects_from_ws_object)))
