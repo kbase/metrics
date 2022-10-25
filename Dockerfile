@@ -33,7 +33,7 @@ RUN python -m pip install --upgrade pip
 RUN pip install --no-cache-dir --upgrade six 
 
 # Arango needed for the relation engine
-#RUN pip install python-arango
+RUN pip install python-arango
 
 COPY bin /root/bin
 RUN cd /root/bin && \
