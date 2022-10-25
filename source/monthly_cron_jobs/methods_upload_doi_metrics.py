@@ -36,7 +36,7 @@ to_workspace = os.environ["WRK_SUFFIX"]
 #max_list_length = 0
 
 # GLOBAL VARS TO CHANGE IF RUNNING IN TEST MODE (GET AD HOC RECORDS) or IN PRODUCTION MODE
-in_test_mode = 1
+in_test_mode = 0
 
 def build_copy_lookup(db):
     #Build source to copy lookup
