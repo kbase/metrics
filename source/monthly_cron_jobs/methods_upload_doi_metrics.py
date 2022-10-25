@@ -646,11 +646,11 @@ def upload_doi_externally_derived_data(doi_results_map, ws_owners_lookup):
     ws_list = doi_results_map["ws_ids"].keys()
     
     #performs inserts into 3 tables : publication_metrics, publication_unique_usernames, publication_unique_workspaces
-    ws_user_start_time = time.time()
+#    ws_user_start_time = time.time()
     existing_workspaces_lookup = get_existing_unique_derived_workspaces(db_connection, ws_list)
     existing_usernames_lookup = get_existing_unique_derived_usernames(db_connection, ws_list)
 #    print("--- Existing Usernames and WS lookup took %s seconds" % (time.time() - ws_user_start_time))
-    existing_dervied_object_lookup_start_time = time.time()
+#    existing_dervied_object_lookup_start_time = time.time()
     existing_derived_object_lookup = get_existing_derived_objects(db_connection, ws_list)
 #    print("--- Existing Derived Object lookup took %s seconds" % (time.time() - existing_dervied_object_lookup_start_time))   
 #    print("existing_usernames_lookup : " + str(existing_usernames_lookup))
