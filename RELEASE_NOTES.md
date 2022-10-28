@@ -1,3 +1,6 @@
+# 2022-10-28
+    * Added doi metrics for fully derived
+
 #2020-06-19
     * Added user_id to user info, backfilling and uploading
 
