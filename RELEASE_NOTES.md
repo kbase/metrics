@@ -1,3 +1,6 @@
+# 2022-10-28
+    * Added doi metrics for fully derived
+
 #2022-05-20
     * Added tracking of users with dev tokens by capturing the first time they were seen
 
