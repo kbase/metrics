@@ -61,7 +61,7 @@ Runs scripts from source/monthly directory
 These create Logs to keep track of (note nightly metrics is calling master_cron_shell
 01 17 * * * /root/metrics/nightly_metrics.sh >>/mnt/metrics_logs/crontab_nightly 2>&1
 01 0  1 * * /root/metrics/monthly_metrics.sh >>/mnt/metrics_logs/crontab_monthly 2>&1
-01 0  27 * * /root/metrics/monthly_metrics.sh >>/mnt/metrics_logs/crontab_doi_monthly 2>&1
+01 0  15 * * /root/metrics/monthly_metrics.sh >>/mnt/metrics_logs/crontab_doi_monthly 2>&1
 01 07 * * * /root/metrics/nightly_errorlogs.sh >>/mnt/metrics_logs/crontab_errorlogs 2>&1
 
 From Docker03 the logs can be checked by going doing the following. (Note no y at end of monthly)

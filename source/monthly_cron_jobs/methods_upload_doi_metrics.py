@@ -15,6 +15,12 @@ import time
 # import pprint
 requests.packages.urllib3.disable_warnings()
 
+#########################################
+#
+#    THIS Uploads DOI metrics data once a month on the 15th
+#
+########################################
+
 #Environment Variables
 metrics_mysql_password = os.environ["METRICS_MYSQL_PWD"]
 mongoDB_metrics_connection = os.environ["MONGO_PATH"]
