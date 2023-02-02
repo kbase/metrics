@@ -606,27 +606,32 @@ CREATE TABLE `copy_doi_ws_map` (
   UNIQUE KEY `cuk_doi_ws_map_ws_id` (`ws_id`)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
-
 CREATE TABLE `doi_metrics` (
   `ws_id` int(11) NOT NULL,
   `record_date` date DEFAULT NULL,
   `unique_users_count` int(11) NOT NULL,
   `unique_ws_ids_count` int(11) NOT NULL,
-  `downloads_count` int(20) DEFAULT 0,
+  `ttl_dls_cnt` int(20) DEFAULT 0,
+  `ttl_uniq_dl_users_cnt` int(20) DEFAULT 0,
+  `ttl_dl_user_doi_obj_cnt` int(20) DEFAULT 0,
+  `ttl_dl_users_dled_obj_cnt` int(20) DEFAULT 0,
   `narrative_views_count` int(20) DEFAULT 0,
   `derived_object_count` int(20) DEFAULT NULL,
   `copied_only_object_count` int(20) DEFAULT NULL,
   `fully_derived_object_pair_counts` int(20) NOT NULL DEFAULT 0,
   UNIQUE KEY `uk_real_doi_metrics_ws_record_date` (`ws_id`,`record_date`),
   CONSTRAINT `fk_real_doimet_ws_id` FOREIGN KEY (`ws_id`) REFERENCES `doi_ws_map` (`ws_id`) ON UPDATE CASCADE
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
 
 CREATE TABLE `copy_doi_metrics` (
   `ws_id` int(11) NOT NULL,
   `record_date` date DEFAULT NULL,
   `unique_users_count` int(11) NOT NULL,
   `unique_ws_ids_count` int(11) NOT NULL,
-  `downloads_count` int(20) DEFAULT 0,
+  `ttl_dls_cnt` int(20) DEFAULT 0,
+  `ttl_uniq_dl_users_cnt` int(20) DEFAULT 0,
+  `ttl_dl_user_doi_obj_cnt` int(20) DEFAULT 0,
+  `ttl_dl_users_dled_obj_cnt` int(20) DEFAULT 0,
   `narrative_views_count` int(20) DEFAULT 0,
   `derived_object_count` int(20) DEFAULT NULL,
   `copied_only_object_count` int(20) DEFAULT NULL,
@@ -741,6 +746,7 @@ CREATE TABLE `doi_unique_downloads` (
   `doi_ws_id` int(11) NOT NULL,
   `downloader_username`  varchar(255) NOT NULL,
   `job_id` varchar(255) NOT NULL,
+  `first_seen_date` date DEFAULT NULL,
   UNIQUE KEY `uk_doi_dl_unique_composite` (`doi_object_id`,`downloaded_ws_obj_id`,`job_id`),
   KEY `dud_doi_object_id_index` (`doi_object_id`),
   KEY `dud_doi_ws_id_index` (`doi_ws_id`),
@@ -748,10 +754,24 @@ CREATE TABLE `doi_unique_downloads` (
   KEY `dud_downloader_username_index` (`downloader_username`)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
+CREATE TABLE `copy_doi_unique_downloads` (
+  `doi_object_id` varchar(255) NOT NULL,
+  `downloaded_ws_obj_id` varchar(255) NOT NULL,
+  `doi_ws_id` int(11) NOT NULL,
+  `downloader_username` varchar(255) NOT NULL,
+  `job_id` varchar(255) NOT NULL,
+  `first_seen_date` date DEFAULT NULL,
+  UNIQUE KEY `uk_cdoi_dl_unique_composite` (`doi_object_id`,`downloaded_ws_obj_id`,`job_id`),
+  KEY `cdud_doi_object_id_index` (`doi_object_id`),
+  KEY `cdud_doi_ws_id_index` (`doi_ws_id`),
+  KEY `cdud_job_id_index` (`job_id`),
+  KEY `cdud_downloader_username_index` (`downloader_username`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
-CREATE TABLE `downloaders_problematic_obj_ids` (
+
+CREATE or REPLACE TABLE `downloaders_problematic_obj_ids` (
   `original_ref_id` varchar(255) NOT NULL,
-  `resolved_ref_id` varchar(255) NOT NULL,
+  `resolved_ref_id` varchar(255) DEFAULT NULL,
   `job_id` varchar(255) NOT NULL,
   UNIQUE KEY `uk_dpi_dl_unique_composite` (`original_ref_id`,`resolved_ref_id`,`job_id`)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
