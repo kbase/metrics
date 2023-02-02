@@ -3,7 +3,7 @@ from pymongo import MongoClient
 import os
 import mysql.connector as mysql
 import requests
-#import populate_downloading_apps
+import get_downloaders_lookup
 
 #FOR RE IF WE GO BACK TO IT , but we will lose type information
 #from arango import ArangoClient
@@ -192,19 +192,6 @@ def get_doi_owners_usernames(db, doi_results_map):
 #    print(str(doi_results_map))
     return doi_results_map
 
-######################
-#  I THINK CAN BE REMOVEF
-#######################
-#def get_objects_for_ws(db, ws_id):
-#    objects_to_check_copies_list = list()
-#    ws_objs_cursor = db.workspaceObjVersions.find({"ws":ws_id},{"type":1, "id":1, "ver":1,"_id":0})
-#    for ws_obj in ws_objs_cursor:
-#        full_obj_type = ws_obj["type"]
-#        core_type = full_obj_type.split('-',1)[0]
-#        obj_id = str(ws_id) + "/" + str(ws_obj["id"]) + "/" + str(ws_obj["ver"])
-#        objects_to_check_copies_list.append(obj_id)
-#    return objects_to_check_copies_list
-
 def build_doi_ws_objects_types_lookup(db, doi_workspaces):
     # gets a list of ws_references from the passed WS_ID
     # This create the list of objects to determine 
@@ -371,7 +358,7 @@ def grow_derived_dict_mongo(db, doi_ws_id, copied_to_lookup_dict, master_dict, l
 #    return master_set
                
 
-def determine_doi_statistics(db, doi_results_map, copied_to_lookup_dict, ws_owners_lookup, doi_ws_objects_types_lookup):
+def determine_doi_statistics(db, doi_results_map, copied_to_lookup_dict, ws_owners_lookup, doi_ws_objects_types_lookup, downloaders_lookup):
     # Populates the doi_results_map with the
     # unique set of users, ws_ids, derived_objects, and copied_only_bjects
     # Calls grow_derived_dict_mongo for both copied_only and derived
@@ -468,6 +455,19 @@ def determine_doi_statistics(db, doi_results_map, copied_to_lookup_dict, ws_owne
                             parent_ws_id = child_parent_ws_id_lookup[ws_id]
                             doi_results_map["ws_ids"][parent_ws_id]["unique_users"].add(ws_owners_lookup[derived_object_ws_id])
                             doi_results_map["ws_ids"][parent_ws_id]["unique_workspaces"].add(derived_object_ws_id)
+                # see if the object has been copied
+                if object_derived in downloaders_lookup:
+                    for downloading_user in downloaders_lookup[object_derived]:
+                        if downloading_user not in doi_owners_usernames:
+                            if ws_object_to_track not in doi_results_map["ws_ids"][ws_id]["object_id_downloads"]:
+                                doi_results_map["ws_ids"][ws_id]["object_id_downloads"][ws_object_to_track] = dict()
+                            if object_derived not in doi_results_map["ws_ids"][ws_id]["object_id_downloads"][ws_object_to_track]:
+                                doi_results_map["ws_ids"][ws_id]["object_id_downloads"][ws_object_to_track][object_derived] = dict()
+                            if downloading_user not in doi_results_map["ws_ids"][ws_id]["object_id_downloads"][ws_object_to_track][object_derived]:
+                                doi_results_map["ws_ids"][ws_id]["object_id_downloads"][ws_object_to_track][object_derived][downloading_user] = set()
+                            for downloading_job_id in downloaders_lookup[object_derived][downloading_user]:
+                                doi_results_map["ws_ids"][ws_id]["object_id_downloads"][ws_object_to_track][object_derived][downloading_user].add(downloading_job_id)
+                            
     # Just debugging lines counting
 #    print("Objectss to check")
 #    print(str(ws_objects_to_track))
@@ -534,7 +534,26 @@ def get_existing_derived_objects(db_connection, ws_id_list):
             doi_object_to_derived_objects_map[doi_object_id].append(derived_object_id)
     return doi_object_to_derived_objects_map
 
-
+def get_existing_doi_unique_downloads(db_connection, ws_id_list):
+    # Gets list of existing doi_unique_downloads for a ws_list (associated with a single DOI),
+    # used to see later if new inserts need to be made
+    doi_existing_downloads_dict = dict()
+    cursor = db_connection.cursor()
+    for ws_id in ws_id_list:
+        if in_test_mode == 1:
+            cursor.execute("select doi_object_id, downloaded_ws_obj_id, job_id from copy_doi_unique_downloads where doi_ws_id = %s",( ws_id,))
+        else:
+            cursor.execute("select doi_object_id, downloaded_ws_obj_id, job_id from doi_unique_downloads where doi_ws_id = %s",( ws_id,))
+        for row_values in cursor:
+            doi_ws_object_id  = row_values[0]
+            downloaded_ws_object_id  = row_values[1]
+            job_id  = row_values[2]
+            if doi_ws_object_id not in doi_existing_downloads_dict:
+                doi_existing_downloads_dict[doi_ws_object_id] = list()
+            dl_job_id_combo =  downloaded_ws_object_id + "::" + job_id
+            doi_existing_downloads_dict[doi_ws_object_id].append(dl_job_id_combo)
+    return doi_existing_downloads_dict
+            
 def build_internally_derived_objects_map(db, ws_id):
     # Build derived objects where both the input and output objects are from the DOI WS
     # Used later to populate doi_internally_derived_objects
@@ -633,7 +652,59 @@ def upload_internally_derived_objects(ws_internally_derived_dict, ws_objects_typ
                 steps_away_count += 1
     db_connection.commit()
 
+def upload_doi_unique_downloads(doi_results_map):
+    # THIS UPLOADS DATA TO doi_unique_downloads
+    # it will only upload previously unseen uploads.
 
+    db_connection = mysql.connect(
+        host=sql_host,  # "mysql1", #"localhost",
+        user="metrics",  # "root",
+        passwd=metrics_mysql_password,
+        database="metrics",  # "datacamp"
+    )
+
+    cursor = db_connection.cursor()
+    query = "use " + query_on
+    cursor.execute(query)
+
+    ws_id_list = doi_results_map["ws_ids"].keys()
+
+    existing_downloads_lookup = get_existing_doi_unique_downloads(db_connection, ws_id_list)
+
+    udud_prep_cursor = db_connection.cursor(prepared=True)
+
+    if in_test_mode == 1:
+        doi_unique_downloads_insert_statement = (
+            "insert into metrics.copy_doi_unique_downloads "
+            "(doi_object_id, downloaded_ws_obj_id, doi_ws_id, downloader_username, job_id, first_seen_date) "
+            "values(%s, %s, %s, %s, %s, now());")
+    else:
+        doi_unique_downloads_insert_statement = (
+            "insert into metrics.doi_unique_downloads "
+            "(doi_object_id, downloaded_ws_obj_id, doi_ws_id, downloader_username, job_id, first_seen_date) "
+            "values(%s, %s, %s, %s, %s, now());")
+
+    # doi_results_map["ws_ids"][ws_id]["object_id_downloads"][ws_object_to_track][object_derived][downloading_user].add(downloading_job_id)
+    #print("doi_results_map_for_downloads : " + str(doi_results_map["ws_ids"][ws_id]["object_id_downloads"][ws_object_to_track][object_derived][downloading_user]))
+    for doi_ws_id in doi_results_map["ws_ids"]:
+        for doi_ws_obj_id in doi_results_map["ws_ids"][doi_ws_id]["object_id_downloads"]:
+            for downloaded_ws_object_id in doi_results_map["ws_ids"][doi_ws_id]["object_id_downloads"][doi_ws_obj_id]:
+                for downloading_user in doi_results_map["ws_ids"][doi_ws_id]["object_id_downloads"][doi_ws_obj_id][downloaded_ws_object_id]:
+                    for job_id in doi_results_map["ws_ids"][doi_ws_id]["object_id_downloads"][doi_ws_obj_id][downloaded_ws_object_id][downloading_user]:
+                        if doi_ws_obj_id in existing_downloads_lookup:
+                            dl_job_id_combo =  str(downloaded_ws_object_id) + "::" + job_id
+                            if dl_job_id_combo not in existing_downloads_lookup[doi_ws_obj_id]:
+                                # means this has not been stored in DB yet, need to insert it
+#                                print("doi_ws_obj_id, downloaded_ws_object_id, doi_ws_id, downloading_user, job_id : " +
+#                                      doi_ws_obj_id +","+ downloaded_ws_object_id +","+ str(doi_ws_id) +","+ downloading_user +","+ job_id)
+                                doi_unique_downloads_input = (doi_ws_obj_id, downloaded_ws_object_id, doi_ws_id, downloading_user, job_id)
+                                udud_prep_cursor.execute(doi_unique_downloads_insert_statement, doi_unique_downloads_input)
+                        else:
+                            # means this has not been stored in DB yet, need to insert it
+                            doi_unique_downloads_input = (doi_ws_obj_id, downloaded_ws_object_id, doi_ws_id, downloading_user, job_id)
+                            udud_prep_cursor.execute(doi_unique_downloads_insert_statement, doi_unique_downloads_input)
+    db_connection.commit()
+    
 def upload_doi_externally_derived_data(doi_results_map, ws_owners_lookup):
     # THIS UPLOADS DATA TO doi_unique_usernames, doi_unique_workspaces,
     # doi_externally_derived_objects (for both copied_only and derived (used as some input)
@@ -666,12 +737,19 @@ def upload_doi_externally_derived_data(doi_results_map, ws_owners_lookup):
     duu_prep_cursor = db_connection.cursor(prepared=True)
     ddo_prep_cursor = db_connection.cursor(prepared=True)
     dtc_prep_cursor = db_connection.cursor(prepared=True)
+    tdc_prep_cursor = db_connection.cursor(prepared=True)
+    tudu_prep_cursor = db_connection.cursor(prepared=True)
+    tdu_doi_prep_cursor = db_connection.cursor(prepared=True)
+    tdu_downloaded_prep_cursor = db_connection.cursor(prepared=True)
     
     if in_test_mode == 1:
         doi_metrics_insert_statement = (
             "insert into metrics.copy_doi_metrics "
-            "(ws_id,record_date , unique_users_count, unique_ws_ids_count, derived_object_count, copied_only_object_count, fully_derived_object_pair_counts) "
-            "values(%s, now(), %s, %s, %s, %s, %s);")
+            "(ws_id, record_date, unique_users_count, unique_ws_ids_count, "
+            "ttl_dls_cnt, ttl_uniq_dl_users_cnt, "
+            "ttl_dl_user_doi_obj_cnt, ttl_dl_users_dled_obj_cnt, " 
+            "derived_object_count, copied_only_object_count, fully_derived_object_pair_counts) "
+            "values(%s, now(), %s, %s, %s, %s,%s, %s, %s, %s, %s);")
 
         doi_unique_workspaces_insert_statement = (
             "insert into metrics.copy_doi_unique_workspaces "
@@ -699,7 +777,26 @@ def upload_doi_externally_derived_data(doi_results_map, ws_owners_lookup):
             "dido.doi_ws_id = dedo.doi_ws_id and dido.doi_object_output_id = dedo.doi_object_id "
             "where dido.doi_ws_id = %s) internal_q "
             "group by copied_only ")
+
+        doi_total_downloads_statement = ("select count(*) as total_downloads from copy_doi_unique_downloads where doi_ws_id = %s")
+
+        doi_total_unique_download_users = (
+            "select count(*) from (select distinct downloader_username from copy_doi_unique_downloads where doi_ws_id = %s) as user_count;")
+
+        doi_total_download_users_doi_object_combos = (
+            "select count(*) from (select distinct downloader_username, doi_object_id from copy_doi_unique_downloads where doi_ws_id = %s) as user_doi_combo_count") 
+
+        doi_total_download_users_downloaded_object_combos = (
+            "select count(*) from (select distinct downloader_username, downloaded_ws_obj_id from copy_doi_unique_downloads where doi_ws_id = %s) as user_dlobj_combo_count") 
+        
     else:
+        doi_metrics_insert_statement = (
+            "insert into metrics.doi_metrics "
+            "(ws_id, record_date, unique_users_count, unique_ws_ids_count, "
+            "ttl_dls_cnt, ttl_uniq_dl_users_cnt, "
+            "ttl_dl_user_doi_obj_cnt, ttl_dl_users_dled_obj_cnt, " 
+            "derived_object_count, copied_only_object_count, fully_derived_object_pair_counts) "
+            "values(%s, now(), %s, %s, %s, %s,%s, %s, %s, %s, %s);")
         doi_metrics_insert_statement = (
             "insert into metrics.doi_metrics "
             "(ws_id,record_date , unique_users_count, unique_ws_ids_count, derived_object_count, copied_only_object_count, fully_derived_object_pair_counts) "
@@ -731,6 +828,17 @@ def upload_doi_externally_derived_data(doi_results_map, ws_owners_lookup):
             "dido.doi_ws_id = dedo.doi_ws_id and dido.doi_object_output_id = dedo.doi_object_id "
             "where dido.doi_ws_id = %s) internal_q "
             "group by copied_only ")
+
+        doi_total_downloads_statement = ("select count(*) as total_downloads from doi_unique_downloads where doi_ws_id = %s")
+
+        doi_total_unique_download_users = (
+            "select count(*) from (select distinct downloader_username from doi_unique_downloads where doi_ws_id = %s) as user_count;")
+
+        doi_total_download_users_doi_object_combos = (
+            "select count(*) from (select distinct downloader_username, doi_object_id from doi_unique_downloads where doi_ws_id = %s) as user_doi_combo_count") 
+
+        doi_total_download_users_downloaded_object_combos = (
+            "select count(*) from (select distinct downloader_username, downloaded_ws_obj_id from doi_unique_downloads where doi_ws_id = %s) as user_dlobj_combo_count") 
 
     for ws_id in doi_results_map["ws_ids"]:
         object_copy_count = 0
@@ -818,9 +926,34 @@ def upload_doi_externally_derived_data(doi_results_map, ws_owners_lookup):
             print("FOR WS : " + str(ws_id) + " the object_copy_count from this run (" + str(object_copy_count)  
                   + ") does not equal the view copy count (" + str(temp_copy_only_count) + ")")
         #print("--- Determine fully derived counts took %s seconds" % (time.time() - determine_fully_derived_counts_start_time))
-            
+
+        # GET THE 4 types of donload counts
+        dl_count_input = (ws_id,)
+        total_downloads_count = 0
+        tdc_prep_cursor.execute(doi_total_downloads_statement, dl_count_input)
+        for record in tdc_prep_cursor:
+            total_downloads_count = record[0]
+
+        total_unique_download_users_count = 0
+        tudu_prep_cursor.execute(doi_total_unique_download_users, dl_count_input)
+        for record in tudu_prep_cursor:
+            total_unique_download_users_count = record[0]
+
+        total_download_users_doi_object_combos_count = 0
+        tdu_doi_prep_cursor.execute(doi_total_download_users_doi_object_combos, dl_count_input)
+        for record in tdu_doi_prep_cursor:
+            total_download_users_doi_object_combos_count = record[0]
+
+        total_download_users_downloaded_object_combos_count = 0
+        tdu_downloaded_prep_cursor.execute(doi_total_download_users_downloaded_object_combos, dl_count_input)
+        for record in tdu_downloaded_prep_cursor:
+            total_download_users_downloaded_object_combos_count = record[0]
+        
         # doi_metrics_insert
-        dm_input = (ws_id, unique_users_count, unique_workspaces_count, object_derived_count, object_copy_count,
+        dm_input = (ws_id, unique_users_count, unique_workspaces_count,
+                    total_downloads_count, total_unique_download_users_count, 
+                    total_download_users_doi_object_combos_count, total_download_users_downloaded_object_combos_count,
+                    object_derived_count, object_copy_count,
                     (temp_full_derived_minus_copy_only_count + temp_copy_only_count ))
         dm_prep_cursor.execute(doi_metrics_insert_statement, dm_input)
             
@@ -851,6 +984,8 @@ def get_doi_metrics():
     copied_to_lookup_dict = build_copy_lookup(mongo_db)
     ws_owners_lookup = get_workspace_owners(mongo_db)
     master_doi_results_map = get_doi_owners_usernames(mongo_db, master_doi_results_map)
+    downloaders_lookup = get_downloaders_lookup.get_downloaders_lookup()
+    print("LENGTH OF DOWNLOADERS_LOOKUP: " + str(len(downloaders_lookup)))
     
     #LOOP OVER ALL DOIS
     for doi in master_doi_results_map:
@@ -883,10 +1018,12 @@ def get_doi_metrics():
                 internally_derived_data = grow_internally_derived_data(internal_derived_lookup_dict, set([input_object_id]),output_objects_levels_list)
                 ws_internally_derived_dict[ws_id][input_object_id] = internally_derived_data
         upload_internally_derived_objects(ws_internally_derived_dict, doi_ws_objects_types_lookup)
+
         #print("--- DOI : %s  Workspaces: %s finished internally derived took %s-secpnds" % (doi, str(doi_results_map["ws_ids"].keys()),time.time() - doi_start_time))
         
         #procss stats per DOI
-        doi_results_map = determine_doi_statistics(mongo_db, doi_results_map, copied_to_lookup_dict, ws_owners_lookup, doi_ws_objects_types_lookup)
+        doi_results_map = determine_doi_statistics(mongo_db, doi_results_map, copied_to_lookup_dict, ws_owners_lookup, doi_ws_objects_types_lookup, downloaders_lookup)
+        upload_doi_unique_downloads(doi_results_map)  
         #print("--- DOI : %s  finished statistics determination at %s-" % (doi, time.time() - doi_start_time))
         upload_doi_externally_derived_data(doi_results_map, ws_owners_lookup)
         #print("--- DOI : %s  finished externally derived_upload tooke  %s- seconds" % (doi, time.time() - doi_start_time))
