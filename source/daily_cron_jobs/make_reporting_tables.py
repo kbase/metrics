@@ -288,6 +288,7 @@ def make_reporting_tables():
         "uip.session_info_country, uip.country, uip.state, "
         "uip.institution, uip.department, uip.job_title, "
         "uip.how_u_hear_selected, uip.how_u_hear_other, "
+        "uip.dev_token_first_seen, "
         "uip.signup_date, uip.last_signin_date, "
         "uip.days_signin_minus_signup, days_since_last_signin, "
         "usssc.num_orgs, usssc.narrative_count, "
