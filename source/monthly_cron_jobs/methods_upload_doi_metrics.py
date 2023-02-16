@@ -797,10 +797,6 @@ def upload_doi_externally_derived_data(doi_results_map, ws_owners_lookup):
             "ttl_dl_user_doi_obj_cnt, ttl_dl_users_dled_obj_cnt, " 
             "derived_object_count, copied_only_object_count, fully_derived_object_pair_counts) "
             "values(%s, now(), %s, %s, %s, %s,%s, %s, %s, %s, %s);")
-        doi_metrics_insert_statement = (
-            "insert into metrics.doi_metrics "
-            "(ws_id,record_date , unique_users_count, unique_ws_ids_count, derived_object_count, copied_only_object_count, fully_derived_object_pair_counts) "
-            "values(%s, now(), %s, %s, %s, %s, %s);")
 
         doi_unique_workspaces_insert_statement = (
             "insert into metrics.doi_unique_workspaces "
@@ -955,6 +951,8 @@ def upload_doi_externally_derived_data(doi_results_map, ws_owners_lookup):
                     total_download_users_doi_object_combos_count, total_download_users_downloaded_object_combos_count,
                     object_derived_count, object_copy_count,
                     (temp_full_derived_minus_copy_only_count + temp_copy_only_count ))
+        # print("doi_metrics_insert_statement : " + str(doi_metrics_insert_statement))
+        # print("dm_input : " + str(dm_input))
         dm_prep_cursor.execute(doi_metrics_insert_statement, dm_input)
             
     db_connection.commit()
