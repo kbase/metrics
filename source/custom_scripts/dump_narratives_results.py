@@ -35,7 +35,7 @@ def dump_narratives_results():
     #    Headers for Adam's narratives query (Note if more columns added, may need to update this
     print("ws_id\tusername\tmod_date\tinitial_save_date\trecord_date\ttop_lvl_object_count\ttotal_object_count\tvisible_app_cells_count\tcode_cells_count\t"
           "narrative_version\thidden_object_count\tdeleted_object_count\ttotal_size\ttop_lvl_size\tis_public\tis_temporary\tis_deleted\tnumber_of_shares\t"
-          "num_nar_obj_ids\tstatic_narratives_count")
+          "num_nar_obj_ids\tstatic_narratives_count\tstatic_narratives_views\tunique_object_types_count")
 
     cursor.execute(query)
     row_values = list()
