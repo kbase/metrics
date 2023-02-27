@@ -778,7 +778,9 @@ def upload_doi_externally_derived_data(doi_results_map, ws_owners_lookup):
             "where dido.doi_ws_id = %s) internal_q "
             "group by copied_only ")
 
-        doi_total_downloads_statement = ("select count(*) as total_downloads from copy_doi_unique_downloads where doi_ws_id = %s")
+        doi_total_downloads_statement = ("select count(*) as total_downloads from "
+                                         "(select distinct downloaded_ws_obj_id, job_id "
+                                         "from copy_doi_unique_downloads where doi_ws_id = %s);")
 
         doi_total_unique_download_users = (
             "select count(*) from (select distinct downloader_username from copy_doi_unique_downloads where doi_ws_id = %s) as user_count;")
@@ -825,7 +827,9 @@ def upload_doi_externally_derived_data(doi_results_map, ws_owners_lookup):
             "where dido.doi_ws_id = %s) internal_q "
             "group by copied_only ")
 
-        doi_total_downloads_statement = ("select count(*) as total_downloads from doi_unique_downloads where doi_ws_id = %s")
+        doi_total_downloads_statement = ("select count(*) as total_downloads from "
+                                         "(select distinct downloaded_ws_obj_id, job_id "
+                                         "from doi_unique_downloads where doi_ws_id = %s);")
 
         doi_total_unique_download_users = (
             "select count(*) from (select distinct downloader_username from doi_unique_downloads where doi_ws_id = %s) as user_count;")
