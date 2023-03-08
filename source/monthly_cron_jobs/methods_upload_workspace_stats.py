@@ -29,6 +29,9 @@ ws_url = os.environ["WS_URL"]
 ws_user_token = os.environ["METRICS_WS_USER_TOKEN"]
 to_workspace = os.environ["WRK_SUFFIX"]
 
+# url for Google analytics for astatic narrative page views
+kb_google_analytics_url = os.environ["KB_GOOGLE_ANALYTICS_URL"]
+
 def get_static_narrative_counts():
     """
     returns a dict of ws_id to count of the nuber of static_workspaces made for it. 
@@ -40,6 +43,42 @@ def get_static_narrative_counts():
     for ws_id in stats[0]:
         static_narrative_counts[int(ws_id)] = len(stats[0][ws_id])
     return static_narrative_counts;
+
+def get_static_narrative_page_views():
+    """
+    returns static narative pageviews for universal google analytics
+    """
+    params = (("tqx", "out:csv"), ("sheet", "Monthly"))
+    response = requests.get(kb_google_analytics_url, params=params)
+    if response.status_code != 200:
+        print(
+            "ERROR - KBase Google analytics  GOOGLE SHEET RESPONSE STATUS CODE : "
+            + str(response.status_code)
+        )
+        print(
+            "KBase Google analytics."
+        )
+        return 0
+    static_narratives_total_views = dict()    
+    lines = response.text.split("\n")
+    found_header_line = False
+    for line in lines:
+        line_elements = line.split(",")
+        first_element = line_elements[0][1:-1].strip()
+        if found_header_line:
+            landing_page_elements = first_element.split("/")
+            ws_id = int(landing_page_elements[2])
+            page_views = int(line_elements[3][1:-1].strip())
+            if ws_id not in static_narratives_total_views:
+                static_narratives_total_views[ws_id] = 0
+            static_narratives_total_views[ws_id] = static_narratives_total_views[ws_id] + page_views
+
+        elif first_element == "Landing Page":
+            found_header_line = True
+            next            
+    print(str(static_narratives_total_views))
+    print("Length static_narratives_total_views : " + str(len(static_narratives_total_views)))
+    return static_narratives_total_views
 
 def get_workspaces(db, static_narrative_counts):
     """
@@ -630,6 +669,7 @@ def upload_workspace_stats():
     db = client.workspace
 
     static_narrative_counts = get_static_narrative_counts()
+    static_narrative_page_views = get_static_narrative_page_views()
     workspaces_dict = get_workspaces(db, static_narrative_counts)
     get_ws_top_info_time = time.time() - start_time
     kbase_staff = get_kbase_staff(db_connection)
@@ -666,12 +706,15 @@ def upload_workspace_stats():
         "visible_app_cells_count, code_cells_count, narrative_version, "
         "hidden_object_count, deleted_object_count, "
         "total_size, top_lvl_size, is_public, "
-        "is_temporary, is_deleted, number_of_shares, "
-        "num_nar_obj_ids, static_narratives_count,unique_object_types_count) "
-        "values(%s,%s, %s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+        "is_temporary, is_deleted, number_of_shares, num_nar_obj_ids, "
+        "static_narratives_count, static_narratives_views, unique_object_types_count) "
+        "values(%s,%s, %s, %s, now(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
     )
 
     for ws_id in sorted(workspaces_dict.keys()):
+        static_narrative_views = 0
+        if ws_id in static_narrative_page_views:
+            static_narrative_views = static_narrative_page_views[ws_id]
         input = (
             ws_id,
             workspaces_dict[ws_id]["username"],
@@ -692,6 +735,7 @@ def upload_workspace_stats():
             workspaces_dict[ws_id]["number_of_shares"],
             workspaces_dict[ws_id]["num_nar_obj_ids"],
             workspaces_dict[ws_id]["static_narrative_count"],
+            static_narrative_views,
             workspaces_dict[ws_id]["unique_object_types_count"],
         )
         prep_cursor.execute(workspaces_insert_statement, input)
