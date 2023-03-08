@@ -25,7 +25,7 @@ def get_kbase_google_analytics():
         print(
             "KBase Google analytics."
         )
-        return user_stats_dict
+        return 0
 
     # key ws_id -> year -> month -> monthly_page_view
     static_narrative_view_monthly_stats = dict()
@@ -57,11 +57,8 @@ def get_kbase_google_analytics():
             static_narrative_view_monthly_stats[ws_id][year][month] = static_narrative_view_monthly_stats[ws_id][year][month] + page_views
             print(str(i) + " :: " + line)
             i += 1
-        if first_element == "Landing Page":
+        elif first_element == "Landing Page":
             found_header_line = True
-            next
-
-
     
     print(str(static_narrative_view_monthly_stats))
     print("Length static_narrative_view_monthly_stats : " + str(len(static_narrative_view_monthly_stats)))

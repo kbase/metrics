@@ -75,7 +75,7 @@ def get_static_narrative_page_views():
 
         elif first_element == "Landing Page":
             found_header_line = True
-            next            
+
     print(str(static_narratives_total_views))
     print("Length static_narratives_total_views : " + str(len(static_narratives_total_views)))
     return static_narratives_total_views
