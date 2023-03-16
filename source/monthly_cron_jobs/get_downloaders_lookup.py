@@ -147,7 +147,7 @@ def pull_downloading_jobs(downloaders_set, problem_refs_lookup):
     earliest_year = 2016
     today = date.today()
     current_year = int(today.year)
-    part_of_year_list = (1,2,3,4)
+    part_of_year_list = (1,2,3,4,5,6,7,8,9,10,11,12)
 
     years_to_do = range(earliest_year,(current_year + 1))
 
@@ -162,15 +162,39 @@ def pull_downloading_jobs(downloaders_set, problem_refs_lookup):
         for part_of_year in part_of_year_list:
             if part_of_year == 1:
                 begin = int(datetime(year_to_do, 1, 1, 0, 0).timestamp()) * 1000
-                end = int(datetime(year_to_do, 3, 31, 23, 59).timestamp()) * 1000
+                end = int(datetime(year_to_do, 1, 31, 23, 59).timestamp()) * 1000
             elif part_of_year == 2:
-                begin = int(datetime(year_to_do, 4, 1, 0, 0).timestamp()) * 1000
-                end = int(datetime(year_to_do, 6, 30, 23, 59).timestamp()) * 1000
+                begin = int(datetime(year_to_do, 2, 1, 0, 0).timestamp()) * 1000
+                end = int(datetime(year_to_do, 3, 1, 23, 59).timestamp()) * 1000
             elif part_of_year == 3:
+                begin = int(datetime(year_to_do, 3, 2, 0, 0).timestamp()) * 1000
+                end = int(datetime(year_to_do, 3, 31, 23, 59).timestamp()) * 1000
+            elif part_of_year == 4:
+                begin = int(datetime(year_to_do, 4, 1, 0, 0).timestamp()) * 1000
+                end = int(datetime(year_to_do, 4, 30, 23, 59).timestamp()) * 1000
+            elif part_of_year == 5:
+                begin = int(datetime(year_to_do, 5, 1, 0, 0).timestamp()) * 1000
+                end = int(datetime(year_to_do, 5, 31, 23, 59).timestamp()) * 1000
+            elif part_of_year == 6:
+                begin = int(datetime(year_to_do, 6, 1, 0, 0).timestamp()) * 1000
+                end = int(datetime(year_to_do, 6, 30, 23, 59).timestamp()) * 1000
+            elif part_of_year == 7:
                 begin = int(datetime(year_to_do, 7, 1, 0, 0).timestamp()) * 1000
+                end = int(datetime(year_to_do, 7, 31, 23, 59).timestamp()) * 1000
+            elif part_of_year == 8:
+                begin = int(datetime(year_to_do, 8, 1, 0, 0).timestamp()) * 1000
+                end = int(datetime(year_to_do, 8, 30, 23, 59).timestamp()) * 1000
+            elif part_of_year == 9:
+                begin = int(datetime(year_to_do, 9, 1, 0, 0).timestamp()) * 1000
                 end = int(datetime(year_to_do, 9, 30, 23, 59).timestamp()) * 1000
-            else:
+            elif part_of_year == 10:
                 begin = int(datetime(year_to_do, 10, 1, 0, 0).timestamp()) * 1000
+                end = int(datetime(year_to_do, 10, 31, 23, 59).timestamp()) * 1000
+            elif part_of_year == 11:
+                begin = int(datetime(year_to_do, 11, 1, 0, 0).timestamp()) * 1000
+                end = int(datetime(year_to_do, 11, 30, 23, 59).timestamp()) * 1000                
+            elif part_of_year == 12:
+                begin = int(datetime(year_to_do, 12, 1, 0, 0).timestamp()) * 1000
                 end = int(datetime(year_to_do, 12, 31, 23, 59).timestamp()) * 1000 
 
             yearly_start_time = time.time()
