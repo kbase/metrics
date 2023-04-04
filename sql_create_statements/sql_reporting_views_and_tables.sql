@@ -1592,3 +1592,17 @@ dmc.derived_object_count, dmc.copied_only_object_count, dmc.fully_derived_object
 from metrics.doi_ws_map dwm inner join metrics_reporting.doi_metrics_current dmc
 on dwm.ws_id =dmc.ws_id
 order by dwm.doi_url, is_parent_ws desc);
+
+
+create or replace view metrics_reporting.doi_metrics_current_report
+as (
+select dwm.doi_url AS doi_url, dwm.title AS title, dwm.is_parent_ws AS is_parent_ws, 
+dmc.ws_id AS ws_id, dmc.record_date AS record_date, dmc.unique_users_count AS unique_users_count, dmc.unique_ws_ids_count AS unique_ws_ids_count,
+dmc.ttl_dls_cnt AS ttl_dls_cnt, dmc.ttl_uniq_dl_users_cnt AS ttl_uniq_dl_users_cnt, dmc.ttl_dl_user_doi_obj_cnt AS ttl_dl_user_doi_obj_cnt,
+dmc.ttl_dl_users_dled_obj_cnt AS ttl_dl_users_dled_obj_cnt, dmc.derived_object_count AS derived_object_count,
+dmc.copied_only_object_count AS copied_only_object_count, dmc.fully_derived_object_pair_counts AS fully_derived_object_pair_counts,
+wc.static_narratives_views
+from metrics.doi_ws_map dwm inner join 
+metrics_reporting.doi_metrics_current dmc on dwm.ws_id = dmc.ws_id
+inner join metrics_reporting.workspaces_current wc on dmc.ws_id = wc.ws_id
+order by dwm.doi_url,dwm.is_parent_ws desc);

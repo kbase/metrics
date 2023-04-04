@@ -30,22 +30,10 @@ def dump_query_results():
     query = "use " + metrics
     cursor.execute(query)
 
-    # CHANGE QUERY HERE
-    #    query = "select username, display_name, email, orcid, kb_internal_user, institution, country, signup_date, last_signin_date from user_info order by signup_date"
-    #    Query for Adam Narratives dump of information:
-    #    select wc.* from metrics.user_info ui inner join metrics_reporting.workspaces_current wc on ui.username = wc.username
-    #    where ui.kb_internal_user = 0 and wc.narrative_version > 0 and is_deleted = 0 and is_temporary = 0;
-    #query = ("select * from metrics_reporting.narrative_app_flows")
-    query = ("select * from metrics_reporting.user_super_summary")
-    # CHANGE COLUMN HEADERS HERE TO MATCH QUERY HEADERS
-    #    print("username\temail\tlast_signin_date\tmax_last_seen\tHasBeenSeen")
-    #    print("ws_id\tusername\tmod_date\tinitial_save_date\trecord_date\ttop_lvl_object_count\ttotal_object_count\tvisible_app_cells_count\tnarrative_version\thidden_object_count\tdeleted_object_count\ttotal_size\ttop_lvl_size\tis_public\tis_temporary\tnumber_of_shares")
-    #    Headers for Adam's narratives query (Note if more columns added, may need to update this
-    #    print(
-    #        "ws_id\tusername\tmod_date\tinitial_save_date\trecord_date\ttop_lvl_object_count\ttotal_object_count\tvisible_app_cells_count\tcode_cells_count\t"
-    #        "narrative_version\thidden_object_count\tdeleted_object_count\ttotal_size\ttop_lvl_size\tis_public\tis_temporary\tis_deleted\tnumber_of_shares\t"
-    #        "num_nar_obj_ids\tstatic_narratives_count"
-    #    )
+    # CHANGE QUERIES AND HEADERS HERE
+
+    # USER SUPER SUMMARY
+    query = ("select * from metrics_reporting.user_super_summary")    
     #    HEADERS FOR user_super_summary
     print(
         "username\tdisplay_name\temail\tkb_internal_user\tuser_id\tglobus_login\tgoogle_login\torcid\tsession_info_country\tcountry\tstate\t"
@@ -58,9 +46,43 @@ def dump_query_results():
         "total_apps_run_last90\ttotal_apps_run_last30\ttotal_app_errors_all_time\tfirst_app_run\tlast_app_run\ttotal_run_time_hours\t"
         "total_queue_time_hours\ttotal_CPU_hours\tsession_count_all_time\tsession_count_last_year\tsession_count_last_90\tsession_count_last_30"
     )
-    #Header for Adam's narrative_app_flow
-    #print("ws_id\tusername\tapp_name\tfunc_name\tstart_date\tfinish_date") 
 
+    # APP FLOWS - for Adam's narrative_app_flow
+    #query = ("select * from metrics_reporting.narrative_app_flows")
+    #print("ws_id\tusername\tapp_name\tfunc_name\tstart_date\tfinish_date") 
+    
+    # app popularity growth
+    #query = ("select uau.app_name, DATE_FORMAT(`finish_date`,'%Y-%m') as run_month, count(*) as run_count, sum(run_time)/3600 as total_run_hours\
+    #          from metrics.user_app_usage uau inner join metrics.user_info ui on uau.username = ui.username\
+    #          where ui.kb_internal_user = 0\
+    #          group by uau.app_name, run_month\
+    #          order by run_month, app_name")
+    #print("app_name\trun_month\trun_count\ttotal_run_hours")
+
+    # App category run totals
+    #query = ("select uau.app_name,\
+    #         IFNULL(app_category, \"No Category Association\") as app_cat,\
+    #         DATE_FORMAT(`finish_date`,'%Y-%m') as run_month, count(*) as run_count,\
+    #         sum(run_time)/3600 as total_run_hours\
+    #         from metrics.user_app_usage uau inner join\
+    #         metrics.user_info ui on uau.username = ui.username\
+    #         left outer join\
+    #         metrics.app_name_category_map anm on uau.app_name = anm.app_name\
+    #         where ui.kb_internal_user = 0\
+    #         group by uau.app_name, app_cat, run_month\
+    #         order by run_month, app_name;")
+    #print("app_name\tapp_cat\trun_month\trun_count\ttotal_run_hours")
+
+    # USER SESSION STATS:
+    #query = ("select si.username, count(*) as session_count, sum(estimated_hrs_active) total_hours_active,\
+    #          avg(estimated_hrs_active) avg_hours_active, std(estimated_hrs_active) std_hours_active,\
+    #          min(first_seen), max(last_seen)\
+    #          from metrics.user_info ui inner join metrics.session_info si on ui.username = si.username\
+    #          where estimated_hrs_active < 24\
+    #          group by username\
+    #          order by avg_hours_active desc, session_count, total_hours_active")
+    #print("username\tsession_count\ttotal_hours_active\tavg_hours_active\tstd_hours_active\tfirst_seen\tlast_seen")
+    
     cursor.execute(query)
     row_values = list()
 
