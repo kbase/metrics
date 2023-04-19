@@ -198,7 +198,7 @@ def pull_downloading_jobs(downloaders_set, problem_refs_lookup):
                 end = int(datetime(year_to_do, 12, 31, 23, 59).timestamp()) * 1000 
 
             yearly_start_time = time.time()
-            print("Yearly Quarter to do start: " + str(year_to_do) + "_" + str(part_of_year) + " :: " + str(yearly_start_time))
+            print("Year_Month to do start: " + str(year_to_do) + "_" + str(part_of_year) + " :: " + str(yearly_start_time))
         
             params = {"start_time": begin, "end_time": end, "ascending": 0, "limit": 1000000000}
             stats = ee2.check_jobs_date_range_for_all(params=params)
