@@ -73,6 +73,11 @@ def dump_query_results():
     #         order by run_month, app_name;")
     #print("app_name\tapp_cat\trun_month\trun_count\ttotal_run_hours")
 
+    # UserObjectTypeCount
+#    query = ("select DATE_FORMAT(`record_date`,'%Y-%m') as month, object_type, sum(top_lvl_object_count) as user_object_count\
+#              from users_workspace_object_counts group by month,  object_type")
+#    print("month\tobject_type\tuser_object_count")
+    
     # USER SESSION STATS:
     #query = ("select si.username, count(*) as session_count, sum(estimated_hrs_active) total_hours_active,\
     #          avg(estimated_hrs_active) avg_hours_active, std(estimated_hrs_active) std_hours_active,\
@@ -82,6 +87,11 @@ def dump_query_results():
     #          group by username\
     #          order by avg_hours_active desc, session_count, total_hours_active")
     #print("username\tsession_count\ttotal_hours_active\tavg_hours_active\tstd_hours_active\tfirst_seen\tlast_seen")
+
+    #Blobstore cumulative sizes over users
+#    query = ("select sum(total_size) as blobstore_size, bs.username from blobstore_stats bs \
+#             group by username order by blobstore_size")
+#    print("blobstore_size\tusername")
     
     cursor.execute(query)
     row_values = list()

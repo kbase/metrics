@@ -803,3 +803,27 @@ CREATE TABLE `archived_doi_unique_workspaces` (
   UNIQUE KEY `uk_doi_metrics_ws_record_date` (`published_ws_id`,`copied_ws_id`)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
 
+
+
+--##################
+-- Blobstore detail
+--##################
+CREATE TABLE `blobstore_detail` (
+  `blobstore_id` varchar(255) NOT NULL,
+  `ws_obj_id` varchar(255) NOT NULL,
+  `save_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `ws_id` int(11) NOT NULL,
+  `size`  int(32) NOT NULL,
+  `saver_username` varchar(255) NOT NULL,
+  `orig_saver` tinyint(1) NOT NULL DEFAULT '0',
+  `object_type` varchar(255) NOT NULL,
+  UNIQUE KEY `bsd_bsid_wsobjid` (`blobstore_id`,`ws_obj_id`),
+  KEY `idx_bsd_wsid` (`ws_id`),
+  KEY `idx_bsd_save_date` (`save_date`),
+  KEY `idx_bsd_orig_saver` (`orig_saver`),
+  KEY `idx_bsd_bsid` (`blobstore_id`),
+  KEY `idx_bsd_wsobjid` (`ws_obj_id`),
+  KEY `idx_bsd_username` (`saver_username`),
+  KEY `idx_bsd_objecttype` (`object_type`),
+  CONSTRAINT `fk_bsd_username` FOREIGN KEY (`saver_username`) REFERENCES `user_info` (`username`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
