@@ -88,6 +88,11 @@ def dump_query_results():
     #          order by avg_hours_active desc, session_count, total_hours_active")
     #print("username\tsession_count\ttotal_hours_active\tavg_hours_active\tstd_hours_active\tfirst_seen\tlast_seen")
 
+    # Custom apps updates for RSV
+#    query = ("select app_name, git_commit_hash, min(finish_date) as first_run_date from user_app_usage \
+#              group by app_name, git_commit_hash having first_run_date > '2021-01-01'")
+#    print("appname\tgit_commit_hash\tfirst_run_date")
+    
     #Blobstore cumulative sizes over users
 #    query = ("select sum(total_size) as blobstore_size, bs.username from blobstore_stats bs \
 #             group by username order by blobstore_size")
