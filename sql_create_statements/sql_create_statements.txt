@@ -1,3 +1,4 @@
+
 --######################
 --# user_info table create and indices.
 
@@ -311,7 +312,7 @@ ON public_narrative_count(public_narrative_count,record_date);
 CREATE or replace TABLE metrics.session_info (
         username VARCHAR(255) NOT NULL,
         record_date DATE NOT NULL,
-        ip_address VARCHAR(15) NOT NULL,
+        ip_address VARCHAR(40) NOT NULL,
         country_name VARCHAR(255) NOT NULL,
         country_code VARCHAR(3) NOT NULL,
         city VARCHAR(255) NOT NULL,
@@ -827,3 +828,21 @@ CREATE TABLE `blobstore_detail` (
   KEY `idx_bsd_objecttype` (`object_type`),
   CONSTRAINT `fk_bsd_username` FOREIGN KEY (`saver_username`) REFERENCES `user_info` (`username`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+--##################
+-- past narrative copies. Need to store, because other's do not want to touch the WS and correct the data.
+-- stores the past narrative copy information that was able to be determined, before narrative copy/tracking was fixed/implemented.
+--##################
+CREATE TABLE `past_narrative_copies` (
+  `source_narrative_id` int(15) NOT NULL,
+  `source_narrative_upa` varchar(255) NOT NULL,
+  `destination_narrative_id` int(15) NOT NULL,
+  `destination_narrative_upa` varchar(255) NOT NULL,
+  `destination_narrative_save_date` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  UNIQUE KEY `uk_destination_narrative_id_pnc` (`destination_narrative_id`),
+  KEY `idx_source_narrative_id_pnc` (`source_narrative_id`),
+  KEY `idx_source_narrative_upa_pnc` (`source_narrative_upa`),
+  KEY `idx_destination_narrative_save_date_pnc` (`destination_narrative_save_date`)
+) ENGINE=InnoDB;
+

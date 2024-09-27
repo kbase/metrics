@@ -1450,7 +1450,7 @@ and is_temporary = 0
 group by wc.username, ui.kb_internal_user; 
 
 #------------------------------
-Final user_super_summary table
+# Final user_super_summary table
 #------------------------------
 
 # NEEDS A CRON JOB
@@ -1606,3 +1606,78 @@ from metrics.doi_ws_map dwm inner join
 metrics_reporting.doi_metrics_current dmc on dwm.ws_id = dmc.ws_id
 inner join metrics_reporting.workspaces_current wc on dmc.ws_id = wc.ws_id
 order by dwm.doi_url,dwm.is_parent_ws desc);
+
+
+#------------------------------
+# Blobstore_detail reports
+#  Note massive table. Some of these are done in CRON job as tables, other are views.
+#------------------------------
+
+create or replace table blobstore_detail_by_ws as
+(
+select in_q.ws_id, sum(in_q.orig_saver_count) as orig_saver_count,
+sum(in_q.non_orig_saver_count) as non_orig_saver_count,
+sum(in_q.orig_saver_size_GB) as orig_saver_size_GB,
+sum(in_q.non_orig_saver_size_GB) as non_orig_saver_size_GB,
+sum(in_q.total_blobstore_size_GB) as total_blobstore_size_GB
+from
+(select ws_id, DATE_FORMAT(`save_date`,'%Y-%m') as month,
+sum(orig_saver) as orig_saver_count, 0 - sum((orig_saver - 1)) as non_orig_saver_count,
+sum(orig_saver * size)/1000000000 as orig_saver_size_GB,
+0 - sum((orig_saver - 1) * size)/1000000000 as non_orig_saver_size_GB,
+sum(size)/1000000000 as total_blobstore_size_GB
+from blobstore_detail bd
+group by ws_id, month) in_q
+group by ws_id );
+Query OK, 108871 rows affected (6 min 52.38 sec)
+Records: 108871  Duplicates: 0  Warnings: 0
+
+create or replace view blobstore_detail_by_ws_monthly as
+(select ws_id, DATE_FORMAT(`save_date`,'%Y-%m') as month,
+sum(orig_saver) as orig_saver_count, 0 - sum((orig_saver - 1)) as non_orig_saver_count,
+sum(orig_saver * size)/1000000000 as orig_saver_size_GB,
+0 - sum((orig_saver - 1) * size)/1000000000 as non_orig_saver_size_GB,
+sum(size)/1000000000 as total_blobstore_size_GB
+from blobstore_detail bd
+group by ws_id, month);
+
+
+create or replace table blobstore_detail_by_user_monthly as
+(select saver_username, DATE_FORMAT(`save_date`,'%Y-%m') as month,
+sum(orig_saver) as orig_saver_count, 0 - sum((orig_saver - 1)) as non_orig_saver_count,
+sum(orig_saver * size)/1000000000 as orig_saver_size_GB,
+0 - sum((orig_saver - 1) * size)/1000000000 as non_orig_saver_size_GB,
+sum(size)/1000000000 as total_blobstore_size_GB
+from blobstore_detail bd
+group by saver_username, month);
+
+create or replace table blobstore_detail_by_user as
+(select saver_username,
+sum(orig_saver_count) as orig_saver_count, sum(non_orig_saver_count) as non_orig_saver_count,
+sum(orig_saver_size_GB) as orig_saver_size_GB,
+sum(non_orig_saver_size_GB) as non_orig_saver_size_GB,
+sum(total_blobstore_size_GB) as total_blobstore_size_GB
+from blobstore_detail_by_user_monthly
+group by saver_username);
+
+
+create or replace table blobstore_detail_by_object_type_monthly as
+(select LEFT(object_type,LOCATE('-',object_type) - 1) as object_type,
+DATE_FORMAT(`save_date`,'%Y-%m') as month,
+sum(orig_saver) as orig_saver_count, 0 - sum((orig_saver - 1)) as non_orig_saver_count,
+sum(orig_saver * size)/1000000000 as orig_saver_size_GB,
+0 - sum((orig_saver - 1) * size)/1000000000 as non_orig_saver_size_GB,
+sum(size)/1000000000 as total_blobstore_size_GB
+from blobstore_detail bd
+group by object_type, month);
+
+create or replace view blobstore_detail_by_object_type as
+(select object_type,
+sum(orig_saver_count) as orig_saver_count,
+sum(non_orig_saver_count) as non_orig_saver_count,
+sum(orig_saver_size_GB) as orig_saver_size_GB,
+sum(non_orig_saver_size_GB) as non_orig_saver_size_GB,
+sum(total_blobstore_size_GB) as total_blobstore_size_GB
+from blobstore_detail_by_object_type_monthly
+group by object_type);
+
