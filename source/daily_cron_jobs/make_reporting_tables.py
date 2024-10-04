@@ -302,6 +302,10 @@ def make_reporting_tables():
         "uns.total_visible_app_cells, uns.total_code_cells_count, "
         "bus.first_file_date, bus.last_file_date, "
         "bus.total_file_sizes_MB, bus.total_file_count, "
+        "bdu.orig_saver_count as blobstore_orig_saver_count, "
+        "bdu.non_orig_saver_count as blobstore_non_orig_saver_count, "
+        "bdu.orig_saver_size_GB as blobstore_orig_saver_size_GB, "
+        "bdu.non_orig_saver_size_GB as blobstore_non_orig_saver_size_GB, "
         "umua.mu_func_name as most_used_app, "
         "udauc.distinct_apps_used, "
         "uapc.total_apps_run_all_time, uapc.total_apps_run_last365, "
@@ -337,6 +341,8 @@ def make_reporting_tables():
         "on uip.username = usc90.username "
         "left outer join metrics.hv_user_session_count_last_30 usc30 "
         "on uip.username = usc30.username "
+        "left outer join metrics.blobstore_detail_by_user bdu "
+        "on uip.username = bdu.saver_username "
         "where uip.exclude != 1 ")    
     cursor.execute(user_super_summary_create_statement)
     print("user_super_summary_create_statement created")

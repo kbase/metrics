@@ -42,7 +42,9 @@ def dump_query_results():
         "last_narrative_modified_date\ttotal_narrative_objects_count\ttop_lvl_narrative_objects_count\ttotal_narrative_objects_size\t"
         "top_lvl_narrative_objects_size\ttotal_narrative_count\ttotal_public_narrative_count\tdistinct_static_narratives_count\t"
         "static_narratives_created_count\ttotal_visible_app_cells\ttotal_code_cells_count\tfirst_file_date\tlast_file_date\t"
-        "total_file_sizes_MB\ttotal_file_count\tmost_used_app\tdistinct_apps_used\ttotal_apps_run_all_time\ttotal_apps_run_last365\t"
+        "total_file_sizes_MB\ttotal_file_count\tblobstore_orig_saver_count\tblobstore_non_orig_saver_count\t"
+        "blobstore_orig_saver_size_GB\tblobstore_non_orig_saver_size_GB\t"
+        "most_used_app\tdistinct_apps_used\ttotal_apps_run_all_time\ttotal_apps_run_last365\t"
         "total_apps_run_last90\ttotal_apps_run_last30\ttotal_app_errors_all_time\tfirst_app_run\tlast_app_run\ttotal_run_time_hours\t"
         "total_queue_time_hours\ttotal_CPU_hours\tsession_count_all_time\tsession_count_last_year\tsession_count_last_90\tsession_count_last_30"
     )
