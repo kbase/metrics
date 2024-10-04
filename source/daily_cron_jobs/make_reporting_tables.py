@@ -185,6 +185,64 @@ def make_reporting_tables():
     cursor.execute(narrative_app_flows_create_statement)
     print("narrative_app_flows created")
 
+    # Blobstroe detial related tables
+    blobstore_detail_by_ws_create_statement = (
+        "create or replace table blobstore_detail_by_ws as "
+        "(select in_q.ws_id, sum(in_q.orig_saver_count) as orig_saver_count, "
+        "sum(in_q.non_orig_saver_count) as non_orig_saver_count, "
+        "sum(in_q.orig_saver_size_GB) as orig_saver_size_GB, "
+        "sum(in_q.non_orig_saver_size_GB) as non_orig_saver_size_GB, "
+        "sum(in_q.total_blobstore_size_GB) as total_blobstore_size_GB "
+        "from ("
+        "select ws_id, DATE_FORMAT(`save_date`,'%Y-%m') as month, "
+        "sum(orig_saver) as orig_saver_count, 0 - sum((orig_saver - 1)) as non_orig_saver_count, "
+        "sum(orig_saver * size)/1000000000 as orig_saver_size_GB, "
+        "0 - sum((orig_saver - 1) * size)/1000000000 as non_orig_saver_size_GB, "
+        "sum(size)/1000000000 as total_blobstore_size_GB "
+        "from blobstore_detail bd "
+        "group by ws_id, month) in_q "
+        "group by ws_id ) ")
+    cursor.execute(blobstore_detail_by_ws_create_statement)
+    print("blobstore_detail_by_ws_create_statement created")
+
+    blobstore_detail_by_user_monthly_create_statement = (
+        "create or replace table blobstore_detail_by_user_monthly as "
+        "(select saver_username, DATE_FORMAT(`save_date`,'%Y-%m') as month, "
+        "sum(orig_saver) as orig_saver_count, 0 - sum((orig_saver - 1)) as non_orig_saver_count, "
+        "sum(orig_saver * size)/1000000000 as orig_saver_size_GB, "
+        "0 - sum((orig_saver - 1) * size)/1000000000 as non_orig_saver_size_GB, "
+        "sum(size)/1000000000 as total_blobstore_size_GB "
+        "from blobstore_detail bd "
+        "group by saver_username, month) ")
+    cursor.execute(blobstore_detail_by_user_monthly_create_statement)
+    print("blobstore_detail_by_user_monthly_create_statement created")
+    
+    blobstore_detail_by_user_create_statement = (
+        "create or replace table blobstore_detail_by_user as "
+        "(select saver_username, "
+        "sum(orig_saver_count) as orig_saver_count, sum(non_orig_saver_count) as non_orig_saver_count, "
+        "sum(orig_saver_size_GB) as orig_saver_size_GB, "
+        "sum(non_orig_saver_size_GB) as non_orig_saver_size_GB, "
+        "sum(total_blobstore_size_GB) as total_blobstore_size_GB "
+        "from blobstore_detail_by_user_monthly "
+        "group by saver_username) ")
+    cursor.execute(blobstore_detail_by_user_create_statement)
+    print("blobstore_detail_by_user_create_statement created")
+
+    blobstore_detail_by_object_type_monthly_create_statement = (
+        "create or replace table blobstore_detail_by_object_type_monthly as "
+        "(select LEFT(object_type,LOCATE('-',object_type) - 1) as object_type, "
+        "DATE_FORMAT(`save_date`,'%Y-%m') as month, "
+        "sum(orig_saver) as orig_saver_count, 0 - sum((orig_saver - 1)) as non_orig_saver_count, "
+        "sum(orig_saver * size)/1000000000 as orig_saver_size_GB, "
+        "0 - sum((orig_saver - 1) * size)/1000000000 as non_orig_saver_size_GB, "
+        "sum(size)/1000000000 as total_blobstore_size_GB "
+        "from blobstore_detail bd "
+        "group by object_type, month) ")
+    cursor.execute(blobstore_detail_by_object_type_monthly_create_statement)
+    print("blobstore_detail_by_object_type_monthly_create_statement created")
+
+    
     ##################
     # a whole bunch of tables related user_super_summary (some helpers that can also be used stadn alone)
     ##################
@@ -348,67 +406,6 @@ def make_reporting_tables():
     print("user_super_summary_create_statement created")
 
 
-    # Blobstroe detial related tables
-    blobstore_detail_by_ws_create_statement = (
-        "create or replace table blobstore_detail_by_ws as "
-        "(select in_q.ws_id, sum(in_q.orig_saver_count) as orig_saver_count, "
-        "sum(in_q.non_orig_saver_count) as non_orig_saver_count, "
-        "sum(in_q.orig_saver_size_GB) as orig_saver_size_GB, "
-        "sum(in_q.non_orig_saver_size_GB) as non_orig_saver_size_GB, "
-        "sum(in_q.total_blobstore_size_GB) as total_blobstore_size_GB "
-        "from ("
-        "select ws_id, DATE_FORMAT(`save_date`,'%Y-%m') as month, "
-        "sum(orig_saver) as orig_saver_count, 0 - sum((orig_saver - 1)) as non_orig_saver_count, "
-        "sum(orig_saver * size)/1000000000 as orig_saver_size_GB, "
-        "0 - sum((orig_saver - 1) * size)/1000000000 as non_orig_saver_size_GB, "
-        "sum(size)/1000000000 as total_blobstore_size_GB "
-        "from blobstore_detail bd "
-        "group by ws_id, month) in_q "
-        "group by ws_id ) ")
-    cursor.execute(blobstore_detail_by_ws_create_statement)
-    print("blobstore_detail_by_ws_create_statement created")
-
-    blobstore_detail_by_user_monthly_create_statement = (
-        "create or replace table blobstore_detail_by_user_monthly as "
-        "(select saver_username, DATE_FORMAT(`save_date`,'%Y-%m') as month, "
-        "sum(orig_saver) as orig_saver_count, 0 - sum((orig_saver - 1)) as non_orig_saver_count, "
-        "sum(orig_saver * size)/1000000000 as orig_saver_size_GB, "
-        "0 - sum((orig_saver - 1) * size)/1000000000 as non_orig_saver_size_GB, "
-        "sum(size)/1000000000 as total_blobstore_size_GB "
-        "from blobstore_detail bd "
-        "group by saver_username, month) ")
-    cursor.execute(blobstore_detail_by_user_monthly_create_statement)
-    print("blobstore_detail_by_user_monthly_create_statement created")
-    
-    blobstore_detail_by_user_create_statement = (
-        "create or replace table blobstore_detail_by_user as "
-        "(select saver_username, "
-        "sum(orig_saver_count) as orig_saver_count, sum(non_orig_saver_count) as non_orig_saver_count, "
-        "sum(orig_saver_size_GB) as orig_saver_size_GB, "
-        "sum(non_orig_saver_size_GB) as non_orig_saver_size_GB, "
-        "sum(total_blobstore_size_GB) as total_blobstore_size_GB "
-        "from blobstore_detail_by_user_monthly "
-        "group by saver_username) ")
-    cursor.execute(blobstore_detail_by_user_create_statement)
-    print("blobstore_detail_by_user_create_statement created")
-
-    blobstore_detail_by_object_type_monthly_create_statement = (
-        "create or replace table blobstore_detail_by_object_type_monthly as "
-        "(select LEFT(object_type,LOCATE('-',object_type) - 1) as object_type, "
-        "DATE_FORMAT(`save_date`,'%Y-%m') as month, "
-        "sum(orig_saver) as orig_saver_count, 0 - sum((orig_saver - 1)) as non_orig_saver_count, "
-        "sum(orig_saver * size)/1000000000 as orig_saver_size_GB, "
-        "0 - sum((orig_saver - 1) * size)/1000000000 as non_orig_saver_size_GB, "
-        "sum(size)/1000000000 as total_blobstore_size_GB "
-        "from blobstore_detail bd "
-        "group by object_type, month) ")
-    cursor.execute(blobstore_detail_by_object_type_monthly_create_statement)
-    print("blobstore_detail_by_object_type_monthly_create_statement created")
-
-
-
-
-    
     return
 
 import time
