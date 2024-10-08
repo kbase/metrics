@@ -167,7 +167,24 @@ def make_reporting_tables():
     cursor.execute(app_category_run_hours_weekly_create_statement)
     print("app_category_run_hours_weekly created")
 
+    ###############
+    workspaces_current_create_statement = (
+        "CREATE OR REPLACE table metrics.workspaces_current as "
+        "(select ws.* "
+        "from metrics.workspaces ws inner join "
+        "metrics.hv_workspaces_max_date wsmd "
+        "on ws.ws_id = wsmd.ws_id and "
+        "ws.record_date = wsmd.record_date) "
+    )
+    cursor.execute(workspaces_current_create_statement)
+    print("workspaces_current created")
 
+    workspaces_current_index_create_statement = (
+        "alter table metrics.workspaces_current add unique (ws_id)"
+    )
+    cursor.execute(workspaces_current_index_create_statement)
+    print("workspaces_current_index created")
+    
     ################
     narrative_app_flows_create_statement = (
         "create or replace table metrics_reporting.narrative_app_flows as "
@@ -175,7 +192,7 @@ def make_reporting_tables():
         "from metrics.user_info ui "
         "inner join metrics.user_app_usage uau "
         "on ui.username = uau.username "
-        "inner join metrics_reporting.workspaces_current wc "
+        "inner join metrics.workspaces_current wc "
         "on wc.ws_id = uau.ws_id "
         "where ui.kb_internal_user = 0 "
         "and uau.is_error = 0 "
@@ -205,6 +222,10 @@ def make_reporting_tables():
     cursor.execute(blobstore_detail_by_ws_create_statement)
     print("blobstore_detail_by_ws_create_statement created")
 
+    blobstore_detail_by_ws_index_statement = "alter table blobstore_detail_by_ws add index (ws_id)"
+    cursor.execute(blobstore_detail_by_ws_index_statement)
+    print("blobstore_detail_by_ws_index_statement created")
+    
     blobstore_detail_by_user_monthly_create_statement = (
         "create or replace table blobstore_detail_by_user_monthly as "
         "(select saver_username, DATE_FORMAT(`save_date`,'%Y-%m') as month, "
@@ -328,7 +349,7 @@ def make_reporting_tables():
         "sum(static_narratives_count) as static_narratives_created_count, "
         "sum(visible_app_cells_count) as total_visible_app_cells, "
         "sum(code_cells_count) as total_code_cells_count "
-        "from metrics_reporting.workspaces_current wc "
+        "from metrics.workspaces_current wc "
         "inner join metrics.user_info ui "
         "on wc.username = ui.username "
         "where narrative_version > 0 "

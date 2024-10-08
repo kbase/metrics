@@ -24,7 +24,10 @@ def dump_weekly_app_categories():
     cursor.execute(query)
 
     # CHANGE QUERY HERE
-    query = ("select * from metrics_reporting.app_category_unique_users_weekly")
+#    Regular weekly app categories
+#    query = ("select * from metrics_reporting.app_category_unique_users_weekly")
+
+    # ADAM's special cagtegory mappings from late 2023 early 2024  
     query = ("select in_query.week_run, in_query.master_category, count(*) as unique_users "
              "from (select distinct DATE_FORMAT(`finish_date`,'%Y-%u') as week_run, "
              "IFNULL(master_category,'None') as master_category, uau.username "

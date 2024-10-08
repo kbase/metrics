@@ -785,6 +785,29 @@ select max(record_date) as record_date, ws_id
 from metrics.workspaces w
 group by ws_id;
 
+#IN METRICS
+CREATE OR REPLACE table metrics.workspaces_current as
+(select ws.*
+from metrics.workspaces ws inner join
+metrics.hv_workspaces_max_date wsmd
+on ws.ws_id = wsmd.ws_id and
+ws.record_date = wsmd.record_date);
+
+alter table metrics.workspaces_current
+add unique (ws_id); 
+
+#IN METRICS
+CREATE OR REPLACE table metrics.workspaces_current_plus_users as
+(select wc.* , bdws.orig_saver_count, bdws.non_orig_saver_count, bdws.orig_saver_size_GB, bdws.non_orig_saver_size_GB
+from metrics.user_info ui
+inner join metrics.workspaces_current wc on ui.username = wc.username
+left outer join blobstore_detail_by_ws bdws on wc.ws_id = bdws.ws_id
+where ui.kb_internal_user = 0
+and wc.narrative_version > 0
+and is_deleted = 0
+and is_temporary = 0);
+
+
 #IN METRICS_REPORTING
 CREATE OR REPLACE VIEW metrics_reporting.workspaces_current as
 select ws.*
@@ -1637,6 +1660,8 @@ group by ws_id, month) in_q
 group by ws_id );
 Query OK, 108871 rows affected (6 min 52.38 sec)
 Records: 108871  Duplicates: 0  Warnings: 0
+
+alter table blobstore_detail_by_ws add index (ws_id);
 
 create or replace view blobstore_detail_by_ws_monthly as
 (select ws_id, DATE_FORMAT(`save_date`,'%Y-%m') as month,
