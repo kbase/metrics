@@ -38,7 +38,6 @@ def dump_narratives_results():
           "narrative_version\thidden_object_count\tdeleted_object_count\ttotal_size\ttop_lvl_size\tis_public\tis_temporary\tis_deleted\tnumber_of_shares\t"
           "num_nar_obj_ids\tstatic_narratives_count\tstatic_narratives_views\tunique_object_types_count\t"
           "orig_saver_count\tnon_orig_saver_count\torig_saver_size_GB\tnon_orig_saver_size_GB")
-          )
           
 #          "num_nar_obj_ids\tstatic_narratives_count\tstatic_narratives_views\tunique_object_types_count")
 
