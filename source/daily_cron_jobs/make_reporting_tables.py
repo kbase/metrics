@@ -167,7 +167,24 @@ def make_reporting_tables():
     cursor.execute(app_category_run_hours_weekly_create_statement)
     print("app_category_run_hours_weekly created")
 
+    ###############
+    workspaces_current_create_statement = (
+        "CREATE OR REPLACE table metrics.workspaces_current as "
+        "(select ws.* "
+        "from metrics.workspaces ws inner join "
+        "metrics.hv_workspaces_max_date wsmd "
+        "on ws.ws_id = wsmd.ws_id and "
+        "ws.record_date = wsmd.record_date) "
+    )
+    cursor.execute(workspaces_current_create_statement)
+    print("workspaces_current created")
 
+    workspaces_current_index_create_statement = (
+        "alter table metrics.workspaces_current add unique (ws_id)"
+    )
+    cursor.execute(workspaces_current_index_create_statement)
+    print("workspaces_current_index created")
+    
     ################
     narrative_app_flows_create_statement = (
         "create or replace table metrics_reporting.narrative_app_flows as "
@@ -175,7 +192,7 @@ def make_reporting_tables():
         "from metrics.user_info ui "
         "inner join metrics.user_app_usage uau "
         "on ui.username = uau.username "
-        "inner join metrics_reporting.workspaces_current wc "
+        "inner join metrics.workspaces_current wc "
         "on wc.ws_id = uau.ws_id "
         "where ui.kb_internal_user = 0 "
         "and uau.is_error = 0 "
@@ -185,6 +202,68 @@ def make_reporting_tables():
     cursor.execute(narrative_app_flows_create_statement)
     print("narrative_app_flows created")
 
+    # Blobstroe detial related tables
+    blobstore_detail_by_ws_create_statement = (
+        "create or replace table blobstore_detail_by_ws as "
+        "(select in_q.ws_id, sum(in_q.orig_saver_count) as orig_saver_count, "
+        "sum(in_q.non_orig_saver_count) as non_orig_saver_count, "
+        "sum(in_q.orig_saver_size_GB) as orig_saver_size_GB, "
+        "sum(in_q.non_orig_saver_size_GB) as non_orig_saver_size_GB, "
+        "sum(in_q.total_blobstore_size_GB) as total_blobstore_size_GB "
+        "from ("
+        "select ws_id, DATE_FORMAT(`save_date`,'%Y-%m') as month, "
+        "sum(orig_saver) as orig_saver_count, 0 - sum((orig_saver - 1)) as non_orig_saver_count, "
+        "sum(orig_saver * size)/1000000000 as orig_saver_size_GB, "
+        "0 - sum((orig_saver - 1) * size)/1000000000 as non_orig_saver_size_GB, "
+        "sum(size)/1000000000 as total_blobstore_size_GB "
+        "from blobstore_detail bd "
+        "group by ws_id, month) in_q "
+        "group by ws_id ) ")
+    cursor.execute(blobstore_detail_by_ws_create_statement)
+    print("blobstore_detail_by_ws_create_statement created")
+
+    blobstore_detail_by_ws_index_statement = "alter table blobstore_detail_by_ws add index (ws_id)"
+    cursor.execute(blobstore_detail_by_ws_index_statement)
+    print("blobstore_detail_by_ws_index_statement created")
+    
+    blobstore_detail_by_user_monthly_create_statement = (
+        "create or replace table blobstore_detail_by_user_monthly as "
+        "(select saver_username, DATE_FORMAT(`save_date`,'%Y-%m') as month, "
+        "sum(orig_saver) as orig_saver_count, 0 - sum((orig_saver - 1)) as non_orig_saver_count, "
+        "sum(orig_saver * size)/1000000000 as orig_saver_size_GB, "
+        "0 - sum((orig_saver - 1) * size)/1000000000 as non_orig_saver_size_GB, "
+        "sum(size)/1000000000 as total_blobstore_size_GB "
+        "from blobstore_detail bd "
+        "group by saver_username, month) ")
+    cursor.execute(blobstore_detail_by_user_monthly_create_statement)
+    print("blobstore_detail_by_user_monthly_create_statement created")
+    
+    blobstore_detail_by_user_create_statement = (
+        "create or replace table blobstore_detail_by_user as "
+        "(select saver_username, "
+        "sum(orig_saver_count) as orig_saver_count, sum(non_orig_saver_count) as non_orig_saver_count, "
+        "sum(orig_saver_size_GB) as orig_saver_size_GB, "
+        "sum(non_orig_saver_size_GB) as non_orig_saver_size_GB, "
+        "sum(total_blobstore_size_GB) as total_blobstore_size_GB "
+        "from blobstore_detail_by_user_monthly "
+        "group by saver_username) ")
+    cursor.execute(blobstore_detail_by_user_create_statement)
+    print("blobstore_detail_by_user_create_statement created")
+
+    blobstore_detail_by_object_type_monthly_create_statement = (
+        "create or replace table blobstore_detail_by_object_type_monthly as "
+        "(select LEFT(object_type,LOCATE('-',object_type) - 1) as object_type, "
+        "DATE_FORMAT(`save_date`,'%Y-%m') as month, "
+        "sum(orig_saver) as orig_saver_count, 0 - sum((orig_saver - 1)) as non_orig_saver_count, "
+        "sum(orig_saver * size)/1000000000 as orig_saver_size_GB, "
+        "0 - sum((orig_saver - 1) * size)/1000000000 as non_orig_saver_size_GB, "
+        "sum(size)/1000000000 as total_blobstore_size_GB "
+        "from blobstore_detail bd "
+        "group by object_type, month) ")
+    cursor.execute(blobstore_detail_by_object_type_monthly_create_statement)
+    print("blobstore_detail_by_object_type_monthly_create_statement created")
+
+    
     ##################
     # a whole bunch of tables related user_super_summary (some helpers that can also be used stadn alone)
     ##################
@@ -270,7 +349,7 @@ def make_reporting_tables():
         "sum(static_narratives_count) as static_narratives_created_count, "
         "sum(visible_app_cells_count) as total_visible_app_cells, "
         "sum(code_cells_count) as total_code_cells_count "
-        "from metrics_reporting.workspaces_current wc "
+        "from metrics.workspaces_current wc "
         "inner join metrics.user_info ui "
         "on wc.username = ui.username "
         "where narrative_version > 0 "
@@ -302,6 +381,10 @@ def make_reporting_tables():
         "uns.total_visible_app_cells, uns.total_code_cells_count, "
         "bus.first_file_date, bus.last_file_date, "
         "bus.total_file_sizes_MB, bus.total_file_count, "
+        "bdu.orig_saver_count as blobstore_orig_saver_count, "
+        "bdu.non_orig_saver_count as blobstore_non_orig_saver_count, "
+        "bdu.orig_saver_size_GB as blobstore_orig_saver_size_GB, "
+        "bdu.non_orig_saver_size_GB as blobstore_non_orig_saver_size_GB, "
         "umua.mu_func_name as most_used_app, "
         "udauc.distinct_apps_used, "
         "uapc.total_apps_run_all_time, uapc.total_apps_run_last365, "
@@ -337,12 +420,14 @@ def make_reporting_tables():
         "on uip.username = usc90.username "
         "left outer join metrics.hv_user_session_count_last_30 usc30 "
         "on uip.username = usc30.username "
+        "left outer join metrics.blobstore_detail_by_user bdu "
+        "on uip.username = bdu.saver_username "
         "where uip.exclude != 1 ")    
     cursor.execute(user_super_summary_create_statement)
     print("user_super_summary_create_statement created")
-    
-    return
 
+
+    return
 
 import time
 import datetime

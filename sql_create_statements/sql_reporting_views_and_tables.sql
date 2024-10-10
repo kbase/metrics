@@ -785,6 +785,29 @@ select max(record_date) as record_date, ws_id
 from metrics.workspaces w
 group by ws_id;
 
+#IN METRICS
+CREATE OR REPLACE table metrics.workspaces_current as
+(select ws.*
+from metrics.workspaces ws inner join
+metrics.hv_workspaces_max_date wsmd
+on ws.ws_id = wsmd.ws_id and
+ws.record_date = wsmd.record_date);
+
+alter table metrics.workspaces_current
+add unique (ws_id); 
+
+#IN METRICS
+CREATE OR REPLACE table metrics.workspaces_current_plus_users as
+(select wc.* , bdws.orig_saver_count, bdws.non_orig_saver_count, bdws.orig_saver_size_GB, bdws.non_orig_saver_size_GB
+from metrics.user_info ui
+inner join metrics.workspaces_current wc on ui.username = wc.username
+left outer join blobstore_detail_by_ws bdws on wc.ws_id = bdws.ws_id
+where ui.kb_internal_user = 0
+and wc.narrative_version > 0
+and is_deleted = 0
+and is_temporary = 0);
+
+
 #IN METRICS_REPORTING
 CREATE OR REPLACE VIEW metrics_reporting.workspaces_current as
 select ws.*
@@ -1450,7 +1473,7 @@ and is_temporary = 0
 group by wc.username, ui.kb_internal_user; 
 
 #------------------------------
-Final user_super_summary table
+# Final user_super_summary table
 #------------------------------
 
 # NEEDS A CRON JOB
@@ -1475,7 +1498,11 @@ uns.total_narrative_count, uns.total_public_narrative_count,
 uns.distinct_static_narratives_count, uns.static_narratives_created_count, 
 uns.total_visible_app_cells, uns.total_code_cells_count, 
 bus.first_file_date, bus.last_file_date, 
-bus.total_file_sizes_MB, bus.total_file_count, 
+bus.total_file_sizes_MB, bus.total_file_count,
+bdu.orig_saver_count as blobstore_orig_saver_count,
+bdu.non_orig_saver_count as blobstore_non_orig_saver_count,
+bdu.orig_saver_size_GB as blobstore_orig_saver_size_GB,
+bdu.non_orig_saver_size_GB as blobstore_non_orig_saver_size_GB,
 umua.mu_func_name as most_used_app,  
 udauc.distinct_apps_used, 
 uapc.total_apps_run_all_time, uapc.total_apps_run_last365, 
@@ -1511,6 +1538,8 @@ left outer join metrics.hv_user_session_count_last_90 usc90
 on uip.username = usc90.username
 left outer join metrics.hv_user_session_count_last_30 usc30
 on uip.username = usc30.username
+left outer join metrics.blobstore_detail_by_user bdu
+on uip.username = bdu.saver_username
 where uip.exclude != 1;
 
 # END OF USER_SUPER_SUMMARY
@@ -1606,3 +1635,80 @@ from metrics.doi_ws_map dwm inner join
 metrics_reporting.doi_metrics_current dmc on dwm.ws_id = dmc.ws_id
 inner join metrics_reporting.workspaces_current wc on dmc.ws_id = wc.ws_id
 order by dwm.doi_url,dwm.is_parent_ws desc);
+
+
+#------------------------------
+# Blobstore_detail reports
+#  Note massive table. Some of these are done in CRON job as tables, other are views.
+#------------------------------
+
+create or replace table blobstore_detail_by_ws as
+(
+select in_q.ws_id, sum(in_q.orig_saver_count) as orig_saver_count,
+sum(in_q.non_orig_saver_count) as non_orig_saver_count,
+sum(in_q.orig_saver_size_GB) as orig_saver_size_GB,
+sum(in_q.non_orig_saver_size_GB) as non_orig_saver_size_GB,
+sum(in_q.total_blobstore_size_GB) as total_blobstore_size_GB
+from
+(select ws_id, DATE_FORMAT(`save_date`,'%Y-%m') as month,
+sum(orig_saver) as orig_saver_count, 0 - sum((orig_saver - 1)) as non_orig_saver_count,
+sum(orig_saver * size)/1000000000 as orig_saver_size_GB,
+0 - sum((orig_saver - 1) * size)/1000000000 as non_orig_saver_size_GB,
+sum(size)/1000000000 as total_blobstore_size_GB
+from blobstore_detail bd
+group by ws_id, month) in_q
+group by ws_id );
+Query OK, 108871 rows affected (6 min 52.38 sec)
+Records: 108871  Duplicates: 0  Warnings: 0
+
+alter table blobstore_detail_by_ws add index (ws_id);
+
+create or replace view blobstore_detail_by_ws_monthly as
+(select ws_id, DATE_FORMAT(`save_date`,'%Y-%m') as month,
+sum(orig_saver) as orig_saver_count, 0 - sum((orig_saver - 1)) as non_orig_saver_count,
+sum(orig_saver * size)/1000000000 as orig_saver_size_GB,
+0 - sum((orig_saver - 1) * size)/1000000000 as non_orig_saver_size_GB,
+sum(size)/1000000000 as total_blobstore_size_GB
+from blobstore_detail bd
+group by ws_id, month);
+
+
+create or replace table blobstore_detail_by_user_monthly as
+(select saver_username, DATE_FORMAT(`save_date`,'%Y-%m') as month,
+sum(orig_saver) as orig_saver_count, 0 - sum((orig_saver - 1)) as non_orig_saver_count,
+sum(orig_saver * size)/1000000000 as orig_saver_size_GB,
+0 - sum((orig_saver - 1) * size)/1000000000 as non_orig_saver_size_GB,
+sum(size)/1000000000 as total_blobstore_size_GB
+from blobstore_detail bd
+group by saver_username, month);
+
+create or replace table blobstore_detail_by_user as
+(select saver_username,
+sum(orig_saver_count) as orig_saver_count, sum(non_orig_saver_count) as non_orig_saver_count,
+sum(orig_saver_size_GB) as orig_saver_size_GB,
+sum(non_orig_saver_size_GB) as non_orig_saver_size_GB,
+sum(total_blobstore_size_GB) as total_blobstore_size_GB
+from blobstore_detail_by_user_monthly
+group by saver_username);
+
+
+create or replace table blobstore_detail_by_object_type_monthly as
+(select LEFT(object_type,LOCATE('-',object_type) - 1) as object_type,
+DATE_FORMAT(`save_date`,'%Y-%m') as month,
+sum(orig_saver) as orig_saver_count, 0 - sum((orig_saver - 1)) as non_orig_saver_count,
+sum(orig_saver * size)/1000000000 as orig_saver_size_GB,
+0 - sum((orig_saver - 1) * size)/1000000000 as non_orig_saver_size_GB,
+sum(size)/1000000000 as total_blobstore_size_GB
+from blobstore_detail bd
+group by object_type, month);
+
+create or replace view blobstore_detail_by_object_type as
+(select object_type,
+sum(orig_saver_count) as orig_saver_count,
+sum(non_orig_saver_count) as non_orig_saver_count,
+sum(orig_saver_size_GB) as orig_saver_size_GB,
+sum(non_orig_saver_size_GB) as non_orig_saver_size_GB,
+sum(total_blobstore_size_GB) as total_blobstore_size_GB
+from blobstore_detail_by_object_type_monthly
+group by object_type);
+

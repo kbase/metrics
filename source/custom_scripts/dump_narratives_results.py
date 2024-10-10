@@ -30,12 +30,16 @@ def dump_narratives_results():
 
     # CHANGE QUERY HERE
     #    Query for Adam Narratives dump of information:
-    query = ("select wc.* from metrics.user_info ui inner join metrics_reporting.workspaces_current wc on ui.username = wc.username "
-             "where ui.kb_internal_user = 0 and wc.narrative_version > 0 and is_deleted = 0 and is_temporary = 0")
+    query = ("select * from metrics.workspaces_current_plus_users ")
+#    query = ("select wc.* from metrics.user_info ui inner join metrics_reporting.workspaces_current wc on ui.username = wc.username "
+#             "where ui.kb_internal_user = 0 and wc.narrative_version > 0 and is_deleted = 0 and is_temporary = 0")
     #    Headers for Adam's narratives query (Note if more columns added, may need to update this
     print("ws_id\tusername\tmod_date\tinitial_save_date\trecord_date\ttop_lvl_object_count\ttotal_object_count\tvisible_app_cells_count\tcode_cells_count\t"
           "narrative_version\thidden_object_count\tdeleted_object_count\ttotal_size\ttop_lvl_size\tis_public\tis_temporary\tis_deleted\tnumber_of_shares\t"
-          "num_nar_obj_ids\tstatic_narratives_count\tstatic_narratives_views\tunique_object_types_count")
+          "num_nar_obj_ids\tstatic_narratives_count\tstatic_narratives_views\tunique_object_types_count\t"
+          "orig_saver_count\tnon_orig_saver_count\torig_saver_size_GB\tnon_orig_saver_size_GB")
+          
+#          "num_nar_obj_ids\tstatic_narratives_count\tstatic_narratives_views\tunique_object_types_count")
 
     cursor.execute(query)
     row_values = list()
