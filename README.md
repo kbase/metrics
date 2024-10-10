@@ -44,6 +44,15 @@ source/daily/make_reporting_tables.py
 
 
 -------------------
+Within the logstash dockerfile there is:
+https://github.com/kbase/logstash/blob/41778da1238129a65296bdddcb6ff26e9c694779/Dockerfile#L24-L29
+The rm at the end I believe is just cleaning up after itself. This was set up by Steve for Cheyenne's work
+This is used by this code:
+https://github.com/kbase/metrics/blob/master/source/daily_cron_jobs/methods_upload_elasticsearch_sumrydicts.py
+
+
+
+-------------------
 
 CRON Jobs are run from mysql-metrics
 
@@ -53,10 +62,10 @@ There are nightly CRON jobs that get run are located in bin/master_cron_shell.sh
 which runs scripts from the source/daily directory
 
 Then there are also monthly CRON jobs that get run are located in bin/upload_workspace_stats.sh
-It used to be workspaces (user info needed first for FK potential issues), but now it also conatins scripts for
-DOI metrics.)
+It used to be workspaces (user info needed first for FK potential issues),
 Runs scripts from source/monthly directory
 
+There is a doi_monthly CRON job for Credit Engine that runs are located in bin/upload_doi_metrics.sh
 
 These create Logs to keep track of (note nightly metrics is calling master_cron_shell
 01 17 * * * /root/metrics/nightly_metrics.sh >>/mnt/metrics_logs/crontab_nightly 2>&1
@@ -64,11 +73,10 @@ These create Logs to keep track of (note nightly metrics is calling master_cron_
 01 0  15 * * /root/metrics/monthly_metrics.sh >>/mnt/metrics_logs/crontab_doi_monthly 2>&1
 01 07 * * * /root/metrics/nightly_errorlogs.sh >>/mnt/metrics_logs/crontab_errorlogs 2>&1
 
-From Docker03 the logs can be checked by going doing the following. (Note no y at end of monthly)
+From Docker03 the logs can be checked by going doing the following.
 cat /mnt/nfs3/data1/metrics/crontab_logs/crontab_nightly
 cat /mnt/nfs3/data1/metrics/crontab_logs/crontab_monthly
 cat /mnt/nfs3/data1/metrics/crontab_logs/crontab_doi_monthly
-
 
 Can also confirm things ran by looking in the database (if not need to do backfills).
 Example: (should be first of each month)
