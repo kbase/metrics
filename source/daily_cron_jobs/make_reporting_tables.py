@@ -184,6 +184,21 @@ def make_reporting_tables():
     )
     cursor.execute(workspaces_current_index_create_statement)
     print("workspaces_current_index created")
+
+    ###############
+    workspaces_current_plus_users_create_statement = (
+        "CREATE OR REPLACE table metrics.workspaces_current_plus_users as "
+        "(select wc.* , bdws.orig_saver_count, bdws.non_orig_saver_count, bdws.orig_saver_size_GB, bdws.non_orig_saver_size_GB "
+        "from metrics.user_info ui "
+        "inner join metrics.workspaces_current wc on ui.username = wc.username "
+        "left outer join blobstore_detail_by_ws bdws on wc.ws_id = bdws.ws_id "
+        "where ui.kb_internal_user = 0 "
+        "and wc.narrative_version > 0 "
+        "and is_deleted = 0 "
+        "and is_temporary = 0)"
+    )
+    cursor.execute(workspaces_current_plus_users_create_statement)
+    print("workspaces_current_plus_users created")
     
     ################
     narrative_app_flows_create_statement = (
