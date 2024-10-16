@@ -159,7 +159,8 @@ wsov_handle_ids_not_in_handle_insert_statement = (
     "values(%s, %s, %s, %s, %s, %s)"
 )
 
-
+wsov_handle_ids_not_in_handle_insert_count = 0
+wsov_handle_ids_not_in_handle_skipped_insert_count = 0
 for handle_id in workspace_handles_not_in_handles_set:
     for full_obj_id in workspaces_dict[handle_id]:
         ws_id = workspaces_dict[handle_id][full_obj_id]["ws"]
@@ -175,7 +176,14 @@ for handle_id in workspace_handles_not_in_handles_set:
             user,
             obj_type,
         )
-        wsov_handle_ids_not_in_handle_insert_cursor.execute(wsov_handle_ids_not_in_handle_insert_statement, input_vals)
+
+        try:
+            wsov_handle_ids_not_in_handle_insert_cursor.execute(wsov_handle_ids_not_in_handle_insert_statement, input_vals)
+            wsov_handle_ids_not_in_handle_insert_count += 1
+        except mysql.Error as err:
+            wsov_handle_ids_not_in_handle_skipped_insert_count += 1
+
+#####
     
 handle_ids_not_in_ws_obj_ver_insert_cursor = db_connection.cursor(prepared=True)
 handle_ids_not_in_ws_obj_ver_insert_statement = (
@@ -184,6 +192,8 @@ handle_ids_not_in_ws_obj_ver_insert_statement = (
     "values(%s, %s, %s, %s) "
 )
 
+handle_ids_not_in_ws_obj_ver_insert_count = 0
+handle_ids_not_in_ws_obj_ver_skipped_insert_count = 0
 for handle_id in handles_not_in_worspace_handles_set:
     bsid = handles_by_hid_dict[handle_id]["bsid"]
     user = handles_by_hid_dict[handle_id]["user"]
@@ -197,8 +207,14 @@ for handle_id in handles_not_in_worspace_handles_set:
         user,
         save_date,
         )
-    handle_ids_not_in_ws_obj_ver_insert_cursor.execute(handle_ids_not_in_ws_obj_ver_insert_statement, input_vals)
-
+    try:
+        handle_ids_not_in_ws_obj_ver_insert_cursor.execute(handle_ids_not_in_ws_obj_ver_insert_statement, input_vals)
+        handle_ids_not_in_ws_obj_ver_insert_count += 1
+    except mysql.Error as err:
+        handle_ids_not_in_ws_obj_ver_skipped_insert_count += 1
+        
+#####
+        
 handles_blobstore_ids_not_in_nodes_insert_cursor = db_connection.cursor(prepared=True)
 handles_blobstore_ids_not_in_nodes_insert_statement = (
     "insert into metrics.handles_blobstore_ids_not_in_nodes "
@@ -206,6 +222,8 @@ handles_blobstore_ids_not_in_nodes_insert_statement = (
     "values(%s, %s, %s, %s) "
 )
 
+handles_blobstore_ids_not_in_nodes_insert_count = 0
+handles_blobstore_ids_not_in_nodes_skipped_insert_count = 0
 for bsid in handles_blobstores_not_in_blobstore_nodes:
     handle_id = handles_by_bsid_dict[bsid]["handle"]
     user = handles_by_bsid_dict[bsid]["user"]
@@ -219,9 +237,14 @@ for bsid in handles_blobstores_not_in_blobstore_nodes:
         user,
         save_date,
         )
-    handles_blobstore_ids_not_in_nodes_insert_cursor.execute(handles_blobstore_ids_not_in_nodes_insert_statement, input_vals)
-
-
+    try:
+        handles_blobstore_ids_not_in_nodes_insert_cursor.execute(handles_blobstore_ids_not_in_nodes_insert_statement, input_vals)
+        handles_blobstore_ids_not_in_nodes_insert_count += 1
+    except mysql.Error as err:
+        handles_blobstore_ids_not_in_nodes_skipped_insert_count += 1
+        
+#####
+        
 blobstore_ids_not_in_handle_insert_cursor = db_connection.cursor(prepared=True)
 blobstore_ids_not_in_handle_insert_statement = (
         "insert into metrics.blobstore_ids_not_in_handle "
@@ -229,6 +252,8 @@ blobstore_ids_not_in_handle_insert_statement = (
         "values(%s, %s, %s) "
     )
 
+blobstore_ids_not_in_handle_insert_count = 0
+blobstore_ids_not_in_handle_skipped_insert_count = 0
 for blobstore_id in blobstore_nodes_not_in_handles_set:
     user = blobstore_dict[blobstore_id]["user"]
     if user is None:
@@ -240,8 +265,11 @@ for blobstore_id in blobstore_nodes_not_in_handles_set:
         user,
         save_date,
         )
-    blobstore_ids_not_in_handle_insert_cursor.execute(blobstore_ids_not_in_handle_insert_statement, input_vals)
-
+    try:
+        blobstore_ids_not_in_handle_insert_cursor.execute(blobstore_ids_not_in_handle_insert_statement, input_vals)
+        blobstore_ids_not_in_handle_insert_count += 1
+    except mysql.Error as err:
+        blobstore_ids_not_in_handle_skipped_insert_count += 1
     
 i = 0
 print("Blobstore_dict :")
@@ -284,6 +312,16 @@ print("blobstore_nodes_not_in_handles_set length : " +  str(len(blobstore_nodes_
 print("handles_blobstores_not_in_blobstore_nodes length : " + str(len(handles_blobstores_not_in_blobstore_nodes)))
 print("handles_not_in_worspace_handles_set length : " + str(len(handles_not_in_worspace_handles_set)))
 print("workspace_handles_not_in_handles_set : " + str(len(workspace_handles_not_in_handles_set)))
+
+print("wsov_handle_ids_not_in_handle_insert_count : " + str(wsov_handle_ids_not_in_handle_insert_count))
+print("wsov_handle_ids_not_in_handle_skipped_insert_count : " + str(wsov_handle_ids_not_in_handle_skipped_insert_count))
+print("handle_ids_not_in_ws_obj_ver_insert_count : " + str(handle_ids_not_in_ws_obj_ver_insert_count))
+print("handle_ids_not_in_ws_obj_ver_skipped_insert_count : " + str(handle_ids_not_in_ws_obj_ver_skipped_insert_count))
+
+print("handles_blobstore_ids_not_in_nodes_insert_count : " + str(handles_blobstore_ids_not_in_nodes_insert_count))
+print("handles_blobstore_ids_not_in_nodes_skipped_insert_count : " + str(handles_blobstore_ids_not_in_nodes_skipped_insert_count))
+print("blobstore_ids_not_in_handle_insert_count : " + str(blobstore_ids_not_in_handle_insert_count))
+print("blobstore_ids_not_in_handle_skipped_insert_count : " + str(blobstore_ids_not_in_handle_skipped_insert_count))
 
 print("--- total seconds %s seconds ---" % (time.time() - start_time))
 
