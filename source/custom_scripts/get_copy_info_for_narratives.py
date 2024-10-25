@@ -26,7 +26,7 @@ requests.packages.urllib3.disable_warnings()
 
 mongoDB_metrics_connection = os.environ["MONGO_PATH"]
 
-ws_url = os.environ["WS_URL"]
+#ws_url = os.environ["WS_URL"]
 ws_user_token = os.environ["METRICS_WS_USER_TOKEN"]
 to_workspace = os.environ["WRK_SUFFIX"]
 
