@@ -1,6 +1,6 @@
 from pymongo import MongoClient
 from pymongo import ReadPreference
-from biokbase.workspace.client import Workspace
+#from biokbase.workspace.client import Workspace
 #from installed_clients.AbstractHandleClient import AbstractHandle as HandleService
 from biokbase.service.Client import Client as ServiceClient
 import json as _json
@@ -22,7 +22,7 @@ requests.packages.urllib3.disable_warnings()
 
 mongoDB_metrics_connection = os.environ["MONGO_PATH"]
 
-ws_url = os.environ["WS_URL"]
+#ws_url = os.environ["WS_URL"]
 ws_user_token = os.environ["METRICS_WS_USER_TOKEN"]
 to_workspace = os.environ["WRK_SUFFIX"]
 
