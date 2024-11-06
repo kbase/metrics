@@ -69,6 +69,9 @@ def get_user_app_stats(
     no_queued_counter = 0
     has_requirements_counter = 0
     no_job_input_counter = 0
+    missing_app_id_dict = dict()
+    missing_app_id_count = 0
+    
     for job in stats["jobs"]:
         if job["status"] in statuses or "finished" not in job:
             continue
@@ -108,25 +111,37 @@ def get_user_app_stats(
             #                print("JOB ID : " + str(job["job_id"]) + " has no job_input ")
             #                print(str(job))
             #                exit()
-            job_stats = {
-                "job_id": job["job_id"],
-                "user": job["user"],
-                "finish_date": finished.strftime("%Y-%m-%d %H:%M:%S"),
-                "start_date": run_start.strftime("%Y-%m-%d %H:%M:%S"),
-                "run_time": run_time,
-                "app_name": job["job_input"]["app_id"].replace(".", "/"),
-                "func_name": job["job_input"]["method"].replace(".", "/"),
-                "git_commit_hash": job["job_input"]["service_ver"],
-                "is_error": is_error,
-                "ws_id": ws_id,
-                "queue_time": queue_time,
-                "reserved_cpu": reserved_cpu,
-            }
-            job_array.append(job_stats)
+            app_name = None
+            if "app_id" not in job["job_input"]:
+                missing_app_id_count += 1
+                if job["user"] not in missing_app_id_dict:
+                    missing_app_id_dict[job["user"]] = set()
+                missing_app_id_dict[job["user"]].add(job["job_id"])
+                
+            else:
+                #record has app_id proceed as normal
+                job_stats = {
+                    "job_id": job["job_id"],
+                    "user": job["user"],
+                    "finish_date": finished.strftime("%Y-%m-%d %H:%M:%S"),
+                    "start_date": run_start.strftime("%Y-%m-%d %H:%M:%S"),
+                    "run_time": run_time,
+                    "app_name": job["job_input"]["app_id"].replace(".", "/"),
+                    "func_name": job["job_input"]["method"].replace(".", "/"),
+                    "git_commit_hash": job["job_input"]["service_ver"],
+                    "is_error": is_error,
+                    "ws_id": ws_id,
+                    "queue_time": queue_time,
+                    "reserved_cpu": reserved_cpu,
+                }
+                job_array.append(job_stats)
     print("HAS QUEUED Count: " + str(has_queued_counter))
     print("NO QUEUED Count: " + str(no_queued_counter))
     print("HAS REQUIREMENTS Count: " + str(has_requirements_counter))
     print("NO JOB INPUT COUNT: " + str(no_job_input_counter))
+    print("NO APP ID COUNT: " +  str(missing_app_id_count))
+    if missing_app_id_count > 0:
+        print("DETAILED NO APP ID DICT : " + str(missing_app_id_dict))
     return job_array
 
 
