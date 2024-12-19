@@ -68,15 +68,19 @@ Runs scripts from source/monthly directory
 There is a doi_monthly CRON job for Credit Engine that runs are located in bin/upload_doi_metrics.sh
 
 These create Logs to keep track of (note nightly metrics is calling master_cron_shell
+```
 01 17 * * * /root/metrics/nightly_metrics.sh >>/mnt/metrics_logs/crontab_nightly 2>&1
 01 0  1 * * /root/metrics/monthly_metrics.sh >>/mnt/metrics_logs/crontab_monthly 2>&1
-01 0  15 * * /root/metrics/monthly_metrics.sh >>/mnt/metrics_logs/crontab_doi_monthly 2>&1
+01 0 15 * * /root/metrics/monthly_metrics_doi.sh >>/mnt/metrics_logs/crontab_doi_monthly 2>&1
 01 07 * * * /root/metrics/nightly_errorlogs.sh >>/mnt/metrics_logs/crontab_errorlogs 2>&1
+*/10 * * * * /root/metrics/ee2_cron_metrics.sh >>/mnt/metrics_logs/crontab_ee2metrics 2>&1
+```
 
 From Docker03 the logs can be checked by going doing the following.
 cat /mnt/nfs3/data1/metrics/crontab_logs/crontab_nightly
 cat /mnt/nfs3/data1/metrics/crontab_logs/crontab_monthly
 cat /mnt/nfs3/data1/metrics/crontab_logs/crontab_doi_monthly
+```
 
 Can also confirm things ran by looking in the database (if not need to do backfills).
 Example: (should be first of each month)
