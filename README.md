@@ -77,6 +77,7 @@ These create Logs to keep track of (note nightly metrics is calling master_cron_
 ```
 
 From Docker03 the logs can be checked by going doing the following.
+```
 cat /mnt/nfs3/data1/metrics/crontab_logs/crontab_nightly
 cat /mnt/nfs3/data1/metrics/crontab_logs/crontab_monthly
 cat /mnt/nfs3/data1/metrics/crontab_logs/crontab_doi_monthly
