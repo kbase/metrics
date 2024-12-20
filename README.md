@@ -28,19 +28,24 @@ From there you can run any program in that folder.
 ------------------
 
 If want to run a shell script. Here is an exmple with capturing the redirect in the environment that called Docker.
-
+```
 docker-compose > user_info_dump.txt run metrics ../bin/custom_scripts/dump_query_results.sh
+```
 
 Put executables in the bin directory we will call scripts this way for the CRON jobs
 The cron jobs should run the following:
+```
 docker-compose run --rm metrics ../bin/master_cron_shell.sh
+```
 
 this under the hood calls
+```
 source/daily/upload_user_stats.py
 source/daily/upload_app_stats.py
 source//daily/upload_app_category_mappings.py
 source/daily/upload_public_narratives_count.py
 source/daily/make_reporting_tables.py
+```
 
 
 -------------------
@@ -56,7 +61,7 @@ https://github.com/kbase/metrics/blob/master/source/daily_cron_jobs/methods_uplo
 
 CRON Jobs are run from mysql-metrics
 
-They are stored at: crontab -e on mysql-metrics
+They are stored at: `crontab -e on mysql-metrics`
 
 There are nightly CRON jobs that get run are located in bin/master_cron_shell.sh
 which runs scripts from the source/daily directory
