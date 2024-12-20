@@ -85,10 +85,14 @@ cat /mnt/nfs3/data1/metrics/crontab_logs/crontab_doi_monthly
 
 Can also confirm things ran by looking in the database (if not need to do backfills).
 Example: (should be first of each month)
+```
 select DATE_FORMAT(`record_date`,'%Y-%m') as narrative_cron_month, count(*) as narrative_count from metrics.workspaces ws group by narrative_cron_month;
+```
 
 For elastic Search session information: (this is daily numbers)
+```
 select record_date, count(*) from session_info group by record_date;
+```
 
 
 --------------------
