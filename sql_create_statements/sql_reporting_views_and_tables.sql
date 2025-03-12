@@ -1590,11 +1590,14 @@ create or replace view metrics_reporting.doi_metrics_current_full as
 select dwm.doi_url, dwm.ws_id, dwm.title, dwm.is_parent_ws,
 pmc.unique_users_count, pmc.unique_ws_ids_count,
 uup.usernames_using_data, uwp.ws_ids_using_data,
-pmc.downloads_count, pmc.narrative_views_count, pmc.derived_object_count,
+pmc.ttl_dls_cnt as downloads_count, wc.static_narratives_views as narrative_views_count, 
+pmc.derived_object_count,
 pmc.copied_only_object_count, pmc.fully_derived_object_pair_counts
 from metrics.doi_ws_map dwm inner join
 metrics_reporting.doi_metrics_current pmc
 on dwm.ws_id = pmc.ws_id
+inner join metrics.workspaces_current wc 
+on pmc.ws_id = wc.ws_id
 left outer join metrics_reporting.unique_workspaces_with_doi_data uwp
 on  pmc.ws_id = uwp.doi_ws_id
 left outer join metrics_reporting.unique_usernames_with_doi_data uup
