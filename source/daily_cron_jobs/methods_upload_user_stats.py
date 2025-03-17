@@ -87,6 +87,7 @@ def get_user_info_from_auth2():
             "gravatar_default" : None,
             "how_u_hear_selected" : None,
             "how_u_hear_other" : None,
+            "orcid_record_link": None
         }
 
     # Get all users with an ORCID authentication set up.
