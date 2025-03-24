@@ -78,8 +78,9 @@ These create Logs to keep track of (note nightly metrics is calling master_cron_
 01 0  1 * * DATE=$(date +\%Y\%m\%d); /root/metrics/monthly_metrics.sh >> /mnt/metrics_logs/monthly_$DATE.log 2>&1
 01 0 15 * * DATE=$(date +\%Y\%m\%d); /root/metrics/monthly_metrics_doi.sh >> /mnt/metrics_logs/doi_monthly_$DATE.log 2>&1
 01 07 * * * DATE=$(date +\%Y\%m\%d); /root/metrics/nightly_errorlogs.sh >> /mnt/metrics_logs/errorlogs_monthly_$DATE.log 2>&1
-*/10 * * * * DATE=$(date +\%Y\%m\%d); /root/metrics/ee2_cron_metrics.sh >> /mnt/metrics_logs/ee2metrics_$DATE.log 2>&1
-
+# */10 * * * * DATE=$(date +\%Y\%m\%d); /root/metrics/ee2_cron_metrics.sh >> /mnt/metrics_logs/ee2metrics_$DATE.log 2>&1
+30 23 * * * /mnt/metrics_logs/move_yesterdays_logs.sh >> /mnt/metrics_logs/move_logs.log 2>&1
+00 23 * * * /mnt/metrics_logs/notify.sh >> /mnt/metrics_logs/notify.log 2>&1
 ```
 
 From Docker03 the logs can be checked by going doing the following.
