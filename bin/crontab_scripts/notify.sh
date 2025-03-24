@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Define directories and Slack webhook URL
 LOG_DIR="/mnt/metrics_logs/previous_logs"
