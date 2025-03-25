@@ -74,14 +74,22 @@ There is a doi_monthly CRON job for Credit Engine that runs are located in bin/u
 
 These create Logs to keep track of (note nightly metrics is calling master_cron_shell
 ```
+17 5 * * * /root/bin/dbBackup.daily
 01 17 * * * DATE=$(date +\%Y\%m\%d); /root/metrics/nightly_metrics.sh >> /mnt/metrics_logs/nightly_$DATE.log 2>&1
 01 0  1 * * DATE=$(date +\%Y\%m\%d); /root/metrics/monthly_metrics.sh >> /mnt/metrics_logs/monthly_$DATE.log 2>&1
 01 0 15 * * DATE=$(date +\%Y\%m\%d); /root/metrics/monthly_metrics_doi.sh >> /mnt/metrics_logs/doi_monthly_$DATE.log 2>&1
-01 07 * * * DATE=$(date +\%Y\%m\%d); /root/metrics/nightly_errorlogs.sh >> /mnt/metrics_logs/errorlogs_monthly_$DATE.log 2>&1
-# */10 * * * * DATE=$(date +\%Y\%m\%d); /root/metrics/ee2_cron_metrics.sh >> /mnt/metrics_logs/ee2metrics_$DATE.log 2>&1
 30 23 * * * /mnt/metrics_logs/move_yesterdays_logs.sh >> /mnt/metrics_logs/move_logs.log 2>&1
 00 23 * * * /mnt/metrics_logs/notify.sh >> /mnt/metrics_logs/notify.log 2>&1
 ```
+
+Previous removed cronjobs
+```
+30 0 * * * docker pull ghcr.io/kbase/systemmetrics:latest
+31 0 * * * docker pull ghcr.io/kbase/errorlogging:latest
+#01 07 * * * DATE=$(date +\%Y\%m\%d); /root/metrics/nightly_errorlogs.sh >> /mnt/metrics_logs/errorlogs_nightly_$DATE.log 2>&1
+#*/10 * * * * DATE=$(date +\%Y\%m\%d); /root/metrics/ee2_cron_metrics.sh >> /mnt/metrics_logs/ee2metrics_$DATE.log 2>&1
+```
+
 
 From Docker03 the logs can be checked by going doing the following.
 ```
