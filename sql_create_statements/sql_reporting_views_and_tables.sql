@@ -72,7 +72,7 @@ where exclude = 0;
 
 #IN METRICS_REPORTING
 create or replace view metrics_reporting.user_info_summary_stats as
-select ui.username, ui.display_name, ui.email, ui.orcid,
+select ui.username, ui.display_name, ui.email, ui.orcid_record_link, ui.orcid,
 ui.user_id, ui.kb_internal_user, ui.institution, ui.country,
 ui.signup_date, ui.last_signin_date, 
 round((UNIX_TIMESTAMP(ui.last_signin_date) - UNIX_TIMESTAMP(ui.signup_date))/86400,2) as days_signin_minus_signup,
@@ -1171,7 +1171,7 @@ group by app_runs_count;
 
 #------------------------------
 # USER ORCID COUNT VIEWS.
-
+# Accounts using ORCID authentication for login
 #IN METRICS_REPORTING
 create or replace view metrics_reporting.user_orcid_count_daily as
 select 
@@ -1196,6 +1196,32 @@ max(user_orcid_count) as max_user_orcid_count
 from metrics.user_orcid_count
 group by date_monthly;
 
+#------------------------------
+# USER ORCID RECORD LINK COUNT VIEWS.
+# Accounts that have allowed ORCID profile access to KBase
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.user_orcid_record_link_count_daily as
+select 
+DATE_FORMAT(`record_date`,'%Y-%m-%d') as date_daily,
+max(user_orcid_record_link_count) as max_user_orcid_record_link_count
+from metrics.user_orcid_record_link_count
+group by date_daily;
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.user_orcid_record_link_count_weekly as
+select 
+concat(substring(YEARWEEK(record_date),1,4),"-",substring(YEARWEEK(record_date),5,2)) as date_weekly,
+max(user_orcid_record_link_count) as max_user_record_link_orcid_count
+from metrics.user_orcid_record_link_count
+group by date_weekly;
+
+#IN METRICS_REPORTING
+create or replace view metrics_reporting.user_orcid_record_link_count_monthly as
+select 
+DATE_FORMAT(`record_date`,'%Y-%m') as date_monthly,
+max(user_orcid_record_link_count) as max_user_orcid_record_link_count
+from metrics.user_orcid_record_link_count
+group by date_monthly;
 
 #----------------------------------
 # Weekly App Category Users
@@ -1479,7 +1505,7 @@ group by wc.username, ui.kb_internal_user;
 # NEEDS A CRON JOB
 create or replace table metrics_reporting.user_super_summary as 
 select uip.username, uip.display_name, 
-uip.email, uip.kb_internal_user, uip.user_id, 
+uip.email, uip.orcid_record_link, uip.kb_internal_user, uip.user_id, 
 uip.globus_login, uip.google_login, uip.orcid, 
 uip.session_info_country, uip.country, uip.state, 
 uip.institution, uip.department, uip.job_title, 

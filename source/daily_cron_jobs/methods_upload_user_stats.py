@@ -114,9 +114,12 @@ def get_user_orcidlinks(user_stats_dict):
     """get map from user to orcid record link"""
     client_orcidlink = MongoClient(mongoDB_metrics_connection + to_orcidlink)
     db_orcidlink = client_orcidlink.orcidlink
-    links = db_orcidlink.links.find({},{"username":1,"orcid_auth.orcid":1})
+    links = db_orcidlink.links.find({},{"username":1,"orcid_auth.orcid":1,"_id":0})
     for linkRecord in links:
+        orcid_link_username = linkRecord['username']
+        orcid_id = linkRecord['orcid_auth']['orcid']
         user_stats_dict[linkRecord['username']]['orcid_record_link'] = linkRecord['orcid_auth']['orcid']
+    client_orcidlink.close()
     return user_stats_dict
 
 def get_internal_users(user_stats_dict):
