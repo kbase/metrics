@@ -377,7 +377,7 @@ def make_reporting_tables():
     user_super_summary_create_statement = (
         "create or replace table metrics_reporting.user_super_summary as "
         "select uip.username, uip.display_name, "
-        "uip.email, uip.kb_internal_user, uip.user_id, "
+        "uip.email, uip.orcid_record_link, uip.kb_internal_user, uip.user_id, "
         "uip.globus_login, uip.google_login, uip.orcid, "
         "uip.session_info_country, uip.country, uip.state, "
         "uip.institution, uip.department, uip.job_title, "

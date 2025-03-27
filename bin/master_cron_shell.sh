@@ -14,6 +14,8 @@ python daily_cron_jobs/upload_public_narratives_count.py
 
 python daily_cron_jobs/upload_user_orcid_count.py
 
+python daily_cron_jobs/upload_user_orcid_record_link.py
+
 python daily_cron_jobs/upload_blobstore_details.py
 
 python daily_cron_jobs/make_reporting_tables.py
