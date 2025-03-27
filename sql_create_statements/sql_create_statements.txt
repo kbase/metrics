@@ -6,6 +6,7 @@ CREATE TABLE `user_info` (
   `username` varchar(255) NOT NULL,
   `display_name` varchar(255) NOT NULL,
   `email` varchar(255) DEFAULT NULL,
+  `orcid_record_link` varchar(255) DEFAULT NULL,
   `orcid` varchar(255) DEFAULT NULL,
   `globus_login` tinyint(1) NOT NULL DEFAULT '0',
   `google_login` tinyint(1) NOT NULL DEFAULT '0',
@@ -573,13 +574,21 @@ CREATE OR REPLACE TABLE	`outreach_event_users` (
 
 --####################################################
 --# User ORCID Counts
-
+--# users who have ORCID authentication enabled for logging into KBase
 CREATE TABLE `user_orcid_count` (
   `user_orcid_count` int(11) NOT NULL,
   `record_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY `uk_user_orcid_count_oid_record_date` (`user_orcid_count`,`record_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+--####################################################
+--# User ORCID Record Link Counts
+--# users who have granted ORCID profile access to KBase
+CREATE TABLE `user_orcid_record_link_count` (
+  `user_orcid_record_link_count` int(11) NOT NULL,
+  `record_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_user_orcid_record_link_count_oid_record_date` (`user_orcid_record_link_count`,`record_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --#############################################################
 --# DOI PUBLICATION METRICS AKA CREDIT ENGINE

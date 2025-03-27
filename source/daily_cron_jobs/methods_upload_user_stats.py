@@ -22,6 +22,7 @@ query_on = os.environ["QUERY_ON"]
 to_auth2 = os.environ["AUTH2_SUFFIX"]
 to_groups = os.environ["GRP_SUFFIX"]
 to_workspace = os.environ["WRK_SUFFIX"]
+to_orcidlink = os.environ["ORCIDLINK_SUFFIX"]
 
 _CT = "content-type"
 _AJ = "application/json"
@@ -86,6 +87,7 @@ def get_user_info_from_auth2():
             "gravatar_default" : None,
             "how_u_hear_selected" : None,
             "how_u_hear_other" : None,
+            "orcid_record_link": None
         }
 
     # Get all users with an ORCID authentication set up.
@@ -108,6 +110,17 @@ def get_user_info_from_auth2():
     client_auth2.close()
     return user_stats_dict
 
+def get_user_orcidlinks(user_stats_dict):
+    """get map from user to orcid record link"""
+    client_orcidlink = MongoClient(mongoDB_metrics_connection + to_orcidlink)
+    db_orcidlink = client_orcidlink.orcidlink
+    links = db_orcidlink.links.find({},{"username":1,"orcid_auth.orcid":1,"_id":0})
+    for linkRecord in links:
+        orcid_link_username = linkRecord['username']
+        orcid_id = linkRecord['orcid_auth']['orcid']
+        user_stats_dict[linkRecord['username']]['orcid_record_link'] = linkRecord['orcid_auth']['orcid']
+    client_orcidlink.close()
+    return user_stats_dict
 
 def get_internal_users(user_stats_dict):
     """
@@ -381,7 +394,7 @@ def upload_user_data(user_stats_dict):
         "signup_date, last_signin_date, department, job_title, job_title_other, "
         "city, state, postal_code, funding_source, research_statement, "
         "research_interests, avatar_option, gravatar_default , "
-        "how_u_hear_selected, how_u_hear_other from metrics.user_info"
+        "how_u_hear_selected, how_u_hear_other, orcid_record_link from metrics.user_info"
     )
     cursor.execute(query)
     for (
@@ -408,7 +421,8 @@ def upload_user_data(user_stats_dict):
             avatar_option,
             gravatar_default,
             how_u_hear_selected,
-            how_u_hear_other
+            how_u_hear_other,
+            orcid_record_link
     ) in cursor:
         existing_user_info[username] = {
             "name": display_name,
@@ -433,7 +447,8 @@ def upload_user_data(user_stats_dict):
             "avatar_option" : avatar_option,
             "gravatar_default" : gravatar_default,
             "how_u_hear_selected" : how_u_hear_selected,
-            "how_u_hear_other" : how_u_hear_other
+            "how_u_hear_other" : how_u_hear_other,
+            "orcid_record_link": orcid_record_link
         }
 
     print("Number of existing users:" + str(len(existing_user_info)))
@@ -449,7 +464,7 @@ def upload_user_data(user_stats_dict):
         "city, state, postal_code, funding_source, "
         "research_statement, research_interests, "
         "avatar_option, gravatar_default, "
-        "how_u_hear_selected, how_u_hear_other)"
+        "how_u_hear_selected, how_u_hear_other, orcid_record_link)"
         "values(%s, %s, %s, %s, "
         "%s, %s, "
         "%s, %s, %s, "
@@ -458,7 +473,7 @@ def upload_user_data(user_stats_dict):
         "%s, %s, %s, %s, "
         "%s, %s, "
         "%s, %s, "
-        "%s, %s);")
+        "%s, %s, %s);")
 
     update_prep_cursor = db_connection.cursor(prepared=True)
     user_info_update_statement = (
@@ -477,7 +492,8 @@ def upload_user_data(user_stats_dict):
         "avatar_option = %s, "
         "gravatar_default = %s, "
         "how_u_hear_selected = %s, "
-        "how_u_hear_other = %s "
+        "how_u_hear_other = %s, "
+        "orcid_record_link = %s "
         "where username = %s;"
     )
 
@@ -514,6 +530,7 @@ def upload_user_data(user_stats_dict):
                 user_stats_dict[username]["gravatar_default"],
                 user_stats_dict[username]["how_u_hear_selected"],
                 user_stats_dict[username]["how_u_hear_other"],
+                user_stats_dict[username]["orcid_record_link"],
             )
             prep_cursor.execute(user_info_insert_statement, input)
             new_user_info_count += 1
@@ -575,6 +592,8 @@ def upload_user_data(user_stats_dict):
                     == existing_user_info[username]["how_u_hear_selected"]
                 and user_stats_dict[username]["how_u_hear_other"]
                     == existing_user_info[username]["how_u_hear_other"]
+                and user_stats_dict[username]["orcid_record_link"]
+                    == existing_user_info[username]["orcid_record_link"]
             ):
                 input = (
                     user_stats_dict[username]["name"],
@@ -600,6 +619,7 @@ def upload_user_data(user_stats_dict):
                     user_stats_dict[username]["gravatar_default"],
                     user_stats_dict[username]["how_u_hear_selected"],
                     user_stats_dict[username]["how_u_hear_other"],
+                    user_stats_dict[username]["orcid_record_link"],
                     username,
                 )
                 update_prep_cursor.execute(user_info_update_statement, input)
@@ -700,4 +720,3 @@ def upload_user_data(user_stats_dict):
     )
 
     return 1
-
