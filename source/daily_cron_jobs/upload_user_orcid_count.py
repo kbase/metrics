@@ -48,5 +48,6 @@ print("############################################")
 print("USER ORCID count Upload (UTC): " + str(datetime.datetime.utcnow()))
 start_time = time.time()
 upload_user_orcid_count()
+print("Finished: " + str(datetime.datetime.utcnow()))
 print("--- USER ORCID count time :  %s seconds ---" % (time.time() - start_time))
-
+print("############################################")
