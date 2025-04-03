@@ -8,7 +8,7 @@ yesterday = datetime.date.today() - datetime.timedelta(days=1)
 print("############################################")
 print("############################################")
 print("############################################")
-print("Blobstore Detais Upload (UTC): " + str(datetime.datetime.utcnow()))
+print("Blobstore Details Upload (UTC): " + str(datetime.datetime.utcnow()))
 print("START TIME (UTC): " + str(datetime.datetime.utcnow()))
 start_time = time.time()
 
@@ -26,3 +26,4 @@ end_date=datetime.datetime.combine(yesterday, datetime.datetime.max.time())
 
 print("Start date: " + str(start_date))
 print("End date: " + str(end_date))
+print("############################################")

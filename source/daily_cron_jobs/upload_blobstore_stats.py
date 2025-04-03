@@ -11,4 +11,6 @@ start_time = time.time()
 #end_date = "2023-08-01"
 #methods_upload_blobstore_stats.process_blobstore_stats_data(start_date,end_date)
 methods_upload_blobstore_stats.process_blobstore_stats_data()
+print("Finished: " + str(datetime.datetime.utcnow()))
 print("Uploading blobstore stats took ", time.time() - start_time, " seconds to run")
+print("############################################")

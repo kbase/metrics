@@ -46,5 +46,6 @@ print("############################################")
 print("USER ORCID Record Link count Upload (UTC): " + str(datetime.datetime.utcnow()))
 start_time = time.time()
 upload_user_orcid_record_link_count()
+print("Finished: " + str(datetime.datetime.utcnow()))
 print("--- USER ORCID Record Link count time :  %s seconds ---" % (time.time() - start_time))
-
+print("############################################")
