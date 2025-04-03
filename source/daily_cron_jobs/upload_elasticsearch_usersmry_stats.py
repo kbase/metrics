@@ -27,5 +27,8 @@ print("NUMBER OF USER SESSIONS RETRIEVED : " + str(len(return_capture)))
 methods_upload_elasticsearch_sumrydicts.upload_elastic_search_session_info(
     return_capture
 )
+print("Finished: " + str(datetime.datetime.utcnow()))
 
 print("--- including gather and upload %s seconds ---" % (time.time() - start_time))
+print("############################################")
+
