@@ -16,16 +16,16 @@ MATCHED_FILES=()
 
 # Check if any files were found
 if [ -n "$FILES" ]; then
-    # Search for "exception" or "traceback" in the found files
+    # Search for "exception" or "traceback" or "Errno" in the found files
     for FILE in $FILES; do
-        if grep -qiE "exception|traceback" "$FILE"; then
+        if grep -qiE "exception|traceback|Errno" "$FILE"; then
             MATCHED_FILES+=("$FILE")
         fi
     done
 
     # If matches are found, send a Slack notification
     if [ ${#MATCHED_FILES[@]} -gt 0 ]; then
-        MESSAGE="Found 'exception' or 'traceback' in the following log files:\n"
+        MESSAGE="Found 'exception' or 'traceback' or 'Errno' in the following log files:\n"
         for FILE in "${MATCHED_FILES[@]}"; do
             MESSAGE+="$(basename "$FILE")\n"
         done
