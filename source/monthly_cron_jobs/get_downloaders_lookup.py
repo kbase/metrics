@@ -220,8 +220,15 @@ def pull_downloading_jobs(downloaders_set, problem_refs_lookup):
                     # only want non errored finished jobs
                     if "job_input" in job and "job_id" in job and "user" in job:
                         in_if_count += 1
-                        method = job["job_input"]["method"]
-                        app_id = job["job_input"]["app_id"]
+                        if "method" in job["job_input"]:
+                            method = job["job_input"]["method"]
+                        else:
+                            method = "No method"
+                        if "app_id" in job["job_input"]:
+                            app_id = job["job_input"]["app_id"]
+                        else:
+                            app_id = "No app ID"
+                            print(f'App ID not found for job {job["job_id"]}')
                         method = method.replace(".", "/")
                         if method in downloaders_set or app_id in downloaders_set:
                             if method == "DataFileUtil/download_web_file":
