@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Define directories and Slack webhook URL
-LOG_DIR="/mnt/metrics_logs/previous_logs"
+LOG_DIR="/mnt/metrics_logs"
 SLACK_WEBHOOK_URL="https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
 
 # Get today's and yesterday's dates in YYYYMMDD format
