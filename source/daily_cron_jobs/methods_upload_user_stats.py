@@ -2,6 +2,7 @@ from pymongo import MongoClient
 from pymongo import ReadPreference
 import json as _json
 import os
+import time
 import mysql.connector as mysql
 import requests
 
@@ -218,143 +219,192 @@ def get_user_narrative_stats(user_stats_dict):
 
     return user_stats_dict
 
-def get_profile_info(user_stats_dict):
+def get_profile_info(user_stats_dict, batch_size=1000, max_retries=10 retry_delay=5):
     """
     Gets the institution(organization), country, department, job_title and job_title_other
-    information for the user from the profile information
+    information for the user from the profile information.
+
+    Requests are sent to the profile service in batches of `batch_size`
+    usernames rather than all at once, since a single request covering
+    every user eventually times out / overloads the profile service as
+    the user base grows.
+
+    Each batch is retried up to `max_retries` times with a backoff delay,
+    since failures observed in practice are transient server-side idle-read
+    timeouts (the profile service's Jetty container giving up waiting on the
+    request body) rather than the batch itself being too large.
     """
     url = profile_url
     headers = dict()
-    arg_hash = {
-        "method": "UserProfile.get_user_profile",
-        "params": [list(user_stats_dict.keys())],
-        "version": "1.1",
-        "id": 123,
-    }
-    body = _json.dumps(arg_hash)
     timeout = 1800
     trust_all_ssl_certificates = 1
-
-    ret = requests.post(
-        url,
-        data=body,
-        headers=headers,
-        timeout=timeout,
-        verify=not trust_all_ssl_certificates,
-    )
-    ret.encoding = "utf-8"
-    if ret.status_code == 500:
-        if ret.headers.get(_CT) == _AJ:
-            err = ret.json()
-            if "error" in err:
-                raise Exception(err)
-            else:
-                raise Exception(ret.text)
-        else:
-            raise Exception(ret.text)
-    if not ret.ok:
-        ret.raise_for_status()
-    resp = ret.json()
-    if "result" not in resp:
-        raise Exception("An unknown error occurred in the response")
-    print(str(len(resp["result"][0])))
     replaceDict = {"-": " ", ")": " ", ".": " ", "(": "", "/": "", ",": "", " +": " "}
+
+    usernames = list(user_stats_dict.keys())
+    total_users = len(usernames)
+    list_chunk = batch_size
+    list_chunk_counter = 0
     counter = 0
-    for obj in resp["result"][0]:
-        if obj is None:
-            continue
-        counter += 1
-        if obj["user"]["username"] in user_stats_dict:
-            user_stats_dict[obj["user"]["username"]]["department"] = obj["profile"][
-	        "userdata"
-            ].get("department")
+
+    while list_chunk_counter < total_users:
+        username_batch = usernames[list_chunk_counter:(list_chunk_counter + list_chunk)]
+        list_chunk_counter += list_chunk
+
+        arg_hash = {
+            "method": "UserProfile.get_user_profile",
+            "params": [username_batch],
+            "version": "1.1",
+            "id": 123,
+        }
+        body = _json.dumps(arg_hash)
+
+        resp = None
+        last_exception = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                ret = requests.post(
+                    url,
+                    data=body,
+                    headers=headers,
+                    timeout=timeout,
+                    verify=not trust_all_ssl_certificates,
+                )
+                ret.encoding = "utf-8"
+                if ret.status_code == 500:
+                    if ret.headers.get(_CT) == _AJ:
+                        err = ret.json()
+                        if "error" in err:
+                            raise Exception(err)
+                        else:
+                            raise Exception(ret.text)
+                    else:
+                        raise Exception(ret.text)
+                if not ret.ok:
+                    ret.raise_for_status()
+                resp = ret.json()
+                if "result" not in resp:
+                    raise Exception("An unknown error occurred in the response")
+                break
+            except Exception as exc:
+                last_exception = exc
+                print(
+                    "profile batch starting at user "
+                    + str(list_chunk_counter - list_chunk)
+                    + " failed on attempt "
+                    + str(attempt)
+                    + "/"
+                    + str(max_retries)
+                    + ": "
+                    + str(exc)
+                )
+                if attempt < max_retries:
+                    time.sleep(retry_delay * attempt)
+        if resp is None:
+            raise last_exception
+
+        print(
+            "profile batch "
+            + str(list_chunk_counter)
+            + "/"
+            + str(total_users)
+            + " - profiles returned: "
+            + str(len(resp["result"][0]))
+        )
+        for obj in resp["result"][0]:
+            if obj is None:
+                continue
+            counter += 1
+            if obj["user"]["username"] in user_stats_dict:
+                user_stats_dict[obj["user"]["username"]]["department"] = obj["profile"][
+    	        "userdata"
+                ].get("department")
             
-            user_stats_dict[obj["user"]["username"]]["job_title"] = obj["profile"][
-                "userdata"
-            ].get("jobTitle")
+                user_stats_dict[obj["user"]["username"]]["job_title"] = obj["profile"][
+                    "userdata"
+                ].get("jobTitle")
             
-            user_stats_dict[obj["user"]["username"]]["job_title_other"] = obj["profile"][
-                "userdata"
-            ].get("jobTitleOther")
+                user_stats_dict[obj["user"]["username"]]["job_title_other"] = obj["profile"][
+                    "userdata"
+                ].get("jobTitleOther")
             
-            user_stats_dict[obj["user"]["username"]]["country"] = obj["profile"][
-                "userdata"
-            ].get("country")
+                user_stats_dict[obj["user"]["username"]]["country"] = obj["profile"][
+                    "userdata"
+                ].get("country")
 
-            user_stats_dict[obj["user"]["username"]]["city"] = obj["profile"][
-                "userdata"
-            ].get("city")
+                user_stats_dict[obj["user"]["username"]]["city"] = obj["profile"][
+                    "userdata"
+                ].get("city")
 
-            user_stats_dict[obj["user"]["username"]]["state"] = obj["profile"][
-                "userdata"
-            ].get("state")
+                user_stats_dict[obj["user"]["username"]]["state"] = obj["profile"][
+                    "userdata"
+                ].get("state")
 
-            user_stats_dict[obj["user"]["username"]]["postal_code"] = obj["profile"][
-                "userdata"
-            ].get("postalCode")
+                user_stats_dict[obj["user"]["username"]]["postal_code"] = obj["profile"][
+                    "userdata"
+                ].get("postalCode")
 
-            user_stats_dict[obj["user"]["username"]]["funding_source"] = obj["profile"][
-                "userdata"
-            ].get("fundingSource")            
+                user_stats_dict[obj["user"]["username"]]["funding_source"] = obj["profile"][
+                    "userdata"
+                ].get("fundingSource")            
 
-            user_stats_dict[obj["user"]["username"]]["research_statement"] = obj["profile"][
-                "userdata"
-            ].get("country")
+                user_stats_dict[obj["user"]["username"]]["research_statement"] = obj["profile"][
+                    "userdata"
+                ].get("country")
 
-            user_stats_dict[obj["user"]["username"]]["avatar_option"] = obj["profile"][
-                "userdata"
-            ].get("avatarOption")
+                user_stats_dict[obj["user"]["username"]]["avatar_option"] = obj["profile"][
+                    "userdata"
+                ].get("avatarOption")
 
-            user_stats_dict[obj["user"]["username"]]["gravatar_default"] = obj["profile"][
-                "userdata"
-            ].get("gravatarDefault")
+                user_stats_dict[obj["user"]["username"]]["gravatar_default"] = obj["profile"][
+                    "userdata"
+                ].get("gravatarDefault")
 
-            research_interests_list = obj["profile"]["userdata"].get('researchInterests')
-            research_interests = None
-            if research_interests_list is not None:
-                research_interests_list.sort()
-                research_interests = ", " . join(map(str, research_interests_list))
-            user_stats_dict[obj["user"]["username"]]["research_interests"] = research_interests
+                research_interests_list = obj["profile"]["userdata"].get('researchInterests')
+                research_interests = None
+                if research_interests_list is not None:
+                    research_interests_list.sort()
+                    research_interests = ", " . join(map(str, research_interests_list))
+                user_stats_dict[obj["user"]["username"]]["research_interests"] = research_interests
             
-            institution = obj["profile"]["userdata"].get("organization")
-            if institution == None:
-                if "affiliations" in obj["profile"]["userdata"]:
-                    affiliations = obj["profile"]["userdata"]["affiliations"]
-                    try:
-                        institution = affiliations[0]["organization"]
-                    except IndexError:
+                institution = obj["profile"]["userdata"].get("organization")
+                if institution == None:
+                    if "affiliations" in obj["profile"]["userdata"]:
+                        affiliations = obj["profile"]["userdata"]["affiliations"]
                         try:
-                            institution = obj["profile"]["userdata"]["organization"]
-                        except:
-                            pass
-            if institution:
-                for key, replacement in replaceDict.items():
-                    # institution = institution.str.replace(key, replacement)
-                    institution = institution.replace(key, replacement)
-                institution = institution.rstrip()
-            user_stats_dict[obj["user"]["username"]]["institution"] = institution
+                            institution = affiliations[0]["organization"]
+                        except IndexError:
+                            try:
+                                institution = obj["profile"]["userdata"]["organization"]
+                            except:
+                                pass
+                if institution:
+                    for key, replacement in replaceDict.items():
+                        # institution = institution.str.replace(key, replacement)
+                        institution = institution.replace(key, replacement)
+                    institution = institution.rstrip()
+                user_stats_dict[obj["user"]["username"]]["institution"] = institution
 
-            #How did you hear about KBase part
-            how_u_hear_other = None
-            how_u_hear_selected = None
-            survey_data = obj["profile"].get('surveydata')
-            if survey_data:
-                how_u_hear_selected_list = list()
-                referral_sources = obj["profile"]["surveydata"].get("referralSources")
-                if referral_sources:
-                    responses = obj["profile"]["surveydata"]["referralSources"].get("response")
-                    for response in responses:
-                        if response == "other" and responses[response]:
-#                            print("OTHER Response: " + str(response) + " : Value : " + str(responses[response]))
-                            how_u_hear_other = str(responses[response]).rstrip()
-                        elif responses[response]:
-                            how_u_hear_selected_list.append(response)                                
-#                            print("Response: " + str(response) + " : Value : " + str(responses[response]))
-                if len(how_u_hear_selected_list) > 0:
-                    how_u_hear_selected_list.sort()
-                    how_u_hear_selected = "::".join(how_u_hear_selected_list)
-            user_stats_dict[obj["user"]["username"]]["how_u_hear_selected"] = how_u_hear_selected
-            user_stats_dict[obj["user"]["username"]]["how_u_hear_other"] = how_u_hear_other
+                #How did you hear about KBase part
+                how_u_hear_other = None
+                how_u_hear_selected = None
+                survey_data = obj["profile"].get('surveydata')
+                if survey_data:
+                    how_u_hear_selected_list = list()
+                    referral_sources = obj["profile"]["surveydata"].get("referralSources")
+                    if referral_sources:
+                        responses = obj["profile"]["surveydata"]["referralSources"].get("response")
+                        for response in responses:
+                            if response == "other" and responses[response]:
+    #                            print("OTHER Response: " + str(response) + " : Value : " + str(responses[response]))
+                                how_u_hear_other = str(responses[response]).rstrip()
+                            elif responses[response]:
+                                how_u_hear_selected_list.append(response)                                
+    #                            print("Response: " + str(response) + " : Value : " + str(responses[response]))
+                    if len(how_u_hear_selected_list) > 0:
+                        how_u_hear_selected_list.sort()
+                        how_u_hear_selected = "::".join(how_u_hear_selected_list)
+                user_stats_dict[obj["user"]["username"]]["how_u_hear_selected"] = how_u_hear_selected
+                user_stats_dict[obj["user"]["username"]]["how_u_hear_other"] = how_u_hear_other
 
     return user_stats_dict
 
