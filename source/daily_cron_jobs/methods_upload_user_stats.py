@@ -36,7 +36,7 @@ _ERROR_PRINT_LIMIT = 500
 # here once you've tracked them down (see
 # methods_upload_user_stats_troubleshooting.py) so get_profile_info retries
 # their batch without them instead of losing every other user in it.
-KNOWN_PROBLEMATIC_USERS = set(['lindelwampaka_96', 'sida'])
+KNOWN_PROBLEMATIC_USERS = set()
 
 
 def _short_error(exc, limit=_ERROR_PRINT_LIMIT):
