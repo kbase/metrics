@@ -2,6 +2,7 @@ from pymongo import MongoClient
 from pymongo import ReadPreference
 import json as _json
 import os
+import time
 import mysql.connector as mysql
 import requests
 
@@ -26,6 +27,32 @@ to_orcidlink = os.environ["ORCIDLINK_SUFFIX"]
 
 _CT = "content-type"
 _AJ = "application/json"
+
+_ERROR_PRINT_LIMIT = 500
+
+# Usernames known to make the profile service fail for the *whole* batch
+# they land in (e.g. a malformed profile doc the service can't serialize),
+# rather than just failing to return that one user's profile. Add usernames
+# here once you've tracked them down (see
+# methods_upload_user_stats_troubleshooting.py) so get_profile_info retries
+# their batch without them instead of losing every other user in it.
+KNOWN_PROBLEMATIC_USERS = set()
+
+
+def _short_error(exc, limit=_ERROR_PRINT_LIMIT):
+    """
+    Stringify an exception for logging, truncated to `limit` chars.
+
+    The profile service's JSON-RPC error bodies have been observed to embed
+    a full dump of server-side state (e.g. the profile document it choked
+    on, plugins/data-search history and all) in the error message, so
+    str(exc) on those can be enormous. Truncating keeps one bad batch from
+    flooding the terminal and burying the actual skip/failure message.
+    """
+    text = str(exc)
+    if len(text) > limit:
+        return text[:limit] + "...[truncated, " + str(len(text)) + " chars total]"
+    return text
 
 
 def get_dev_token_users_from_mongo():
@@ -218,143 +245,314 @@ def get_user_narrative_stats(user_stats_dict):
 
     return user_stats_dict
 
-def get_profile_info(user_stats_dict):
+def _request_profile_batch(
+    url, headers, timeout, trust_all_ssl_certificates,
+    username_batch, batch_start, max_retries, retry_delay,
+):
     """
-    Gets the institution(organization), country, department, job_title and job_title_other
-    information for the user from the profile information
+    POSTs a single batch of usernames to UserProfile.get_user_profile,
+    retrying up to `max_retries` times with a backoff delay. Returns
+    (resp, None) on success or (None, last_exception) if every attempt
+    failed.
+
+    Retries exist because failures observed in practice are transient
+    server-side idle-read timeouts (the profile service's Jetty container
+    giving up waiting on the request body) rather than the batch itself
+    being too large. A batch that fails deterministically (e.g. because it
+    contains a user whose profile doc the service can't serialize) will
+    still exhaust all `max_retries` attempts here before the caller falls
+    back to excluding known-problematic users.
     """
-    url = profile_url
-    headers = dict()
     arg_hash = {
         "method": "UserProfile.get_user_profile",
-        "params": [list(user_stats_dict.keys())],
+        "params": [username_batch],
         "version": "1.1",
         "id": 123,
     }
     body = _json.dumps(arg_hash)
+
+    last_exception = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            ret = requests.post(
+                url,
+                data=body,
+                headers=headers,
+                timeout=timeout,
+                verify=not trust_all_ssl_certificates,
+            )
+            ret.encoding = "utf-8"
+            if ret.status_code == 500:
+                if ret.headers.get(_CT) == _AJ:
+                    err = ret.json()
+                    if "error" in err:
+                        raise Exception(err)
+                    else:
+                        raise Exception(ret.text)
+                else:
+                    raise Exception(ret.text)
+            if not ret.ok:
+                ret.raise_for_status()
+            resp = ret.json()
+            if "result" not in resp:
+                raise Exception("An unknown error occurred in the response")
+            return resp, None
+        except Exception as exc:
+            last_exception = exc
+            print(
+                "profile batch starting at user "
+                + str(batch_start)
+                + " failed on attempt "
+                + str(attempt)
+                + "/"
+                + str(max_retries)
+                + ": "
+                + _short_error(exc)
+            )
+            if attempt < max_retries:
+                time.sleep(retry_delay * attempt)
+    return None, last_exception
+
+
+def get_profile_info(
+    user_stats_dict, batch_size=1000, max_retries=10, retry_delay=5,
+    problematic_users=None,
+):
+    """
+    Gets the institution(organization), country, department, job_title and job_title_other
+    information for the user from the profile information.
+
+    Requests are sent to the profile service in batches of `batch_size`
+    usernames rather than all at once, since a single request covering
+    every user eventually times out / overloads the profile service as
+    the user base grows.
+
+    Each batch is retried up to `max_retries` times with a backoff delay
+    (see _request_profile_batch).
+
+    `problematic_users` (defaults to KNOWN_PROBLEMATIC_USERS) names users
+    who are known to poison the batch they're in - the batch fails no
+    matter how many times it's retried as-is. When a batch fails and it
+    contains one of these users, the batch is NOT retried unchanged.
+    Instead it's re-run exactly once more with just those users removed
+    (batch size n - len(bad users in that batch)), so the rest of the
+    batch still gets uploaded. The bad users themselves are left out of
+    user_stats_dict's profile fields and reported at the end; everyone
+    else completes normally.
+
+    UserProfile.get_user_profile has no field-selection param, so the
+    service always returns the full profile doc (including the large,
+    unused "plugins" blob, e.g. saved data-search state). Since only
+    userdata/surveydata are used below, "plugins" is dropped right after
+    parsing each batch response so it doesn't linger in memory or show up
+    when inspecting the response.
+    """
+    url = profile_url
+    headers = dict()
     timeout = 1800
     trust_all_ssl_certificates = 1
-
-    ret = requests.post(
-        url,
-        data=body,
-        headers=headers,
-        timeout=timeout,
-        verify=not trust_all_ssl_certificates,
-    )
-    ret.encoding = "utf-8"
-    if ret.status_code == 500:
-        if ret.headers.get(_CT) == _AJ:
-            err = ret.json()
-            if "error" in err:
-                raise Exception(err)
-            else:
-                raise Exception(ret.text)
-        else:
-            raise Exception(ret.text)
-    if not ret.ok:
-        ret.raise_for_status()
-    resp = ret.json()
-    if "result" not in resp:
-        raise Exception("An unknown error occurred in the response")
-    print(str(len(resp["result"][0])))
     replaceDict = {"-": " ", ")": " ", ".": " ", "(": "", "/": "", ",": "", " +": " "}
+
+    if problematic_users is None:
+        problematic_users = KNOWN_PROBLEMATIC_USERS
+    problematic_users = set(problematic_users)
+
+    usernames = list(user_stats_dict.keys())
+    total_users = len(usernames)
+    list_chunk = batch_size
+    list_chunk_counter = 0
     counter = 0
-    for obj in resp["result"][0]:
-        if obj is None:
-            continue
-        counter += 1
-        if obj["user"]["username"] in user_stats_dict:
-            user_stats_dict[obj["user"]["username"]]["department"] = obj["profile"][
-	        "userdata"
-            ].get("department")
+    failed_batches = []
+    skipped_problematic_users = []
+
+    while list_chunk_counter < total_users:
+        batch_start = list_chunk_counter
+        username_batch = usernames[list_chunk_counter:(list_chunk_counter + list_chunk)]
+        list_chunk_counter += list_chunk
+
+        resp, last_exception = _request_profile_batch(
+            url, headers, timeout, trust_all_ssl_certificates,
+            username_batch, batch_start, max_retries, retry_delay,
+        )
+
+        if resp is None:
+            bad_in_batch = [u for u in username_batch if u in problematic_users]
+            if not bad_in_batch:
+                print(
+                    "SKIPPING profile batch for users "
+                    + str(batch_start)
+                    + "-"
+                    + str(min(list_chunk_counter, total_users) - 1)
+                    + " ("
+                    + str(len(username_batch))
+                    + " users) after "
+                    + str(max_retries)
+                    + " failed attempts: "
+                    + _short_error(last_exception)
+                )
+                failed_batches.append(username_batch)
+                continue
+
+            skipped_problematic_users.extend(bad_in_batch)
+            clean_batch = [u for u in username_batch if u not in problematic_users]
+            if not clean_batch:
+                print(
+                    "Batch starting at user " + str(batch_start)
+                    + " contained only known problematic user(s) "
+                    + ", ".join(bad_in_batch) + "; skipping."
+                )
+                continue
+
+            print(
+                "Batch starting at user " + str(batch_start)
+                + " failed; not retrying as-is since it contains known "
+                "problematic user(s) " + ", ".join(bad_in_batch)
+                + ". Re-running batch without them ("
+                + str(len(clean_batch)) + "/" + str(len(username_batch))
+                + " users)."
+            )
+            resp, last_exception = _request_profile_batch(
+                url, headers, timeout, trust_all_ssl_certificates,
+                clean_batch, batch_start, max_retries, retry_delay,
+            )
+            if resp is None:
+                print(
+                    "SKIPPING profile batch for remaining users starting at "
+                    + str(batch_start) + " (" + str(len(clean_batch))
+                    + " users) - retry without problematic users also "
+                    "failed after " + str(max_retries) + " attempts: "
+                    + _short_error(last_exception)
+                )
+                failed_batches.append(clean_batch)
+                continue
+
+        print(
+            "profile batch "
+            + str(list_chunk_counter)
+            + "/"
+            + str(total_users)
+            + " - profiles returned: "
+            + str(len(resp["result"][0]))
+        )
+        for obj in resp["result"][0]:
+            if obj is None:
+                continue
+            obj["profile"].pop("plugins", None)
+            counter += 1
+            if obj["user"]["username"] in user_stats_dict:
+                user_stats_dict[obj["user"]["username"]]["department"] = obj["profile"][
+    	        "userdata"
+                ].get("department")
             
-            user_stats_dict[obj["user"]["username"]]["job_title"] = obj["profile"][
-                "userdata"
-            ].get("jobTitle")
+                user_stats_dict[obj["user"]["username"]]["job_title"] = obj["profile"][
+                    "userdata"
+                ].get("jobTitle")
             
-            user_stats_dict[obj["user"]["username"]]["job_title_other"] = obj["profile"][
-                "userdata"
-            ].get("jobTitleOther")
+                user_stats_dict[obj["user"]["username"]]["job_title_other"] = obj["profile"][
+                    "userdata"
+                ].get("jobTitleOther")
             
-            user_stats_dict[obj["user"]["username"]]["country"] = obj["profile"][
-                "userdata"
-            ].get("country")
+                user_stats_dict[obj["user"]["username"]]["country"] = obj["profile"][
+                    "userdata"
+                ].get("country")
 
-            user_stats_dict[obj["user"]["username"]]["city"] = obj["profile"][
-                "userdata"
-            ].get("city")
+                user_stats_dict[obj["user"]["username"]]["city"] = obj["profile"][
+                    "userdata"
+                ].get("city")
 
-            user_stats_dict[obj["user"]["username"]]["state"] = obj["profile"][
-                "userdata"
-            ].get("state")
+                user_stats_dict[obj["user"]["username"]]["state"] = obj["profile"][
+                    "userdata"
+                ].get("state")
 
-            user_stats_dict[obj["user"]["username"]]["postal_code"] = obj["profile"][
-                "userdata"
-            ].get("postalCode")
+                user_stats_dict[obj["user"]["username"]]["postal_code"] = obj["profile"][
+                    "userdata"
+                ].get("postalCode")
 
-            user_stats_dict[obj["user"]["username"]]["funding_source"] = obj["profile"][
-                "userdata"
-            ].get("fundingSource")            
+                user_stats_dict[obj["user"]["username"]]["funding_source"] = obj["profile"][
+                    "userdata"
+                ].get("fundingSource")            
 
-            user_stats_dict[obj["user"]["username"]]["research_statement"] = obj["profile"][
-                "userdata"
-            ].get("country")
+                user_stats_dict[obj["user"]["username"]]["research_statement"] = obj["profile"][
+                    "userdata"
+                ].get("country")
 
-            user_stats_dict[obj["user"]["username"]]["avatar_option"] = obj["profile"][
-                "userdata"
-            ].get("avatarOption")
+                user_stats_dict[obj["user"]["username"]]["avatar_option"] = obj["profile"][
+                    "userdata"
+                ].get("avatarOption")
 
-            user_stats_dict[obj["user"]["username"]]["gravatar_default"] = obj["profile"][
-                "userdata"
-            ].get("gravatarDefault")
+                user_stats_dict[obj["user"]["username"]]["gravatar_default"] = obj["profile"][
+                    "userdata"
+                ].get("gravatarDefault")
 
-            research_interests_list = obj["profile"]["userdata"].get('researchInterests')
-            research_interests = None
-            if research_interests_list is not None:
-                research_interests_list.sort()
-                research_interests = ", " . join(map(str, research_interests_list))
-            user_stats_dict[obj["user"]["username"]]["research_interests"] = research_interests
+                research_interests_list = obj["profile"]["userdata"].get('researchInterests')
+                research_interests = None
+                if research_interests_list is not None:
+                    research_interests_list.sort()
+                    research_interests = ", " . join(map(str, research_interests_list))
+                user_stats_dict[obj["user"]["username"]]["research_interests"] = research_interests
             
-            institution = obj["profile"]["userdata"].get("organization")
-            if institution == None:
-                if "affiliations" in obj["profile"]["userdata"]:
-                    affiliations = obj["profile"]["userdata"]["affiliations"]
-                    try:
-                        institution = affiliations[0]["organization"]
-                    except IndexError:
+                institution = obj["profile"]["userdata"].get("organization")
+                if institution == None:
+                    if "affiliations" in obj["profile"]["userdata"]:
+                        affiliations = obj["profile"]["userdata"]["affiliations"]
                         try:
-                            institution = obj["profile"]["userdata"]["organization"]
-                        except:
-                            pass
-            if institution:
-                for key, replacement in replaceDict.items():
-                    # institution = institution.str.replace(key, replacement)
-                    institution = institution.replace(key, replacement)
-                institution = institution.rstrip()
-            user_stats_dict[obj["user"]["username"]]["institution"] = institution
+                            institution = affiliations[0]["organization"]
+                        except IndexError:
+                            try:
+                                institution = obj["profile"]["userdata"]["organization"]
+                            except:
+                                pass
+                if institution:
+                    for key, replacement in replaceDict.items():
+                        # institution = institution.str.replace(key, replacement)
+                        institution = institution.replace(key, replacement)
+                    institution = institution.rstrip()
+                user_stats_dict[obj["user"]["username"]]["institution"] = institution
 
-            #How did you hear about KBase part
-            how_u_hear_other = None
-            how_u_hear_selected = None
-            survey_data = obj["profile"].get('surveydata')
-            if survey_data:
-                how_u_hear_selected_list = list()
-                referral_sources = obj["profile"]["surveydata"].get("referralSources")
-                if referral_sources:
-                    responses = obj["profile"]["surveydata"]["referralSources"].get("response")
-                    for response in responses:
-                        if response == "other" and responses[response]:
-#                            print("OTHER Response: " + str(response) + " : Value : " + str(responses[response]))
-                            how_u_hear_other = str(responses[response]).rstrip()
-                        elif responses[response]:
-                            how_u_hear_selected_list.append(response)                                
-#                            print("Response: " + str(response) + " : Value : " + str(responses[response]))
-                if len(how_u_hear_selected_list) > 0:
-                    how_u_hear_selected_list.sort()
-                    how_u_hear_selected = "::".join(how_u_hear_selected_list)
-            user_stats_dict[obj["user"]["username"]]["how_u_hear_selected"] = how_u_hear_selected
-            user_stats_dict[obj["user"]["username"]]["how_u_hear_other"] = how_u_hear_other
+                #How did you hear about KBase part
+                how_u_hear_other = None
+                how_u_hear_selected = None
+                survey_data = obj["profile"].get('surveydata')
+                if survey_data:
+                    how_u_hear_selected_list = list()
+                    referral_sources = obj["profile"]["surveydata"].get("referralSources")
+                    if referral_sources:
+                        responses = obj["profile"]["surveydata"]["referralSources"].get("response")
+                        for response in responses:
+                            if response == "other" and responses[response]:
+    #                            print("OTHER Response: " + str(response) + " : Value : " + str(responses[response]))
+                                how_u_hear_other = str(responses[response]).rstrip()
+                            elif responses[response]:
+                                how_u_hear_selected_list.append(response)                                
+    #                            print("Response: " + str(response) + " : Value : " + str(responses[response]))
+                    if len(how_u_hear_selected_list) > 0:
+                        how_u_hear_selected_list.sort()
+                        how_u_hear_selected = "::".join(how_u_hear_selected_list)
+                user_stats_dict[obj["user"]["username"]]["how_u_hear_selected"] = how_u_hear_selected
+                user_stats_dict[obj["user"]["username"]]["how_u_hear_other"] = how_u_hear_other
+
+    if skipped_problematic_users:
+        print(
+            "INFO: "
+            + str(len(skipped_problematic_users))
+            + " user(s) were skipped because they are marked as known "
+            "problematic users (KNOWN_PROBLEMATIC_USERS / problematic_users); "
+            "their batch was re-run without them so the rest of that batch "
+            "still completed. Skipped users: "
+            + ", ".join(skipped_problematic_users)
+        )
+
+    if failed_batches:
+        skipped_users = [u for batch in failed_batches for u in batch]
+        print(
+            "WARNING: "
+            + str(len(failed_batches))
+            + " profile batch(es) / "
+            + str(len(skipped_users))
+            + " user(s) were skipped after exhausting retries; "
+            "these users' profile fields will be left unchanged. Skipped users: "
+            + ", ".join(skipped_users)
+        )
 
     return user_stats_dict
 

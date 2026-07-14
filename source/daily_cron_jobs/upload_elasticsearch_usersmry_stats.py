@@ -13,8 +13,8 @@ print("Elastic Search Session Info Upload (UTC): " + str(datetime.datetime.utcno
 start_time = time.time()
 # start_date = "month-day-year"
 # end_date = "month-day-year"
-#start_date = "07-27-2023"
-#end_date = "08-01-2021"
+#start_date = "07-01-2026"
+#end_date = "07-09-2026"
 #return_capture = methods_upload_elasticsearch_sumrydicts.elastic_summary_dictionaries(
 #    start_date, end_date
 #)

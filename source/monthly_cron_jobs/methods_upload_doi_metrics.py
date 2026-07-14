@@ -993,7 +993,7 @@ def get_doi_metrics():
     for doi in master_doi_results_map:
         doi_start_time = time.time()
         print("############################################")
-        print("--- DOI : %s - containting workspaces %s  - starteded at %s-" % (doi, str(master_doi_results_map[doi]["ws_ids"].keys()), str(datetime.datetime.utcnow())))
+        print("--- DOI : %s - containing workspaces %s  - starteded at %s-" % (doi, str(master_doi_results_map[doi]["ws_ids"].keys()), str(datetime.datetime.utcnow())))
         #make local lookup for the DOIs part of the master_doi_results_map
         doi_results_map = dict()
         doi_results_map["doi_owners"] = master_doi_results_map[doi]["doi_owners"]
@@ -1029,7 +1029,7 @@ def get_doi_metrics():
         #print("--- DOI : %s  finished statistics determination at %s-" % (doi, time.time() - doi_start_time))
         upload_doi_externally_derived_data(doi_results_map, ws_owners_lookup)
         #print("--- DOI : %s  finished externally derived_upload tooke  %s- seconds" % (doi, time.time() - doi_start_time))
-        print("--- DOI : %s - containting workspaces %s  -took Total time %s seconds ---" % (doi,str(doi_results_map["ws_ids"].keys()), time.time() - doi_start_time))
+        print("--- DOI : %s - containing workspaces %s  -took Total time %s seconds ---" % (doi,str(doi_results_map["ws_ids"].keys()), time.time() - doi_start_time))
 
 print("\n\n############################################")
 print("############################################")
