@@ -14,11 +14,14 @@ FILES=$(find "$LOG_DIR" -type f \( -name "*_$TODAY.log" -o -name "*_$YESTERDAY.l
 # Initialize an empty array to store files with matches
 MATCHED_FILES=()
 
+# Ignore errors with user profile service that trigger a re-try
+IGNORE_PATTERN="SKIPPING profile batch for users"
+
 # Check if any files were found
 if [ -n "$FILES" ]; then
     # Search for "exception" or "traceback" or "Errno" in the found files
     for FILE in $FILES; do
-        if grep -qiE "exception|traceback|Errno" "$FILE"; then
+        if grep -iE "exception|traceback|Errno" "$FILE" | grep -qivE "$IGNORE_PATTERN"; then
             MATCHED_FILES+=("$FILE")
         fi
     done
