@@ -25,7 +25,8 @@ if [ -n "$FILES" ]; then
             MATCHED_FILES+=("$FILE")
         fi
     done
-
+    # Temporarily disabling so it doesn't spam the channel
+    MATCHED_FILES=()
     # If matches are found, send a Slack notification
     if [ ${#MATCHED_FILES[@]} -gt 0 ]; then
         MESSAGE="Found 'exception' or 'traceback' or 'Errno' in the following log files:\n"
